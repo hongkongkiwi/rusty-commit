@@ -1,0 +1,83 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  dependabot:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+      
+      - name: Auto-merge security updates
+        if: >
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          contains(steps.metadata.outputs.dependency-names, 'security')
+        run: |
+          echo "Auto-merging security patch update for ${{ steps.metadata.outputs.dependency-names }}"
+          gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      
+      - name: Auto-merge patch updates for known safe dependencies
+        if: >
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          (
+            contains(steps.metadata.outputs.dependency-names, 'serde') ||
+            contains(steps.metadata.outputs.dependency-names, 'tokio') ||
+            contains(steps.metadata.outputs.dependency-names, 'clap') ||
+            contains(steps.metadata.outputs.dependency-names, 'anyhow') ||
+            contains(steps.metadata.outputs.dependency-names, 'thiserror') ||
+            contains(steps.metadata.outputs.dependency-names, 'log') ||
+            contains(steps.metadata.outputs.dependency-names, 'env_logger') ||
+            contains(steps.metadata.outputs.dependency-names, 'uuid') ||
+            contains(steps.metadata.outputs.dependency-names, 'chrono') ||
+            contains(steps.metadata.outputs.dependency-names, 'reqwest') ||
+            contains(steps.metadata.outputs.dependency-names, 'url')
+          )
+        run: |
+          echo "Auto-merging patch update for known safe dependency: ${{ steps.metadata.outputs.dependency-names }}"
+          gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      
+      - name: Auto-approve non-security updates
+        if: >
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: |
+          echo "Auto-approving ${{ steps.metadata.outputs.update-type }} update for ${{ steps.metadata.outputs.dependency-names }}"
+          gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      
+      - name: Comment on major updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body "🚨 **Major version update detected!** 
+
+          This PR updates **${{ steps.metadata.outputs.dependency-names }}** with potentially breaking changes.
+          
+          **Update type:** ${{ steps.metadata.outputs.update-type }}
+          **From:** ${{ steps.metadata.outputs.previous-version }}  
+          **To:** ${{ steps.metadata.outputs.new-version }}
+          
+          Please review the changelog and test thoroughly before merging."
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

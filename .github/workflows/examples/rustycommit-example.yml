@@ -1,0 +1,36 @@
+# Example workflow for using Rusty Commit as a GitHub Action
+# Copy this file to your repository's .github/workflows/ directory
+
+name: 'Auto Commit with Rusty Commit'
+
+on:
+  push:
+    branches-ignore: [main, master, dev, development, release]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  rustycommit:
+    timeout-minutes: 10
+    name: Generate AI Commit Messages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating commits
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better context
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate and commit with Rusty Commit
+        uses: hongkongkiwi/rustycommit@main  # or use a specific version tag
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCO_API_KEY: ${{ secrets.RCO_API_KEY }}  # Set this in repository secrets
+          RCO_AI_PROVIDER: 'openai'               # or anthropic, openrouter, groq, etc.
+          RCO_MODEL: 'gpt-4o-mini'                # or claude-3-5-haiku, etc.
+          RCO_COMMIT_TYPE: 'conventional'         # or gitmoji
+          RCO_EMOJI: 'false'                      # Set to true for emoji commits
+          confirm: 'true'                         # Skip confirmation prompt
+          push: 'true'                            # Push commits automatically

@@ -1,0 +1,170 @@
+# CodeRabbit Configuration
+# Documentation: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+# Review Settings
+reviews:
+  # Enable auto-review for PRs
+  auto_review:
+    enabled: true
+    # Review draft PRs
+    drafts: true
+    # Review PRs on base branch update
+    base_branches:
+      - main
+      - master
+      - develop
+
+  # Review triggers
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  
+  # Path filters - review these file types
+  path_filters:
+    - "**/*.rs"
+    - "**/*.toml"
+    - "**/*.md"
+    - "**/*.yml"
+    - "**/*.yaml"
+    - ".github/**"
+  
+  # Ignore patterns
+  path_exclusions:
+    - "target/**"
+    - "**/*.lock"
+    - "**/target/**"
+    - "**/.git/**"
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+
+# Language-specific settings
+language_settings:
+  rust:
+    # Rust-specific review settings
+    enable_clippy: true
+    enable_fmt_check: true
+    check_unsafe_code: true
+    check_unwrap_usage: true
+    security_audit: true
+    
+    # Performance checks
+    check_performance: true
+    check_memory_safety: true
+    
+    # Documentation
+    check_missing_docs: true
+    check_doc_examples: true
+
+# Chat Settings
+chat:
+  # Enable PR chat functionality
+  auto_reply: true
+
+# Tools Settings
+tools:
+  # Code quality tools
+  rustfmt:
+    enabled: true
+    
+  clippy:
+    enabled: true
+    level: "warn"  # Options: allow, warn, deny, forbid
+    
+  cargo_audit:
+    enabled: true
+    
+  # Security scanning
+  security:
+    enabled: true
+    check_dependencies: true
+    
+  # Test coverage
+  coverage:
+    enabled: false  # Enable if you have coverage reports
+    threshold: 80
+
+# Custom Review Instructions
+instructions:
+  - "Focus on Rust best practices and idiomatic code"
+  - "Check for proper error handling with Result types"
+  - "Verify secure storage implementation for OAuth tokens"
+  - "Ensure async/await patterns are used correctly"
+  - "Check for potential race conditions in concurrent code"
+  - "Verify that API keys and secrets are never logged or exposed"
+  - "Review OAuth implementation for security best practices"
+  - "Check that file permissions are set correctly for sensitive files"
+  - "Ensure proper use of the ? operator for error propagation"
+  - "Verify that all public functions have documentation"
+  - "Review AI commit message generation for accuracy and helpfulness"
+  - "Check configuration file format compatibility (JSON/TOML/legacy)"
+
+# Review Tone
+tone:
+  # Options: assertive, friendly, professional, encouraging
+  style: "professional"
+  
+# Summary Settings
+summary:
+  # Generate summaries for large PRs
+  auto_generate: true
+  # Summary for PRs with more than this many changes
+  threshold: 100
+
+# Issue Validation
+issue_validation:
+  enabled: true
+  # Check if PR is linked to an issue
+  require_issue_link: false
+  
+# Documentation
+documentation:
+  # Check for documentation updates when code changes
+  enforce_docs_update: true
+  # Check README updates for new features
+  check_readme: true
+
+# Security
+security:
+  # Security-focused review
+  enabled: true
+  # Check for hardcoded secrets
+  scan_secrets: true
+  # Check dependencies for vulnerabilities
+  scan_dependencies: true
+
+# Performance
+performance:
+  # Performance-focused review
+  enabled: true
+  # Check for common performance issues
+  check_common_issues: true
+  # Review algorithmic complexity
+  check_complexity: true
+
+# Testing
+testing:
+  # Suggest tests for new code
+  suggest_tests: true
+  # Check test coverage for changed files
+  check_coverage: true
+  # Minimum coverage percentage
+  min_coverage: 70
+
+# Additional Rules
+rules:
+  # Enforce conventional commits
+  conventional_commits: true
+  # Check PR title format
+  pr_title_pattern: "^(feat|fix|docs|style|refactor|test|chore)(\\(.+\\))?: .+"
+  # Max PR size (lines of code)
+  max_pr_size: 500
+  
+# Feedback Settings
+feedback:
+  # Ask for feedback after review
+  request_feedback: true
+  # Include helpful links
+  include_links: true

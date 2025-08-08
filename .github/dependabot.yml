@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # Rust/Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "hongkongkiwi"
+    assignees:
+      - "hongkongkiwi"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Group all patch updates together
+    groups:
+      rust-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+      rust-minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "hongkongkiwi"
+    assignees:
+      - "hongkongkiwi"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+          - "major"

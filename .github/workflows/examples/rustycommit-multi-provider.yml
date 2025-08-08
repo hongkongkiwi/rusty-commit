@@ -1,0 +1,124 @@
+# Example: Multi-provider setup with fallbacks
+# Shows how to use different AI providers based on conditions
+
+name: 'Multi-Provider Rusty Commit'
+
+on:
+  push:
+    branches-ignore: [main, master]
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'AI Provider to use'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - openai
+          - anthropic  
+          - openrouter
+          - groq
+          - deepseek
+          - github-copilot
+
+jobs:
+  smart-commit:
+    name: Smart AI Commit Generation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # Primary: Try GitHub Copilot (free for subscribers)
+      - name: Generate commit with GitHub Copilot
+        id: copilot-commit
+        if: github.event.inputs.provider == 'github-copilot' || github.event.inputs.provider == 'auto'
+        uses: hongkongkiwi/rustycommit@main
+        continue-on-error: true
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCO_AI_PROVIDER: 'github-copilot'
+          RCO_MODEL: 'gpt-4o'
+          RCO_COMMIT_TYPE: 'conventional'
+          RCO_EMOJI: 'true'
+          confirm: 'true'
+          push: 'true'
+
+      # Fallback 1: Try Groq (fast and free tier)
+      - name: Generate commit with Groq
+        id: groq-commit
+        if: (steps.copilot-commit.outcome == 'failure' || github.event.inputs.provider == 'groq') && github.event.inputs.provider != 'github-copilot'
+        uses: hongkongkiwi/rustycommit@main  
+        continue-on-error: true
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCO_API_KEY: ${{ secrets.RCO_API_KEY }}
+          RCO_AI_PROVIDER: 'groq'
+          RCO_MODEL: 'llama-3.1-70b-versatile'
+          RCO_COMMIT_TYPE: 'conventional'
+          RCO_EMOJI: 'true'
+          confirm: 'true'
+          push: 'true'
+
+      # Fallback 2: Try OpenAI
+      - name: Generate commit with OpenAI
+        id: openai-commit
+        if: |
+          (steps.copilot-commit.outcome == 'failure' && steps.groq-commit.outcome == 'failure') || 
+          github.event.inputs.provider == 'openai'
+        uses: hongkongkiwi/rustycommit@main
+        continue-on-error: true
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCO_API_KEY: ${{ secrets.RCO_API_KEY }}
+          RCO_AI_PROVIDER: 'openai'
+          RCO_MODEL: 'gpt-4o-mini'
+          RCO_COMMIT_TYPE: 'conventional'
+          confirm: 'true'
+          push: 'true'
+
+      # Final fallback: DeepSeek (cost-effective)
+      - name: Generate commit with DeepSeek
+        id: deepseek-commit  
+        if: |
+          (steps.copilot-commit.outcome == 'failure' && 
+           steps.groq-commit.outcome == 'failure' && 
+           steps.openai-commit.outcome == 'failure') ||
+          github.event.inputs.provider == 'deepseek'
+        uses: hongkongkiwi/rustycommit@main
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCO_API_KEY: ${{ secrets.RCO_API_KEY }}
+          RCO_AI_PROVIDER: 'deepseek'
+          RCO_MODEL: 'deepseek-chat'
+          RCO_COMMIT_TYPE: 'conventional'
+          confirm: 'true'
+          push: 'true'
+
+      # Report which provider was used
+      - name: Report provider used
+        run: |
+          if [ "${{ steps.copilot-commit.outcome }}" = "success" ]; then
+            echo "✅ Used GitHub Copilot for commit generation"
+            echo "provider=github-copilot" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.groq-commit.outcome }}" = "success" ]; then
+            echo "✅ Used Groq for commit generation"  
+            echo "provider=groq" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.openai-commit.outcome }}" = "success" ]; then
+            echo "✅ Used OpenAI for commit generation"
+            echo "provider=openai" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.deepseek-commit.outcome }}" = "success" ]; then
+            echo "✅ Used DeepSeek for commit generation"
+            echo "provider=deepseek" >> $GITHUB_OUTPUT
+          else
+            echo "❌ All providers failed"
+            echo "provider=none" >> $GITHUB_OUTPUT
+            exit 1
+          fi

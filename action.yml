@@ -1,0 +1,263 @@
+name: 'Rusty Commit'
+description: 'Generate AI-powered commit messages using Rust-native implementation with 16+ AI providers'
+author: 'hongkongkiwi'
+
+branding:
+  icon: 'git-commit'
+  color: 'orange'
+
+inputs:
+  GITHUB_TOKEN:
+    description: 'GitHub token for creating commits'
+    required: true
+  RCO_API_KEY:
+    description: 'API key for AI provider (can be set via repository secrets)'
+    required: false
+  RCO_AI_PROVIDER:
+    description: 'AI provider to use (openai, anthropic, openrouter, groq, github-copilot, etc.)'
+    required: false
+    default: 'openai'
+  RCO_MODEL:
+    description: 'AI model to use for generating commit messages'
+    required: false
+    default: 'gpt-4o-mini'
+  RCO_COMMIT_TYPE:
+    description: 'Commit message format (conventional, gitmoji)'
+    required: false
+    default: 'conventional'
+  RCO_EMOJI:
+    description: 'Enable emojis in commit messages'
+    required: false
+    default: 'false'
+  RCO_LANGUAGE:
+    description: 'Language for commit messages (en, es, fr, de, etc.)'
+    required: false
+    default: 'en'
+  RCO_DESCRIPTION_MAX_LENGTH:
+    description: 'Maximum length of commit message description'
+    required: false
+    default: '100'
+  RCO_TOKENS_MAX_INPUT:
+    description: 'Maximum input tokens for AI provider'
+    required: false
+    default: '4096'
+  RCO_TOKENS_MAX_OUTPUT:
+    description: 'Maximum output tokens for AI provider'
+    required: false
+    default: '500'
+  RCO_API_URL:
+    description: 'Custom API endpoint URL (for custom providers or Ollama)'
+    required: false
+  RCO_SECURE_STORAGE:
+    description: 'Use secure credential storage (keychain/credential manager)'
+    required: false
+    default: 'true'
+  full-gitmoji:
+    description: 'Use full GitMoji specification'
+    required: false
+    default: 'false'
+  context:
+    description: 'Additional context for the commit message'
+    required: false
+  exclude:
+    description: 'Files to exclude from diff analysis (glob patterns)'
+    required: false
+  diff-unified:
+    description: 'Number of lines of context in diff'
+    required: false
+    default: '3'
+  one-line-commit:
+    description: 'Generate single-line commit messages'
+    required: false
+    default: 'false'
+  confirm:
+    description: 'Skip confirmation prompt (auto-commit)'
+    required: false
+    default: 'true'
+  push:
+    description: 'Push commit after creation'
+    required: false
+    default: 'false'
+
+outputs:
+  commit-hash:
+    description: 'SHA of the created commit'
+  commit-message:
+    description: 'Generated commit message'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rusty Commit
+      shell: bash
+      run: |
+        # Determine architecture
+        case "$(uname -m)" in
+          x86_64) ARCH="x86_64" ;;
+          aarch64|arm64) ARCH="aarch64" ;;
+          armv7*) ARCH="armv7" ;;
+          *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+        esac
+
+        # Determine OS
+        case "$(uname -s)" in
+          Linux*) 
+            OS="linux"
+            if ldd --version 2>&1 | grep -q musl; then
+              OS_VARIANT="linux-${ARCH}-musl"
+            else
+              OS_VARIANT="linux-${ARCH}"
+            fi
+            ARCHIVE_EXT="tar.gz"
+            ;;
+          Darwin*) 
+            OS="macos"
+            OS_VARIANT="macos-${ARCH}"
+            ARCHIVE_EXT="tar.gz"
+            ;;
+          CYGWIN*|MINGW*|MSYS*) 
+            OS="windows"
+            OS_VARIANT="windows-${ARCH}"
+            ARCHIVE_EXT="zip"
+            ;;
+          *) echo "Unsupported OS: $(uname -s)"; exit 1 ;;
+        esac
+
+        # Get latest release
+        LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
+        if [ -z "$LATEST_RELEASE" ]; then
+          echo "Could not determine latest release"
+          exit 1
+        fi
+
+        echo "Installing Rusty Commit ${LATEST_RELEASE} for ${OS_VARIANT}"
+        
+        # Download and extract
+        DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_RELEASE}/rustycommit-${OS_VARIANT}.${ARCHIVE_EXT}"
+        
+        if [ "$ARCHIVE_EXT" = "tar.gz" ]; then
+          curl -L "$DOWNLOAD_URL" | tar xz
+        else
+          curl -L "$DOWNLOAD_URL" -o rustycommit.zip
+          unzip -q rustycommit.zip
+          rm rustycommit.zip
+        fi
+        
+        # Make executable and move to PATH
+        chmod +x rco*
+        sudo mv rco* /usr/local/bin/rco 2>/dev/null || mv rco* /usr/bin/rco 2>/dev/null || {
+          mkdir -p ~/.local/bin
+          mv rco* ~/.local/bin/rco
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        }
+        
+        # Verify installation
+        rco --version
+
+    - name: Configure Rusty Commit
+      shell: bash
+      env:
+        # Primary RCO variables
+        RCO_API_KEY: ${{ inputs.RCO_API_KEY }}
+        RCO_AI_PROVIDER: ${{ inputs.RCO_AI_PROVIDER }}
+        RCO_MODEL: ${{ inputs.RCO_MODEL }}
+        RCO_COMMIT_TYPE: ${{ inputs.RCO_COMMIT_TYPE }}
+        RCO_EMOJI: ${{ inputs.RCO_EMOJI }}
+        RCO_LANGUAGE: ${{ inputs.RCO_LANGUAGE }}
+        RCO_DESCRIPTION_MAX_LENGTH: ${{ inputs.RCO_DESCRIPTION_MAX_LENGTH }}
+        RCO_TOKENS_MAX_INPUT: ${{ inputs.RCO_TOKENS_MAX_INPUT }}
+        RCO_TOKENS_MAX_OUTPUT: ${{ inputs.RCO_TOKENS_MAX_OUTPUT }}
+        RCO_API_URL: ${{ inputs.RCO_API_URL }}
+        RCO_SECURE_STORAGE: ${{ inputs.RCO_SECURE_STORAGE }}
+      run: |
+        # Configure with RCO variables
+        API_KEY="${RCO_API_KEY}"
+        AI_PROVIDER="${RCO_AI_PROVIDER}"
+        MODEL="${RCO_MODEL}"
+        COMMIT_TYPE="${RCO_COMMIT_TYPE}"
+        EMOJI="${RCO_EMOJI}"
+        LANGUAGE="${RCO_LANGUAGE}"
+        DESC_MAX_LENGTH="${RCO_DESCRIPTION_MAX_LENGTH}"
+        TOKENS_MAX_INPUT="${RCO_TOKENS_MAX_INPUT}"
+        TOKENS_MAX_OUTPUT="${RCO_TOKENS_MAX_OUTPUT}"
+        API_URL="${RCO_API_URL}"
+        SECURE_STORAGE="${RCO_SECURE_STORAGE}"
+
+        # Configure environment variables using RCO names
+        [ -n "$API_KEY" ] && rco config set RCO_API_KEY="$API_KEY"
+        [ -n "$AI_PROVIDER" ] && rco config set RCO_AI_PROVIDER="$AI_PROVIDER"
+        [ -n "$MODEL" ] && rco config set RCO_MODEL="$MODEL"
+        [ -n "$COMMIT_TYPE" ] && rco config set RCO_COMMIT_TYPE="$COMMIT_TYPE"
+        [ -n "$EMOJI" ] && rco config set RCO_EMOJI="$EMOJI"
+        [ -n "$LANGUAGE" ] && rco config set RCO_LANGUAGE="$LANGUAGE"
+        [ -n "$DESC_MAX_LENGTH" ] && rco config set RCO_DESCRIPTION_MAX_LENGTH="$DESC_MAX_LENGTH"
+        [ -n "$TOKENS_MAX_INPUT" ] && rco config set RCO_TOKENS_MAX_INPUT="$TOKENS_MAX_INPUT"
+        [ -n "$TOKENS_MAX_OUTPUT" ] && rco config set RCO_TOKENS_MAX_OUTPUT="$TOKENS_MAX_OUTPUT"
+        [ -n "$API_URL" ] && rco config set RCO_API_URL="$API_URL"
+        
+        # Show configuration status
+        echo "🚀 Rusty Commit Configuration:"
+        rco config status
+
+    - name: Setup Git
+      shell: bash
+      run: |
+        # Configure Git if not already configured
+        if [ -z "$(git config user.name)" ]; then
+          git config user.name "rustycommit-action[bot]"
+        fi
+        if [ -z "$(git config user.email)" ]; then
+          git config user.email "rustycommit-action[bot]@users.noreply.github.com"
+        fi
+
+    - name: Generate and Commit
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      run: |
+        # Check if there are staged changes
+        if ! git diff --cached --quiet; then
+          echo "Found staged changes, generating commit message..."
+        elif ! git diff --quiet; then
+          echo "Found unstaged changes, staging all changes..."
+          git add .
+        else
+          echo "No changes detected, nothing to commit"
+          echo "commit-hash=" >> $GITHUB_OUTPUT
+          echo "commit-message=No changes to commit" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Build command with options
+        CMD="rco"
+        
+        [ "${{ inputs.full-gitmoji }}" = "true" ] && CMD="$CMD --fgm"
+        [ -n "${{ inputs.context }}" ] && CMD="$CMD --context '${{ inputs.context }}'"
+        [ -n "${{ inputs.exclude }}" ] && CMD="$CMD --exclude '${{ inputs.exclude }}'"
+        [ -n "${{ inputs.diff-unified }}" ] && CMD="$CMD --diff-unified '${{ inputs.diff-unified }}'"
+        [ "${{ inputs.one-line-commit }}" = "true" ] && CMD="$CMD --one-line-commit"
+        [ "${{ inputs.confirm }}" = "true" ] && CMD="$CMD --yes"
+
+        # Generate and commit
+        echo "Running: $CMD"
+        eval $CMD
+        
+        # Get commit info
+        COMMIT_HASH=$(git rev-parse HEAD)
+        COMMIT_MESSAGE=$(git log -1 --pretty=%s)
+        
+        echo "commit-hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+        echo "commit-message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+        
+        echo "✅ Created commit: $COMMIT_HASH"
+        echo "📝 Message: $COMMIT_MESSAGE"
+
+    - name: Push Changes
+      if: inputs.push == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      run: |
+        echo "Pushing changes to repository..."
+        git push
+        echo "✅ Changes pushed successfully"

@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            # Rusty Commit ${{ steps.get_version.outputs.version }}
+            
+            🚀 **Blazing-fast commit messages powered by AI and written in Rust** 🦀
+            
+            ## What's New
+            - 16+ AI providers supported (Anthropic, OpenAI, OpenRouter, Groq, DeepSeek, and more)
+            - Interactive authentication with beautiful provider selection
+            - Secure credential storage with system keychain integration
+            - Full OpenCommit compatibility with enhanced Rust performance
+            
+            ## Installation
+            
+            ### macOS / Linux
+            ```bash
+            # Download and extract (replace URL with your platform)
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/rustycommit-<platform>.tar.gz | tar xz
+            
+            # Move to PATH
+            sudo mv rco /usr/local/bin/
+            ```
+            
+            ### Windows
+            Download the Windows zip file and add `rco.exe` to your PATH.
+            
+            ### Using Cargo
+            ```bash
+            cargo install rustycommit
+            # With secure storage
+            cargo install rustycommit --features secure-storage
+            ```
+
+  build-release:
+    name: Build Release (${{ matrix.target }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive-name: rustycommit-linux-x86_64.tar.gz
+            use-cross: false
+          
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive-name: rustycommit-linux-x86_64-musl.tar.gz
+            use-cross: true
+          
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            archive-name: rustycommit-linux-aarch64.tar.gz
+            use-cross: true
+          
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            archive-name: rustycommit-linux-armv7.tar.gz
+            use-cross: true
+          
+          # macOS builds
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive-name: rustycommit-macos-x86_64.tar.gz
+            use-cross: false
+          
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive-name: rustycommit-macos-aarch64.tar.gz
+            use-cross: false
+          
+          # Windows builds
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive-name: rustycommit-windows-x86_64.zip
+            use-cross: false
+          
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            archive-name: rustycommit-windows-i686.zip
+            use-cross: false
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Install cross
+        if: matrix.use-cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      
+      - name: Build with cross
+        if: matrix.use-cross
+        run: cross build --release --target ${{ matrix.target }}
+      
+      - name: Build with cargo
+        if: ${{ !matrix.use-cross }}
+        run: cargo build --release --target ${{ matrix.target }}
+      
+      - name: Create archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p archive
+          cp target/${{ matrix.target }}/release/rco archive/ 2>/dev/null || true
+          cd archive
+          tar czf ../${{ matrix.archive-name }} .
+      
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path archive
+          Copy-Item "target\${{ matrix.target }}\release\rco.exe" -Destination "archive\"
+          Compress-Archive -Path "archive\*" -DestinationPath "${{ matrix.archive-name }}"
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.archive-name }}
+          asset_name: ${{ matrix.archive-name }}
+          asset_content_type: application/octet-stream
+  
+  publish-crates:
+    name: Publish to crates.io
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true

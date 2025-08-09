@@ -117,8 +117,7 @@ impl OAuthClient {
             ("code_challenge_method", &"S256".to_string()),
         ];
 
-        let query =
-            serde_urlencoded::to_string(params).context("Failed to encode OAuth params")?;
+        let query = serde_urlencoded::to_string(params).context("Failed to encode OAuth params")?;
         let auth_url = format!("{AUTHORIZE_URL}?{query}");
 
         Ok((auth_url, verifier))
@@ -298,7 +297,7 @@ impl OAuthClient {
 // Generate random bytes for PKCE
 fn generate_random_bytes(dest: &mut [u8]) -> Result<()> {
     use rand::RngCore;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     rng.fill_bytes(dest);
     Ok(())
 }

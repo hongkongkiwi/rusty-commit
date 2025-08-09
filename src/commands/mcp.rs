@@ -4,7 +4,7 @@ use rmcp::{
     handler::server::ServerHandler,
     model::*,
     service::{RequestContext, RoleServer},
-    Error as McpError, ServiceExt,
+    ErrorData as McpError, ServiceExt,
 };
 use std::future::Future;
 use tokio::io::{stdin, stdout};
@@ -106,6 +106,7 @@ impl ServerHandler for RustyCommitMcpServer {
                             "required": []
                         }).as_object().unwrap().clone()
                     ),
+                    output_schema: None,
                     annotations: None,
                 },
                 Tool {
@@ -128,6 +129,7 @@ impl ServerHandler for RustyCommitMcpServer {
                             "required": []
                         }).as_object().unwrap().clone()
                     ),
+                    output_schema: None,
                     annotations: None,
                 },
             ];

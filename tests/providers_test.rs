@@ -1,5 +1,5 @@
-use rustycommit::config::Config;
-use rustycommit::providers::{build_prompt, create_provider};
+use rusty_commit::config::Config;
+use rusty_commit::providers::{build_prompt, create_provider};
 
 #[test]
 fn test_build_prompt_conventional() {

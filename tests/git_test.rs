@@ -1,4 +1,4 @@
-use rustycommit::git;
+use rusty_commit::git;
 use std::fs;
 use std::process::Command;
 use tempfile::tempdir;

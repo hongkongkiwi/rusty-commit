@@ -1,4 +1,4 @@
-use rustycommit::auth::oauth::OAuthClient;
+use rusty_commit::auth::oauth::OAuthClient;
 use tempfile::tempdir;
 
 #[test]
@@ -71,7 +71,7 @@ fn test_oauth_environment_setup() {
 #[test]
 fn test_oauth_constants() {
     // Test that OAuth constants are reasonable
-    use rustycommit::auth::oauth::{AUTHORIZE_URL, CLIENT_ID, REDIRECT_URI};
+    use rusty_commit::auth::oauth::{AUTHORIZE_URL, CLIENT_ID, REDIRECT_URI};
 
     // Client ID should be a valid UUID format
     assert_eq!(CLIENT_ID.len(), 36); // UUID length
@@ -172,7 +172,7 @@ fn test_oauth_error_handling() {
 
 #[test]
 fn test_token_expiry_calculation() {
-    use rustycommit::auth::oauth::OAuthClient;
+    use rusty_commit::auth::oauth::OAuthClient;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let now = SystemTime::now()

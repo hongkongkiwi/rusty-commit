@@ -1,7 +1,7 @@
-use rustycommit::auth::token_storage::{
+use rusty_commit::auth::token_storage::{
     delete_tokens, get_tokens, has_valid_token, store_tokens, TokenStorage,
 };
-use rustycommit::config::Config;
+use rusty_commit::config::Config;
 use std::fs;
 use tempfile::tempdir;
 
@@ -187,7 +187,7 @@ fn test_config_with_different_providers() {
 
 #[test]
 fn test_oauth_client_creation() {
-    use rustycommit::auth::oauth::OAuthClient;
+    use rusty_commit::auth::oauth::OAuthClient;
 
     let _client = OAuthClient::new();
     // Test that the client was created successfully

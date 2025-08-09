@@ -1,4 +1,4 @@
-use rustycommit::config::Config;
+use rusty_commit::config::Config;
 use std::fs;
 use tempfile::tempdir;
 

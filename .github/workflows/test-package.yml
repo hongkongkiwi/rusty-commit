@@ -68,7 +68,7 @@ jobs:
           
           # Extract and test the package
           tar xzf $GITHUB_WORKSPACE/target/package/*.crate
-          cd rustycommit-*
+          cd rusty-commit-*
           
           # Test that it builds
           cargo build --all-features

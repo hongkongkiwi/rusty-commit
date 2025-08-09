@@ -33,7 +33,7 @@ jobs:
           echo "Current version: $VERSION"
           
           # Check if this version is already published
-          if cargo search rustycommit --limit 1 | grep -q "rustycommit = \"$VERSION\""; then
+          if cargo search rusty-commit --limit 1 | grep -q "rusty-commit = \"$VERSION\""; then
             echo "::warning::Version $VERSION is already published on crates.io"
             echo "already_published=true" >> $GITHUB_OUTPUT
           else

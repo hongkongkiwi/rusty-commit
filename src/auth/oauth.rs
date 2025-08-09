@@ -12,10 +12,13 @@ use tokio::time::sleep;
 pub const AUTHORIZE_URL: &str = "https://claude.ai/oauth/authorize";
 pub const TOKEN_URL: &str = "https://claude.ai/oauth/token";
 pub const CLIENT_ID: &str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"; // Public client ID for CLI apps
+#[allow(dead_code)]
 pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
+#[allow(dead_code)]
 pub const SCOPES: &str = "user:inference";
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 struct DeviceCodeRequest {
     client_id: String,
     scope: String,
@@ -32,6 +35,7 @@ pub struct DeviceCodeResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 struct TokenRequest {
     grant_type: String,
     device_code: String,
@@ -67,6 +71,12 @@ pub struct OAuthClient {
     redirect_uri: String,
 }
 
+impl Default for OAuthClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OAuthClient {
     pub fn new() -> Self {
         Self {
@@ -75,28 +85,28 @@ impl OAuthClient {
             redirect_uri: "http://localhost:8989/callback".to_string(),
         }
     }
-    
+
     /// Generate PKCE challenge and verifier
     fn generate_pkce() -> Result<(String, String)> {
         // Generate random verifier
         let mut bytes = [0u8; 32];
         generate_random_bytes(&mut bytes)?;
         let verifier = URL_SAFE_NO_PAD.encode(bytes);
-        
+
         // Generate challenge from verifier
         let mut hasher = Sha256::new();
         hasher.update(verifier.as_bytes());
         let challenge = URL_SAFE_NO_PAD.encode(hasher.finalize());
-        
+
         Ok((verifier, challenge))
     }
-    
+
     /// Build authorization URL with PKCE
     pub fn get_authorization_url(&self) -> Result<(String, String)> {
         let (verifier, challenge) = Self::generate_pkce()?;
-        
+
         let state = URL_SAFE_NO_PAD.encode(uuid::Uuid::new_v4().as_bytes());
-        
+
         let params = [
             ("client_id", &self.client_id),
             ("redirect_uri", &self.redirect_uri),
@@ -106,20 +116,21 @@ impl OAuthClient {
             ("code_challenge", &challenge),
             ("code_challenge_method", &"S256".to_string()),
         ];
-        
-        let query = serde_urlencoded::to_string(&params).context("Failed to encode OAuth params")?;
-        let auth_url = format!("{}?{}", AUTHORIZE_URL, query);
-        
+
+        let query =
+            serde_urlencoded::to_string(params).context("Failed to encode OAuth params")?;
+        let auth_url = format!("{AUTHORIZE_URL}?{query}");
+
         Ok((auth_url, verifier))
     }
-    
+
     /// Start local server to receive OAuth callback
     pub async fn start_callback_server(&self, verifier: String) -> Result<TokenResponse> {
         use warp::Filter;
-        
+
         let code = Arc::new(Mutex::new(None));
         let code_clone = code.clone();
-        
+
         // Create callback route
         let callback = warp::path("callback")
             .and(warp::query::<std::collections::HashMap<String, String>>())
@@ -128,7 +139,7 @@ impl OAuthClient {
                     let mut code_lock = code_clone.blocking_lock();
                     *code_lock = Some(auth_code.clone());
                 }
-                
+
                 warp::reply::html(
                     r#"
                     <!DOCTYPE html>
@@ -184,15 +195,15 @@ impl OAuthClient {
                     "#
                 )
             });
-        
+
         // Start server in background
         let server = warp::serve(callback).bind(([127, 0, 0, 1], 8989));
         let server_handle = tokio::spawn(server);
-        
+
         // Wait for code (with timeout)
         let start = SystemTime::now();
         let timeout = Duration::from_secs(300); // 5 minutes
-        
+
         loop {
             if let Some(auth_code) = &*code.lock().await {
                 // Exchange code for token
@@ -200,16 +211,16 @@ impl OAuthClient {
                 server_handle.abort();
                 return Ok(token);
             }
-            
+
             if SystemTime::now().duration_since(start)? > timeout {
                 server_handle.abort();
                 anyhow::bail!("Authentication timeout - no response received");
             }
-            
+
             sleep(Duration::from_millis(100)).await;
         }
     }
-    
+
     /// Exchange authorization code for access token
     async fn exchange_code_for_token(&self, code: &str, verifier: &str) -> Result<TokenResponse> {
         let params = [
@@ -219,25 +230,30 @@ impl OAuthClient {
             ("client_id", &self.client_id),
             ("code_verifier", verifier),
         ];
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(TOKEN_URL)
             .form(&params)
             .send()
             .await
             .context("Failed to exchange code for token")?;
-        
+
         if response.status().is_success() {
-            response.json::<TokenResponse>().await
+            response
+                .json::<TokenResponse>()
+                .await
                 .context("Failed to parse token response")
         } else {
             let error: ErrorResponse = response.json().await?;
-            anyhow::bail!("Token exchange failed: {} - {}", 
-                error.error, 
-                error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token exchange failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
-    
+
     /// Refresh an access token
     pub async fn refresh_token(&self, refresh_token: &str) -> Result<TokenResponse> {
         let request = RefreshTokenRequest {
@@ -245,25 +261,30 @@ impl OAuthClient {
             refresh_token: refresh_token.to_string(),
             client_id: self.client_id.clone(),
         };
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(TOKEN_URL)
             .json(&request)
             .send()
             .await
             .context("Failed to refresh token")?;
-        
+
         if response.status().is_success() {
-            response.json::<TokenResponse>().await
+            response
+                .json::<TokenResponse>()
+                .await
                 .context("Failed to parse refresh token response")
         } else {
             let error: ErrorResponse = response.json().await?;
-            anyhow::bail!("Token refresh failed: {} - {}", 
-                error.error, 
-                error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token refresh failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
-    
+
     /// Check if a token is expired
     pub fn is_token_expired(expires_at: u64) -> bool {
         let now = SystemTime::now()

@@ -1,3 +1,8 @@
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::bind_instead_of_map)]
+#![allow(clippy::manual_async_fn)]
+#![allow(dead_code)]
+
 mod auth;
 mod cli;
 mod commands;

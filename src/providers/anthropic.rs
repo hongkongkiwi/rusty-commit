@@ -93,7 +93,7 @@ impl AIProvider for AnthropicProvider {
             let mut req = self
                 .client
                 .post("https://api.anthropic.com/v1/messages");
-            
+
             // Check if this is an OAuth token (starts with "ey") or API key (starts with "sk-")
             if self.api_key.starts_with("ey") {
                 // OAuth token - use Authorization header
@@ -102,7 +102,7 @@ impl AIProvider for AnthropicProvider {
                 // API key - use x-api-key header
                 req = req.header("x-api-key", &self.api_key);
             }
-            
+
             let response = req
                 .header("anthropic-version", "2023-06-01")
                 .header(header::CONTENT_TYPE, "application/json")
@@ -114,7 +114,7 @@ impl AIProvider for AnthropicProvider {
             if !response.status().is_success() {
                 let status = response.status();
                 let error_text = response.text().await?;
-                
+
                 if status.as_u16() == 401 {
                     return Err(anyhow::anyhow!("Invalid Anthropic API key. Please check your API key configuration."));
                 } else if status.as_u16() == 403 {
@@ -128,7 +128,7 @@ impl AIProvider for AnthropicProvider {
                 .json()
                 .await
                 .context("Failed to parse Anthropic response")?;
-                
+
             Ok(anthropic_response)
         }).await.context("Failed to generate commit message from Anthropic after retries. Please check your internet connection and API configuration.")?;
 

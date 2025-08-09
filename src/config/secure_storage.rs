@@ -66,7 +66,7 @@ pub fn get_secret(_key: &str) -> Result<Option<String>> {
             }
         }
     }
-    
+
     #[cfg(not(feature = "secure-storage"))]
     {
         Ok(None)
@@ -90,7 +90,7 @@ pub fn delete_secret(_key: &str) -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -105,15 +105,12 @@ pub fn is_available() -> bool {
         match Entry::new(SERVICE_NAME, "test") {
             Ok(entry) => {
                 // Try to get a non-existent key - this should work if keyring is available
-                matches!(
-                    entry.get_password(),
-                    Err(keyring::Error::NoEntry) | Ok(_)
-                )
+                matches!(entry.get_password(), Err(keyring::Error::NoEntry) | Ok(_))
             }
             Err(_) => false,
         }
     }
-    
+
     #[cfg(not(feature = "secure-storage"))]
     {
         false
@@ -124,7 +121,7 @@ pub fn is_available() -> bool {
 pub fn get_platform_info() -> String {
     #[cfg(all(feature = "secure-storage", target_os = "macos"))]
     return "macOS Keychain".to_string();
-    
+
     #[cfg(all(feature = "secure-storage", target_os = "linux"))]
     {
         // Try to detect which secret service is available
@@ -136,22 +133,22 @@ pub fn get_platform_info() -> String {
             return "Linux Secret Service".to_string();
         }
     }
-    
+
     #[cfg(all(feature = "secure-storage", target_os = "windows"))]
     return "Windows Credential Manager".to_string();
-    
+
     #[cfg(all(feature = "secure-storage", target_os = "ios"))]
     return "iOS Keychain".to_string();
-    
+
     #[cfg(all(feature = "secure-storage", target_os = "freebsd"))]
     return "FreeBSD Secret Service".to_string();
-    
+
     #[cfg(all(feature = "secure-storage", target_os = "openbsd"))]
     return "OpenBSD Secret Service".to_string();
-    
+
     #[cfg(not(feature = "secure-storage"))]
     return "Not compiled with secure storage support".to_string();
-    
+
     // Fallback for unknown platforms with secure-storage enabled
     #[cfg(all(
         feature = "secure-storage",
@@ -172,10 +169,7 @@ pub fn status_message() -> String {
     #[cfg(feature = "secure-storage")]
     {
         if is_available() {
-            format!(
-                "Secure storage is available via {}",
-                get_platform_info()
-            )
+            format!("Secure storage is available via {}", get_platform_info())
         } else {
             format!(
                 "Secure storage feature is enabled but {} is not available",
@@ -183,9 +177,10 @@ pub fn status_message() -> String {
             )
         }
     }
-    
+
     #[cfg(not(feature = "secure-storage"))]
     {
-        "Secure storage is not enabled (compile with --features secure-storage to enable)".to_string()
+        "Secure storage is not enabled (compile with --features secure-storage to enable)"
+            .to_string()
     }
 }

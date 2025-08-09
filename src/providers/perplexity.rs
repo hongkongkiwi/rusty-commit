@@ -88,7 +88,8 @@ impl AIProvider for PerplexityProvider {
         let messages = vec![
             Message {
                 role: "system".to_string(),
-                content: "You are an expert at writing clear, concise git commit messages.".to_string(),
+                content: "You are an expert at writing clear, concise git commit messages."
+                    .to_string(),
             },
             Message {
                 role: "user".to_string(),
@@ -127,13 +128,19 @@ impl AIProvider for PerplexityProvider {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            
+
             match status.as_u16() {
-                401 => anyhow::bail!("Invalid Perplexity API key. Please check your API key configuration."),
-                429 => anyhow::bail!("Perplexity API rate limit exceeded. Please wait a moment and try again."),
+                401 => anyhow::bail!(
+                    "Invalid Perplexity API key. Please check your API key configuration."
+                ),
+                429 => anyhow::bail!(
+                    "Perplexity API rate limit exceeded. Please wait a moment and try again."
+                ),
                 400 => {
                     if error_text.contains("insufficient_quota") {
-                        anyhow::bail!("Perplexity API quota exceeded. Please check your billing status.");
+                        anyhow::bail!(
+                            "Perplexity API quota exceeded. Please check your billing status."
+                        );
                     }
                     anyhow::bail!("Bad request to Perplexity API: {}", error_text);
                 }

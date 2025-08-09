@@ -1,12 +1,11 @@
 use anyhow::Result;
-use backoff::{ExponentialBackoff, ExponentialBackoffBuilder};
-use backoff::tokio::retry;
+use backoff::{future::retry, ExponentialBackoff, ExponentialBackoffBuilder};
 use std::time::Duration;
 
 /// Determines if an error is retryable
 pub fn is_retryable_error(error: &anyhow::Error) -> bool {
     let error_msg = error.to_string().to_lowercase();
-    
+
     // Retryable errors: network issues, timeouts, rate limits, server errors
     error_msg.contains("429") ||  // Rate limit
     error_msg.contains("rate_limit") ||
@@ -25,7 +24,7 @@ pub fn is_retryable_error(error: &anyhow::Error) -> bool {
 /// Determines if an error is permanent (should not retry)
 pub fn is_permanent_error(error: &anyhow::Error) -> bool {
     let error_msg = error.to_string().to_lowercase();
-    
+
     // Permanent errors: auth issues, invalid requests, quota exceeded
     error_msg.contains("401") ||  // Unauthorized
     error_msg.contains("403") ||  // Forbidden
@@ -34,7 +33,7 @@ pub fn is_permanent_error(error: &anyhow::Error) -> bool {
     error_msg.contains("quota exceeded") ||
     error_msg.contains("invalid request") ||
     error_msg.contains("model not found") ||
-    error_msg.contains("400")     // Bad request
+    error_msg.contains("400") // Bad request
 }
 
 /// Create a backoff policy for API retries
@@ -54,7 +53,7 @@ where
     Fut: std::future::Future<Output = Result<T>>,
 {
     let backoff = create_backoff();
-    
+
     retry(backoff, || async {
         match operation().await {
             Ok(result) => Ok(result),
@@ -71,7 +70,8 @@ where
                 }
             }
         }
-    }).await
+    })
+    .await
 }
 
 #[cfg(test)]
@@ -86,7 +86,7 @@ mod tests {
         assert!(is_retryable_error(&anyhow!("Connection timeout")));
         assert!(is_retryable_error(&anyhow!("Network error")));
         assert!(is_retryable_error(&anyhow!("Model overloaded")));
-        
+
         assert!(!is_retryable_error(&anyhow!("401 Unauthorized")));
         assert!(!is_retryable_error(&anyhow!("Invalid API key")));
     }
@@ -97,7 +97,7 @@ mod tests {
         assert!(is_permanent_error(&anyhow!("Invalid API key")));
         assert!(is_permanent_error(&anyhow!("Insufficient quota")));
         assert!(is_permanent_error(&anyhow!("400 Bad request")));
-        
+
         assert!(!is_permanent_error(&anyhow!("429 Rate limit")));
         assert!(!is_permanent_error(&anyhow!("500 Server error")));
     }
@@ -105,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_success() {
         let mut attempts = 0;
-        
+
         let result = retry_async(|| async {
             attempts += 1;
             if attempts < 3 {
@@ -113,8 +113,9 @@ mod tests {
             } else {
                 Ok("success".to_string())
             }
-        }).await;
-        
+        })
+        .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
         assert_eq!(attempts, 3);
@@ -123,12 +124,13 @@ mod tests {
     #[tokio::test]
     async fn test_retry_permanent_error() {
         let mut attempts = 0;
-        
+
         let result = retry_async(|| async {
             attempts += 1;
             Err(anyhow!("401 Unauthorized"))
-        }).await;
-        
+        })
+        .await;
+
         assert!(result.is_err());
         assert_eq!(attempts, 1); // Should not retry permanent errors
     }

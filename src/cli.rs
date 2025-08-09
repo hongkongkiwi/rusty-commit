@@ -45,7 +45,7 @@ pub enum Commands {
     /// Generate commitlint configuration
     #[command(name = "commitlint")]
     CommitLint(CommitLintCommand),
-    
+
     /// Authenticate with Claude using OAuth
     Auth(AuthCommand),
 

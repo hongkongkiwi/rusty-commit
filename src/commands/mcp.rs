@@ -1,8 +1,8 @@
 use anyhow::Result;
 use colored::Colorize;
 use rmcp::{
-    model::*,
     handler::server::ServerHandler,
+    model::*,
     service::{RequestContext, RoleServer},
     Error as McpError, ServiceExt,
 };
@@ -21,26 +21,32 @@ pub async fn execute(cmd: McpCommand) -> Result<()> {
             println!("💡 For Cursor integration, use: rco mcp stdio");
             Ok(())
         }
-        crate::cli::McpAction::Stdio => {
-            start_stdio_server().await
-        }
+        crate::cli::McpAction::Stdio => start_stdio_server().await,
     }
 }
 
 /// Start MCP server over stdio using RMCP SDK
 async fn start_stdio_server() -> Result<()> {
-    eprintln!("{}", "🚀 Starting Rusty Commit MCP Server over STDIO".green().bold());
-    eprintln!("{}", "📡 Ready for MCP client connections (Cursor, Claude Desktop, etc.)".cyan());
+    eprintln!(
+        "{}",
+        "🚀 Starting Rusty Commit MCP Server over STDIO"
+            .green()
+            .bold()
+    );
+    eprintln!(
+        "{}",
+        "📡 Ready for MCP client connections (Cursor, Claude Desktop, etc.)".cyan()
+    );
 
     let server = RustyCommitMcpServer::new();
     let transport = (stdin(), stdout());
-    
+
     // Start the server
     let service = server.serve(transport).await?;
-    
+
     // Wait for completion
     service.waiting().await?;
-    
+
     Ok(())
 }
 
@@ -126,7 +132,7 @@ impl ServerHandler for RustyCommitMcpServer {
                 },
             ];
 
-            Ok(ListToolsResult { 
+            Ok(ListToolsResult {
                 tools,
                 next_cursor: None,
             })
@@ -140,39 +146,37 @@ impl ServerHandler for RustyCommitMcpServer {
     ) -> impl Future<Output = Result<CallToolResult, McpError>> + Send + '_ {
         async move {
             match request.name.as_ref() {
-                "generate_commit_message" => {
-                    generate_commit_message_mcp(&request.arguments).await
-                }
-                "show_commit_prompt" => {
-                    show_commit_prompt_mcp(&request.arguments).await
-                }
-                _ => {
-                    Ok(CallToolResult::error(vec![Content::text(format!(
-                        "Unknown tool: {}",
-                        request.name
-                    ))]))
-                }
+                "generate_commit_message" => generate_commit_message_mcp(&request.arguments).await,
+                "show_commit_prompt" => show_commit_prompt_mcp(&request.arguments).await,
+                _ => Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Unknown tool: {}",
+                    request.name
+                ))])),
             }
         }
     }
 }
 
 /// Generate commit message via MCP
-async fn generate_commit_message_mcp(arguments: &Option<serde_json::Map<String, serde_json::Value>>) -> Result<CallToolResult, McpError> {
+async fn generate_commit_message_mcp(
+    arguments: &Option<serde_json::Map<String, serde_json::Value>>,
+) -> Result<CallToolResult, McpError> {
     // Ensure we're in a git repository
     if let Err(e) = git::assert_git_repo() {
-        return Ok(CallToolResult::error(
-            vec![Content::text(format!("❌ Error: Not a git repository: {}", e))]
-        ));
+        return Ok(CallToolResult::error(vec![Content::text(format!(
+            "❌ Error: Not a git repository: {}",
+            e
+        ))]));
     }
 
     // Load configuration
     let mut config = match Config::load() {
         Ok(c) => c,
         Err(e) => {
-            return Ok(CallToolResult::error(
-                vec![Content::text(format!("❌ Configuration error: {}", e))]
-            ));
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "❌ Configuration error: {}",
+                e
+            ))]));
         }
     };
 
@@ -184,23 +188,27 @@ async fn generate_commit_message_mcp(arguments: &Option<serde_json::Map<String, 
     let diff = match git::get_staged_diff() {
         Ok(d) => d,
         Err(e) => {
-            return Ok(CallToolResult::error(
-                vec![Content::text(format!("❌ Git error: {}", e))]
-            ));
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "❌ Git error: {}",
+                e
+            ))]));
         }
     };
 
     if diff.is_empty() {
         return Ok(CallToolResult::success(vec![Content::text(
-            "⚠️  No staged changes found. Please stage your changes with 'git add' first."
+            "⚠️  No staged changes found. Please stage your changes with 'git add' first.",
         )]));
     }
 
     // Extract arguments
-    let args = arguments.as_ref().map(|map| serde_json::Value::Object(map.clone())).unwrap_or(serde_json::json!({}));
+    let args = arguments
+        .as_ref()
+        .map(|map| serde_json::Value::Object(map.clone()))
+        .unwrap_or(serde_json::json!({}));
     let context = args["context"].as_str();
     let full_gitmoji = args["full_gitmoji"].as_bool().unwrap_or(false);
-    
+
     // Override commit type if specified
     if let Some(commit_type) = args["commit_type"].as_str() {
         config.commit_type = Some(commit_type.to_string());
@@ -211,39 +219,42 @@ async fn generate_commit_message_mcp(arguments: &Option<serde_json::Map<String, 
         Ok(message) => {
             let provider_name = config.ai_provider.as_deref().unwrap_or("openai");
             let model_name = config.model.as_deref().unwrap_or("default");
-            
+
             Ok(CallToolResult::success(vec![Content::text(format!(
-                "🤖 **Generated Commit Message:**\n\n```\n{}\n```\n\n**Details:**\n- Provider: {}\n- Model: {}\n- Generated by: Rusty Commit v{}\n\n💡 You can now copy this message and use it in your commit.", 
-                message, 
+                "🤖 **Generated Commit Message:**\n\n```\n{}\n```\n\n**Details:**\n- Provider: {}\n- Model: {}\n- Generated by: Rusty Commit v{}\n\n💡 You can now copy this message and use it in your commit.",
+                message,
                 provider_name,
                 model_name,
                 env!("CARGO_PKG_VERSION")
             ))]))
         }
-        Err(e) => {
-            Ok(CallToolResult::error(
-                vec![Content::text(format!("❌ Failed to generate commit message: {}", e))]
-            ))
-        }
+        Err(e) => Ok(CallToolResult::error(vec![Content::text(format!(
+            "❌ Failed to generate commit message: {}",
+            e
+        ))])),
     }
 }
 
 /// Show commit prompt via MCP
-async fn show_commit_prompt_mcp(arguments: &Option<serde_json::Map<String, serde_json::Value>>) -> Result<CallToolResult, McpError> {
+async fn show_commit_prompt_mcp(
+    arguments: &Option<serde_json::Map<String, serde_json::Value>>,
+) -> Result<CallToolResult, McpError> {
     // Ensure we're in a git repository
     if let Err(e) = git::assert_git_repo() {
-        return Ok(CallToolResult::error(
-            vec![Content::text(format!("❌ Error: Not a git repository: {}", e))]
-        ));
+        return Ok(CallToolResult::error(vec![Content::text(format!(
+            "❌ Error: Not a git repository: {}",
+            e
+        ))]));
     }
 
     // Load configuration
     let mut config = match Config::load() {
         Ok(c) => c,
         Err(e) => {
-            return Ok(CallToolResult::error(
-                vec![Content::text(format!("❌ Configuration error: {}", e))]
-            ));
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "❌ Configuration error: {}",
+                e
+            ))]));
         }
     };
 
@@ -255,20 +266,24 @@ async fn show_commit_prompt_mcp(arguments: &Option<serde_json::Map<String, serde
     let diff = match git::get_staged_diff() {
         Ok(d) => d,
         Err(e) => {
-            return Ok(CallToolResult::error(
-                vec![Content::text(format!("❌ Git error: {}", e))]
-            ));
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "❌ Git error: {}",
+                e
+            ))]));
         }
     };
 
     if diff.is_empty() {
         return Ok(CallToolResult::success(vec![Content::text(
-            "⚠️  No staged changes found. Please stage your changes with 'git add' first."
+            "⚠️  No staged changes found. Please stage your changes with 'git add' first.",
         )]));
     }
 
     // Extract arguments
-    let args = arguments.as_ref().map(|map| serde_json::Value::Object(map.clone())).unwrap_or(serde_json::json!({}));
+    let args = arguments
+        .as_ref()
+        .map(|map| serde_json::Value::Object(map.clone()))
+        .unwrap_or(serde_json::json!({}));
     let context = args["context"].as_str();
     let full_gitmoji = args["full_gitmoji"].as_bool().unwrap_or(false);
 
@@ -278,8 +293,8 @@ async fn show_commit_prompt_mcp(arguments: &Option<serde_json::Map<String, serde
     let model_name = config.model.as_deref().unwrap_or("default");
 
     Ok(CallToolResult::success(vec![Content::text(format!(
-        "🔍 **AI Prompt Preview:**\n\n```\n{}\n```\n\n**Configuration:**\n- Provider: {}\n- Model: {}\n- Generated by: Rusty Commit v{}\n\n💡 This is the exact prompt that would be sent to the AI model.", 
-        prompt, 
+        "🔍 **AI Prompt Preview:**\n\n```\n{}\n```\n\n**Configuration:**\n- Provider: {}\n- Model: {}\n- Generated by: Rusty Commit v{}\n\n💡 This is the exact prompt that would be sent to the AI model.",
+        prompt,
         provider_name,
         model_name,
         env!("CARGO_PKG_VERSION")

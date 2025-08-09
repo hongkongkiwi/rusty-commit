@@ -8,7 +8,9 @@ fn test_cli_help() {
     cmd.arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Rusty Commit - AI-powered commit message generator"));
+        .stdout(predicate::str::contains(
+            "Rusty Commit - AI-powered commit message generator",
+        ));
 }
 
 #[test]
@@ -27,7 +29,9 @@ fn test_config_command_help() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Manage Rusty Commit configuration"));
+        .stdout(predicate::str::contains(
+            "Manage Rusty Commit configuration",
+        ));
 }
 
 #[test]

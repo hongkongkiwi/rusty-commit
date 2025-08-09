@@ -5,8 +5,8 @@ pub mod secure_storage;
 use anyhow::{Context, Result};
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::env;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -41,13 +41,13 @@ pub struct Config {
 
     // GitHub Actions
     pub action_enabled: Option<bool>,
-    
+
     // Testing
     pub test_mock_type: Option<String>,
-    
+
     // Hooks
     pub hook_auto_uncomment: Option<bool>,
-    
+
     // Global commitlint configuration
     pub commitlint_config: Option<String>,
     pub custom_prompt: Option<String>,
@@ -85,7 +85,6 @@ impl Default for Config {
 }
 
 impl Config {
-    
     /// Get the new global config path
     pub fn global_config_path() -> Result<PathBuf> {
         let home = home_dir().context("Could not find home directory")?;
@@ -98,17 +97,16 @@ impl Config {
         format::ConfigLocations::load_merged()
     }
 
-
     pub fn save(&self) -> Result<()> {
         // Save to global config by default
         self.save_to(format::ConfigLocation::Global)
     }
-    
+
     /// Save configuration to a specific location
     pub fn save_to(&self, location: format::ConfigLocation) -> Result<()> {
         // Create a copy for saving (without sensitive data)
         let mut save_config = self.clone();
-        
+
         // If we have an API key and secure storage is available, store it securely
         if let Some(ref api_key) = self.api_key {
             if secure_storage::is_available() {
@@ -122,14 +120,14 @@ impl Config {
                 }
             }
         }
-        
+
         format::ConfigLocations::save(&save_config, location)
     }
 
     /// Helper function to get environment variable with RCO_ prefix
     fn get_env_var(base_name: &str) -> Option<String> {
         let rco_key = format!("RCO_{}", base_name);
-        
+
         // Check RCO_ prefix
         env::var(&rco_key).ok()
     }
@@ -236,7 +234,11 @@ impl Config {
                 self.test_mock_type = Some(value.to_string());
             }
             "RCO_HOOK_AUTO_UNCOMMENT" => {
-                self.hook_auto_uncomment = Some(value.parse().context("Invalid boolean for HOOK_AUTO_UNCOMMENT")?);
+                self.hook_auto_uncomment = Some(
+                    value
+                        .parse()
+                        .context("Invalid boolean for HOOK_AUTO_UNCOMMENT")?,
+                );
             }
             "RCO_COMMITLINT_CONFIG" => {
                 self.commitlint_config = Some(value.to_string());
@@ -260,7 +262,9 @@ impl Config {
         let value = match key {
             "RCO_API_KEY" => {
                 // Try to get from memory first, then from secure storage
-                self.api_key.as_ref().map(|s| s.to_string())
+                self.api_key
+                    .as_ref()
+                    .map(|s| s.to_string())
                     .or_else(|| secure_storage::get_secret("RCO_API_KEY").ok().flatten())
             }
             "RCO_API_URL" => self.api_url.as_ref().map(|s| s.to_string()),
@@ -302,12 +306,8 @@ impl Config {
                     "RCO_API_URL" => self.api_url = default.api_url.clone(),
                     "RCO_AI_PROVIDER" => self.ai_provider = default.ai_provider.clone(),
                     "RCO_MODEL" => self.model = default.model.clone(),
-                    "RCO_TOKENS_MAX_INPUT" => {
-                        self.tokens_max_input = default.tokens_max_input
-                    }
-                    "RCO_TOKENS_MAX_OUTPUT" => {
-                        self.tokens_max_output = default.tokens_max_output
-                    }
+                    "RCO_TOKENS_MAX_INPUT" => self.tokens_max_input = default.tokens_max_input,
+                    "RCO_TOKENS_MAX_OUTPUT" => self.tokens_max_output = default.tokens_max_output,
                     "RCO_COMMIT_TYPE" => self.commit_type = default.commit_type.clone(),
                     "RCO_EMOJI" => self.emoji = default.emoji,
                     "RCO_DESCRIPTION_CAPITALIZE" => {
@@ -348,7 +348,7 @@ impl Config {
         // If no explicit config path, check default locations
         if self.commitlint_config.is_none() {
             let home = home_dir().context("Could not find home directory")?;
-            
+
             // Check for global commitlint configs in priority order
             let possible_paths = [
                 home.join(".commitlintrc.js"),
@@ -379,7 +379,7 @@ impl Config {
                 if self.commit_type.is_none() {
                     self.commit_type = Some("conventional".to_string());
                 }
-                
+
                 // In a full implementation, we would parse the commitlint config
                 // and extract rules, but for now we'll use conventional commits
                 println!("📋 Found commitlint config at: {}", config_path);
@@ -390,7 +390,12 @@ impl Config {
     }
 
     /// Get the effective prompt (custom or generated)
-    pub fn get_effective_prompt(&self, diff: &str, context: Option<&str>, full_gitmoji: bool) -> String {
+    pub fn get_effective_prompt(
+        &self,
+        diff: &str,
+        context: Option<&str>,
+        full_gitmoji: bool,
+    ) -> String {
         if let Some(ref custom_prompt) = self.custom_prompt {
             // Replace placeholders in custom prompt
             let mut prompt = custom_prompt.clone();
@@ -452,7 +457,7 @@ impl Config {
                 }
             };
         }
-        
+
         macro_rules! load_env_var_parse {
             ($field:ident, $base_name:expr, $type:ty) => {
                 if let Some(value) = Self::get_env_var($base_name) {

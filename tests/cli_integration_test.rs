@@ -1,8 +1,8 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use tempfile::tempdir;
 use std::fs;
 use std::process::Command as StdCommand;
+use tempfile::tempdir;
 
 fn init_test_git_repo(dir: &std::path::Path) {
     // Initialize git repo
@@ -33,7 +33,9 @@ fn test_auth_command_help() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Authenticate with Claude using OAuth"));
+        .stdout(predicate::str::contains(
+            "Authenticate with Claude using OAuth",
+        ));
 }
 
 #[test]
@@ -93,7 +95,10 @@ fn test_config_commands_comprehensive() {
             .arg(format!("{}={}", key, value))
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("{} set to: {}", key, value)));
+            .stdout(predicate::str::contains(format!(
+                "{} set to: {}",
+                key, value
+            )));
 
         // Get config
         let mut cmd = Command::cargo_bin("rco").unwrap();
@@ -140,7 +145,10 @@ fn test_config_model_settings() {
             .arg(format!("OCO_MODEL={}", model))
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("OCO_MODEL set to: {}", model)));
+            .stdout(predicate::str::contains(format!(
+                "OCO_MODEL set to: {}",
+                model
+            )));
 
         // Verify model was set
         let mut cmd = Command::cargo_bin("rco").unwrap();
@@ -176,7 +184,10 @@ fn test_config_boolean_values() {
             .arg(format!("{}={}", key, value))
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("{} set to: {}", key, value)));
+            .stdout(predicate::str::contains(format!(
+                "{} set to: {}",
+                key, value
+            )));
     }
 }
 
@@ -199,7 +210,10 @@ fn test_config_numeric_values() {
             .arg(format!("{}={}", key, value))
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("{} set to: {}", key, value)));
+            .stdout(predicate::str::contains(format!(
+                "{} set to: {}",
+                key, value
+            )));
     }
 }
 
@@ -241,7 +255,10 @@ fn test_config_api_urls() {
             .arg(format!("OCO_API_URL={}", url))
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("OCO_API_URL set to: {}", url)));
+            .stdout(predicate::str::contains(format!(
+                "OCO_API_URL set to: {}",
+                url
+            )));
     }
 }
 
@@ -345,7 +362,9 @@ fn test_config_reset() {
         .arg("--all")
         .assert()
         .success()
-        .stdout(predicate::str::contains("All configuration reset to defaults"));
+        .stdout(predicate::str::contains(
+            "All configuration reset to defaults",
+        ));
 }
 
 #[test]
@@ -387,7 +406,7 @@ fn test_hook_commands() {
         .success()
         .stdout(predicate::str::contains("Setup git hooks"));
 
-    // Note: We can't easily test actual hook installation without 
+    // Note: We can't easily test actual hook installation without
     // risking modifying the test system's git hooks
 }
 
@@ -403,7 +422,9 @@ fn test_commitlint_commands() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Generate commitlint configuration"));
+        .stdout(predicate::str::contains(
+            "Generate commitlint configuration",
+        ));
 }
 
 #[test]
@@ -479,7 +500,10 @@ fn test_multiple_provider_configurations() {
             .arg("OCO_AI_PROVIDER")
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("OCO_AI_PROVIDER: {}", provider)));
+            .stdout(predicate::str::contains(format!(
+                "OCO_AI_PROVIDER: {}",
+                provider
+            )));
 
         let mut cmd = Command::cargo_bin("rco").unwrap();
         cmd.env("HOME", home)

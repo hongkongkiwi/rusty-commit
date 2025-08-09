@@ -16,7 +16,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // Get the current configuration
     let mut config = Config::load()?;
-    
+
     // Load and apply commitlint configuration
     config.load_with_commitlint()?;
     config.apply_commitlint_rules()?;
@@ -70,7 +70,8 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // If --show-prompt flag is set, just show the prompt and exit
     if options.show_prompt {
-        let prompt = config.get_effective_prompt(&diff, options.context.as_deref(), options.full_gitmoji);
+        let prompt =
+            config.get_effective_prompt(&diff, options.context.as_deref(), options.full_gitmoji);
         println!("\n{}", "Prompt that would be sent to AI:".green().bold());
         println!("{}", "═".repeat(60).dimmed());
         println!("{}", prompt);

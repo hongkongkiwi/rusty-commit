@@ -79,7 +79,7 @@ OCO_API_CUSTOM_HEADERS=undefined
 fn test_set_and_get_config_values() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
-    
+
     let mut config = Config::default();
 
     // Test setting various types
@@ -104,7 +104,7 @@ fn test_set_and_get_config_values() {
 fn test_reset_config() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
-    
+
     let mut config = Config::default();
 
     // Modify some values
@@ -129,7 +129,7 @@ fn test_reset_config() {
 fn test_legacy_prompt_module_mapping() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
-    
+
     let mut config = Config::default();
 
     // Test mapping of legacy prompt module
@@ -146,7 +146,7 @@ fn test_legacy_prompt_module_mapping() {
 fn test_ignore_undefined_values() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
-    
+
     let mut config = Config::default();
     let original_value = config.api_url.clone();
 

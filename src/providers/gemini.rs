@@ -63,11 +63,7 @@ impl GeminiProvider {
             .clone();
 
         let client = Client::new();
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("gemini-pro")
-            .to_string();
+        let model = config.model.as_deref().unwrap_or("gemini-pro").to_string();
 
         Ok(Self {
             client,

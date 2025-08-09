@@ -90,9 +90,11 @@ impl AIProvider for OllamaProvider {
                 .json()
                 .await
                 .context("Failed to parse Ollama response")?;
-                
+
             Ok(ollama_response)
-        }).await.context("Failed to generate commit message from Ollama after retries")?;
+        })
+        .await
+        .context("Failed to generate commit message from Ollama after retries")?;
 
         Ok(ollama_response.response.trim().to_string())
     }

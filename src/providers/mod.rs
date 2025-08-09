@@ -31,8 +31,8 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
         "azure" | "azure-openai" => Ok(Box::new(azure::AzureProvider::new(config)?)),
         "perplexity" => Ok(Box::new(perplexity::PerplexityProvider::new(config)?)),
         // OpenAI-compatible providers
-        "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | 
-        "huggingface" | "mistral" | "github-models" | "amazon-bedrock" => {
+        "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | "huggingface"
+        | "mistral" | "github-models" | "amazon-bedrock" => {
             Ok(Box::new(openai::OpenAIProvider::new(config)?))
         }
         _ => anyhow::bail!("Unsupported AI provider: {}", provider),

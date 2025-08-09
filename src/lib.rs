@@ -1,3 +1,7 @@
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::bind_instead_of_map)]
+#![allow(clippy::manual_async_fn)]
+
 //! Rusty Commit - AI-powered commit message generator written in Rust
 //!
 //! This library provides the core functionality for generating commit messages

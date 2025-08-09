@@ -189,7 +189,7 @@ fn test_config_with_different_providers() {
 fn test_oauth_client_creation() {
     use rustycommit::auth::oauth::OAuthClient;
 
-    let client = OAuthClient::new();
+    let _client = OAuthClient::new();
     // Test that the client was created successfully
     // Since OAuthClient fields are private, we can only test creation doesn't panic
     assert!(true); // OAuth client created successfully

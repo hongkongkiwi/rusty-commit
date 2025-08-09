@@ -3,7 +3,7 @@ use tempfile::tempdir;
 
 #[test]
 fn test_oauth_client_creation() {
-    let client = OAuthClient::new();
+    let _client = OAuthClient::new();
     // Test that OAuth client can be created without panic
     // Since fields are private, we mainly test that construction works
     assert!(true);

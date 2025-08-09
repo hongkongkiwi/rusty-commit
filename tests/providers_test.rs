@@ -1,6 +1,5 @@
 use rustycommit::config::Config;
-// Note: These provider functions need to be implemented or tests updated
-// use rustycommit::providers::{build_prompt, create_provider};
+use rustycommit::providers::{build_prompt, create_provider};
 
 #[test]
 fn test_build_prompt_conventional() {

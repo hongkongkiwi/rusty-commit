@@ -28,8 +28,8 @@ pub fn is_permanent_error(error: &anyhow::Error) -> bool {
     // Permanent errors: auth issues, invalid requests, quota exceeded
     error_msg.contains("401") ||  // Unauthorized
     error_msg.contains("403") ||  // Forbidden
-    error_msg.contains("invalid_api_key") ||
-    error_msg.contains("insufficient_quota") ||
+    error_msg.contains("invalid api key") ||
+    error_msg.contains("insufficient quota") ||
     error_msg.contains("quota exceeded") ||
     error_msg.contains("invalid request") ||
     error_msg.contains("model not found") ||
@@ -49,8 +49,8 @@ pub fn create_backoff() -> ExponentialBackoff {
 /// Retry an async operation with exponential backoff
 pub async fn retry_async<F, Fut, T>(operation: F) -> Result<T>
 where
-    F: Fn() -> Fut,
-    Fut: std::future::Future<Output = Result<T>>,
+    F: Fn() -> Fut + Send + Sync,
+    Fut: std::future::Future<Output = Result<T>> + Send,
 {
     let backoff = create_backoff();
 
@@ -104,34 +104,46 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_success() {
-        let mut attempts = 0;
+        use std::sync::{Arc, Mutex};
+        
+        let attempts = Arc::new(Mutex::new(0));
 
-        let result = retry_async(|| async {
-            attempts += 1;
-            if attempts < 3 {
-                Err(anyhow!("429 Rate limit"))
-            } else {
-                Ok("success".to_string())
+        let result = retry_async(|| {
+            let attempts = attempts.clone();
+            async move {
+                let mut attempts_lock = attempts.lock().unwrap();
+                *attempts_lock += 1;
+                if *attempts_lock < 3 {
+                    Err(anyhow!("429 Rate limit"))
+                } else {
+                    Ok("success".to_string())
+                }
             }
         })
         .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
-        assert_eq!(attempts, 3);
+        assert_eq!(*attempts.lock().unwrap(), 3);
     }
 
     #[tokio::test]
     async fn test_retry_permanent_error() {
-        let mut attempts = 0;
+        use std::sync::{Arc, Mutex};
+        
+        let attempts = Arc::new(Mutex::new(0));
 
-        let result = retry_async(|| async {
-            attempts += 1;
-            Err(anyhow!("401 Unauthorized"))
+        let result: Result<String, _> = retry_async(|| {
+            let attempts = attempts.clone();
+            async move {
+                let mut attempts_lock = attempts.lock().unwrap();
+                *attempts_lock += 1;
+                Err(anyhow!("401 Unauthorized"))
+            }
         })
         .await;
 
         assert!(result.is_err());
-        assert_eq!(attempts, 1); // Should not retry permanent errors
+        assert_eq!(*attempts.lock().unwrap(), 1); // Should not retry permanent errors
     }
 }

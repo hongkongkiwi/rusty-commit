@@ -105,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_success() {
         use std::sync::{Arc, Mutex};
-        
+
         let attempts = Arc::new(Mutex::new(0));
 
         let result = retry_async(|| {
@@ -130,7 +130,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_permanent_error() {
         use std::sync::{Arc, Mutex};
-        
+
         let attempts = Arc::new(Mutex::new(0));
 
         let result: Result<String, _> = retry_async(|| {

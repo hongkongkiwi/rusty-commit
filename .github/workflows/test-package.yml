@@ -1,0 +1,103 @@
+name: Test Package
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - '.github/workflows/test-package.yml'
+  workflow_dispatch:
+
+jobs:
+  test-package:
+    name: Test crates.io Package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, beta]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Verify package metadata
+        run: |
+          cargo package --list
+          cargo package --allow-dirty
+      
+      - name: Check package size
+        run: |
+          # Build the package
+          cargo package --allow-dirty
+          
+          # Check size (warn if over 10MB)
+          PACKAGE_SIZE=$(ls -l target/package/*.crate | awk '{print $5}')
+          PACKAGE_SIZE_MB=$((PACKAGE_SIZE / 1024 / 1024))
+          
+          echo "Package size: ${PACKAGE_SIZE_MB}MB"
+          
+          if [ $PACKAGE_SIZE_MB -gt 10 ]; then
+            echo "Warning: Package is larger than 10MB (${PACKAGE_SIZE_MB}MB)"
+            echo "Consider excluding unnecessary files in Cargo.toml"
+          fi
+        shell: bash
+      
+      - name: Test package build
+        run: |
+          # Create a temporary directory
+          TEMP_DIR=$(mktemp -d)
+          cd $TEMP_DIR
+          
+          # Extract and test the package
+          tar xzf $GITHUB_WORKSPACE/target/package/*.crate
+          cd rustycommit-*
+          
+          # Test that it builds
+          cargo build --all-features
+          cargo test --all-features
+        shell: bash
+      
+      - name: Verify binary works
+        run: |
+          cargo build --release
+          ./target/release/rco --version
+          ./target/release/rco --help
+        shell: bash
+      
+      - name: Check documentation
+        run: |
+          cargo doc --no-deps --all-features
+          cargo test --doc
+      
+      - name: Lint package
+        if: matrix.rust == 'stable'
+        run: |
+          # Check for common issues
+          cargo clippy -- -D warnings
+          
+          # Check for missing documentation
+          cargo rustdoc --all-features -- -D missing-docs || true
+      
+      - name: Security audit
+        if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
+        run: |
+          cargo install cargo-audit || true
+          cargo audit || true

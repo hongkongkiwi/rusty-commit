@@ -58,9 +58,9 @@ jobs:
       
       - name: Publish to crates.io
         run: |
-          cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+          cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
 
   create-release:
     name: Create GitHub Release

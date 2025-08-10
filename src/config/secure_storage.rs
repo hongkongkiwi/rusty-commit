@@ -10,7 +10,9 @@
 //! - **iOS**: Uses iOS Keychain Services
 //! - **FreeBSD/OpenBSD**: Uses Secret Service if available
 
-use anyhow::{anyhow, Result};
+#[cfg(feature = "secure-storage")]
+use anyhow::anyhow;
+use anyhow::Result;
 
 #[cfg(feature = "secure-storage")]
 use keyring::Entry;

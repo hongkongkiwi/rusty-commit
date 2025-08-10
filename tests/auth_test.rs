@@ -255,19 +255,8 @@ fn test_config_with_different_providers() {
         // Test saving and loading
         assert!(config.save().is_ok());
 
-        // Debug: Print environment state before loading
-        println!(
-            "Debug: RCO_AI_PROVIDER env var before load: {:?}",
-            std::env::var("RCO_AI_PROVIDER")
-        );
-
         let loaded_config = Config::load().unwrap();
 
-        // Debug: Print loaded config
-        println!(
-            "Debug: loaded config ai_provider: {:?}",
-            loaded_config.ai_provider
-        );
 
         assert_eq!(loaded_config.ai_provider.as_deref(), Some("anthropic"));
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));

@@ -1,0 +1,13 @@
+Package: rusty-commit
+Version: VERSION
+Section: devel
+Priority: optional
+Architecture: ARCH
+Maintainer: Rusty Commit Contributors
+Homepage: https://github.com/hongkongkiwi/rusty-commit
+Description: Rust-powered AI commit message generator
+ Blazing-fast commit messages powered by AI and written in Rust.
+ Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
+ Groq, DeepSeek, and more. Features interactive authentication,
+ secure credential storage, and full OpenCommit compatibility.
+Depends: git

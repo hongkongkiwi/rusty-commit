@@ -162,3 +162,4 @@ jobs:
           asset_content_type: application/octet-stream
 
   # Crate publishing is now handled by publish.yml which triggers on release published event
+  # OS package creation is handled by package-release.yml which also triggers on release published event

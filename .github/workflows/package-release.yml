@@ -1,0 +1,624 @@
+name: Package Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to package (e.g., 1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  build-binaries:
+    name: Build Binaries (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: rco
+            asset_name: rco-linux-x86_64
+            use_cross: false
+
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: rco
+            asset_name: rco-linux-aarch64
+            use_cross: true
+
+          # Linux ARM v7
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            artifact_name: rco
+            asset_name: rco-linux-armv7
+            use_cross: true
+
+          # Linux musl (for Alpine)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: rco
+            asset_name: rco-linux-musl-x86_64
+            use_cross: true
+
+          # macOS x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: rco
+            asset_name: rco-macos-x86_64
+            use_cross: false
+
+          # macOS ARM64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: rco
+            asset_name: rco-macos-aarch64
+            use_cross: false
+
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: rco.exe
+            asset_name: rco-windows-x86_64
+            use_cross: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build with cross
+        if: matrix.use_cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build with cargo
+        if: ${{ !matrix.use_cross }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+  package-deb:
+    name: Package Debian/Ubuntu (.deb)
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - { rust: x86_64-unknown-linux-gnu, deb: amd64, artifact: rco-linux-x86_64 }
+          - { rust: aarch64-unknown-linux-gnu, deb: arm64, artifact: rco-linux-aarch64 }
+          - { rust: armv7-unknown-linux-gnueabihf, deb: armhf, artifact: rco-linux-armv7 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.arch.artifact }}
+          path: ./binary
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev debhelper
+
+      - name: Create package structure
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PKGNAME="rusty-commit_${VERSION}_${{ matrix.arch.deb }}"
+          
+          # Create directory structure
+          mkdir -p "${PKGNAME}/DEBIAN"
+          mkdir -p "${PKGNAME}/usr/bin"
+          mkdir -p "${PKGNAME}/usr/share/doc/rusty-commit"
+          
+          # Copy binary
+          cp binary/rco "${PKGNAME}/usr/bin/"
+          chmod 755 "${PKGNAME}/usr/bin/rco"
+          
+          # Create control file
+          cat > "${PKGNAME}/DEBIAN/control" << EOF
+          Package: rusty-commit
+          Version: ${VERSION}
+          Section: devel
+          Priority: optional
+          Architecture: ${{ matrix.arch.deb }}
+          Maintainer: Rusty Commit Contributors
+          Homepage: https://github.com/hongkongkiwi/rusty-commit
+          Description: Rust-powered AI commit message generator
+           Blazing-fast commit messages powered by AI and written in Rust.
+           Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
+           Groq, DeepSeek, and more. Features interactive authentication,
+           secure credential storage, and full OpenCommit compatibility.
+          Depends: git
+          EOF
+          
+          # Copy documentation
+          cp README.md "${PKGNAME}/usr/share/doc/rusty-commit/"
+          cp LICENSE "${PKGNAME}/usr/share/doc/rusty-commit/" || true
+          
+          # Build the package
+          dpkg-deb --build "${PKGNAME}"
+
+      - name: Upload .deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch.deb }}
+          path: rusty-commit_*.deb
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./rusty-commit_${{ steps.version.outputs.version }}_${{ matrix.arch.deb }}.deb
+          asset_name: rusty-commit_${{ steps.version.outputs.version }}_${{ matrix.arch.deb }}.deb
+          asset_content_type: application/vnd.debian.binary-package
+
+  package-rpm:
+    name: Package RPM (.rpm)
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - { rust: x86_64-unknown-linux-gnu, rpm: x86_64, artifact: rco-linux-x86_64 }
+          - { rust: aarch64-unknown-linux-gnu, rpm: aarch64, artifact: rco-linux-aarch64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.arch.artifact }}
+          path: ./binary
+
+      - name: Install RPM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm rpmlint
+
+      - name: Create RPM package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Create RPM build structure
+          mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin
+          
+          # Copy binary
+          cp binary/rco rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/
+          chmod 755 rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/rco
+          
+          # Create spec file
+          cat > rpmbuild/SPECS/rusty-commit.spec << EOF
+          Name:           rusty-commit
+          Version:        ${VERSION}
+          Release:        1
+          Summary:        Rust-powered AI commit message generator
+          License:        MIT
+          URL:            https://github.com/hongkongkiwi/rusty-commit
+          
+          %description
+          Blazing-fast commit messages powered by AI and written in Rust.
+          Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
+          Groq, DeepSeek, and more.
+          
+          %files
+          /usr/bin/rco
+          
+          %changelog
+          * $(date '+%a %b %d %Y') Rusty Commit Contributors - ${VERSION}
+          - Release ${VERSION}
+          EOF
+          
+          # Build RPM
+          cd rpmbuild
+          rpmbuild --define "_topdir $(pwd)" \
+                   --define "_builddir %{_topdir}/BUILD" \
+                   --define "_rpmdir %{_topdir}/RPMS" \
+                   --define "_sourcedir %{_topdir}/SOURCES" \
+                   --define "_specdir %{_topdir}/SPECS" \
+                   --define "_srcrpmdir %{_topdir}/SRPMS" \
+                   --define "_buildrootdir %{_topdir}/BUILDROOT" \
+                   -bb SPECS/rusty-commit.spec \
+                   --target ${{ matrix.arch.rpm }}
+
+      - name: Upload RPM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch.rpm }}
+          path: rpmbuild/RPMS/${{ matrix.arch.rpm }}/*.rpm
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        run: |
+          for rpm in rpmbuild/RPMS/${{ matrix.arch.rpm }}/*.rpm; do
+            asset_name=$(basename "$rpm")
+            echo "Uploading $asset_name"
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/x-rpm" \
+              --data-binary "@$rpm" \
+              "${{ github.event.release.upload_url }}?name=$asset_name"
+          done
+
+  package-alpine:
+    name: Package Alpine (.apk)
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - { rust: x86_64-unknown-linux-musl, alpine: x86_64, artifact: rco-linux-musl-x86_64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.arch.artifact }}
+          path: ./binary
+
+      - name: Setup Alpine environment
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace alpine:latest sh -c "
+            apk add --no-cache alpine-sdk sudo
+            adduser -D builder
+            addgroup builder abuild
+            echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+            
+            # Setup for package building
+            su - builder -c 'abuild-keygen -a -i -n'
+            
+            VERSION=${{ steps.version.outputs.version }}
+            
+            # Create package structure
+            mkdir -p /home/builder/packages/rusty-commit
+            cd /home/builder/packages/rusty-commit
+            
+            # Create APKBUILD
+            cat > APKBUILD << 'APKEOF'
+          # Maintainer: Rusty Commit Contributors
+          pkgname=rusty-commit
+          pkgver=\$VERSION
+          pkgrel=0
+          pkgdesc=\"Rust-powered AI commit message generator\"
+          url=\"https://github.com/hongkongkiwi/rusty-commit\"
+          arch=\"${{ matrix.arch.alpine }}\"
+          license=\"MIT\"
+          depends=\"git\"
+          source=\"\"
+          
+          package() {
+              mkdir -p \"\$pkgdir\"/usr/bin
+              cp /workspace/binary/rco \"\$pkgdir\"/usr/bin/
+              chmod 755 \"\$pkgdir\"/usr/bin/rco
+          }
+          APKEOF
+            
+            # Build package
+            su - builder -c 'cd /home/builder/packages/rusty-commit && abuild -r'
+            
+            # Copy built package
+            cp /home/builder/packages/*/rusty-commit*.apk /workspace/
+          "
+
+      - name: Upload APK package
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.arch.alpine }}
+          path: rusty-commit*.apk
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        run: |
+          for apk in rusty-commit*.apk; do
+            asset_name=$(basename "$apk")
+            echo "Uploading $asset_name"
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/vnd.alpine.linux.package" \
+              --data-binary "@$apk" \
+              "${{ github.event.release.upload_url }}?name=$asset_name"
+          done
+
+  package-tarball:
+    name: Package Tarball (.tar.gz)
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { artifact: rco-linux-x86_64, archive: rusty-commit-linux-x86_64.tar.gz }
+          - { artifact: rco-linux-aarch64, archive: rusty-commit-linux-aarch64.tar.gz }
+          - { artifact: rco-linux-armv7, archive: rusty-commit-linux-armv7.tar.gz }
+          - { artifact: rco-linux-musl-x86_64, archive: rusty-commit-linux-musl-x86_64.tar.gz }
+          - { artifact: rco-macos-x86_64, archive: rusty-commit-macos-x86_64.tar.gz }
+          - { artifact: rco-macos-aarch64, archive: rusty-commit-macos-aarch64.tar.gz }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./binary
+
+      - name: Create tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DIRNAME="rusty-commit-${VERSION}"
+          
+          # Create directory structure
+          mkdir -p "${DIRNAME}"
+          cp binary/rco "${DIRNAME}/" || cp binary/rco.exe "${DIRNAME}/" || true
+          chmod 755 "${DIRNAME}/rco" || true
+          cp README.md "${DIRNAME}/"
+          cp LICENSE "${DIRNAME}/" || true
+          
+          # Create completion scripts directory
+          mkdir -p "${DIRNAME}/completions"
+          
+          # Generate shell completions (if available)
+          # This would require adding clap_complete to dependencies
+          # and generating at build time
+          
+          # Create install script
+          cat > "${DIRNAME}/install.sh" << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          PREFIX="${PREFIX:-/usr/local}"
+          BIN_DIR="$PREFIX/bin"
+          
+          echo "Installing rusty-commit to $BIN_DIR"
+          
+          # Create bin directory if it doesn't exist
+          sudo mkdir -p "$BIN_DIR"
+          
+          # Copy binary
+          sudo cp rco "$BIN_DIR/"
+          sudo chmod 755 "$BIN_DIR/rco"
+          
+          echo "Installation complete!"
+          echo "Run 'rco --help' to get started"
+          EOF
+          
+          chmod 755 "${DIRNAME}/install.sh"
+          
+          # Create tarball
+          tar czf "${{ matrix.archive }}" "${DIRNAME}"
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-${{ matrix.artifact }}
+          path: ${{ matrix.archive }}
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ matrix.archive }}
+          asset_name: ${{ matrix.archive }}
+          asset_content_type: application/gzip
+
+  package-windows-zip:
+    name: Package Windows (.zip)
+    needs: build-binaries
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: rco-windows-x86_64
+          path: ./binary
+
+      - name: Create ZIP package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $dirname = "rusty-commit-$version"
+          
+          # Create directory structure
+          New-Item -ItemType Directory -Force -Path $dirname
+          Copy-Item "binary\rco.exe" -Destination "$dirname\"
+          Copy-Item "README.md" -Destination "$dirname\"
+          if (Test-Path "LICENSE") {
+            Copy-Item "LICENSE" -Destination "$dirname\"
+          }
+          
+          # Create install script
+          @"
+          @echo off
+          echo Installing rusty-commit...
+          
+          set INSTALL_DIR=%LOCALAPPDATA%\rusty-commit
+          
+          if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+          
+          copy rco.exe "%INSTALL_DIR%\" >nul
+          
+          echo.
+          echo Installation complete!
+          echo Please add %INSTALL_DIR% to your PATH environment variable.
+          echo.
+          pause
+          "@ | Out-File -FilePath "$dirname\install.bat" -Encoding ASCII
+          
+          # Create ZIP
+          Compress-Archive -Path "$dirname\*" -DestinationPath "rusty-commit-windows-x86_64.zip"
+
+      - name: Upload ZIP package
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: rusty-commit-windows-x86_64.zip
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./rusty-commit-windows-x86_64.zip
+          asset_name: rusty-commit-windows-x86_64.zip
+          asset_content_type: application/zip
+
+  package-snap:
+    name: Package Snap (.snap)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v${{ github.event.inputs.version }}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create snapcraft.yaml
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p snap
+          cat > snap/snapcraft.yaml << EOF
+          name: rusty-commit
+          version: '${VERSION}'
+          summary: Rust-powered AI commit message generator
+          description: |
+            Blazing-fast commit messages powered by AI and written in Rust.
+            Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
+            Groq, DeepSeek, and more. Features interactive authentication,
+            secure credential storage, and full OpenCommit compatibility.
+          
+          base: core22
+          confinement: classic
+          grade: stable
+          
+          parts:
+            rusty-commit:
+              plugin: rust
+              source: .
+              build-packages:
+                - libssl-dev
+                - pkg-config
+              stage-packages:
+                - git
+          
+          apps:
+            rco:
+              command: bin/rco
+          EOF
+
+      - name: Install snapcraft
+        run: |
+          sudo snap install snapcraft --classic
+          sudo snap install lxd --channel=latest/stable
+          sudo lxd init --auto
+
+      - name: Build snap
+        run: |
+          sg lxd -c 'snapcraft --use-lxd'
+
+      - name: Upload snap package
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap-package
+          path: rusty-commit_*.snap
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        run: |
+          for snap in rusty-commit_*.snap; do
+            asset_name=$(basename "$snap")
+            echo "Uploading $asset_name"
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/vnd.snap" \
+              --data-binary "@$snap" \
+              "${{ github.event.release.upload_url }}?name=$asset_name"
+          done

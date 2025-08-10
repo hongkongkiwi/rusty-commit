@@ -1,0 +1,23 @@
+# Maintainer: Rusty Commit Contributors
+pkgname=rusty-commit
+pkgver=VERSION
+pkgrel=0
+pkgdesc="Rust-powered AI commit message generator"
+url="https://github.com/hongkongkiwi/rusty-commit"
+arch="all"
+license="MIT"
+depends="git"
+makedepends="rust cargo"
+source="$pkgname-$pkgver.tar.gz"
+
+build() {
+    cargo build --release --locked
+}
+
+check() {
+    cargo test --release --locked
+}
+
+package() {
+    install -Dm755 target/release/rco "$pkgdir"/usr/bin/rco
+}

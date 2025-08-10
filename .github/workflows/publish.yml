@@ -157,3 +157,21 @@ jobs:
           echo "1. Calculate SHA256 of the release artifacts"
           echo "2. Update the formula in a homebrew tap repository"
           echo "3. Submit a PR to homebrew-core (if applicable)"
+
+  trigger-packaging:
+    name: Trigger OS Package Creation
+    runs-on: ubuntu-latest
+    needs: publish
+    if: ${{ !github.event.release.prerelease }}
+    steps:
+      - name: Trigger package workflow
+        run: |
+          echo "Package creation workflow (package-release.yml) runs automatically"
+          echo "It's triggered by the same 'release published' event"
+          echo "Packages being created:"
+          echo "- Debian/Ubuntu (.deb) for amd64, arm64, armhf"
+          echo "- RPM (.rpm) for x86_64, aarch64"  
+          echo "- Alpine (.apk) for x86_64"
+          echo "- Snap (.snap) universal package"
+          echo "- Tarball (.tar.gz) with install script"
+          echo "- Windows ZIP with installer"

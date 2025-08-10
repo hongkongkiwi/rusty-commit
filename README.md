@@ -16,6 +16,23 @@
 - **Flexible**: Conventional commits, GitMoji, templates, multi‑language
 - **Integrated**: Git hooks, GitHub Actions, MCP server for editors
 
+## Contents
+- Installation
+- Quick start
+- Examples
+- Configuration
+- Providers
+- CLI overview
+- Git hooks
+- Updates
+- GitHub Action
+- Advanced
+- Troubleshooting
+- Uninstall
+- Compatibility
+- Development
+- License & Credits
+
 ## Installation
 
 ### One‑liner (recommended)
@@ -51,6 +68,21 @@ rco -y                      # skip confirmation
 rco --show-prompt           # print the AI prompt only
 ```
 
+## Examples
+Conventional commit example:
+```text
+feat(auth): fix token refresh edge-case
+
+Handle clock-skew by allowing ±60s leeway during token expiry checks. Adds retry on 429 and surfaces actionable errors.
+```
+
+GitMoji example (with --fgm or RCO_COMMIT_TYPE=gitmoji):
+```text
+✨ auth: robust token refresh with retry
+
+Allow ±60s clock-skew; add backoff on 429; improve error messages for invalid credentials.
+```
+
 ## Configuration
 - **Global**: `~/.config/rustycommit/config.{toml,json}`
 - **Per‑repo**: `.rustycommit.toml` / `.rco.toml`
@@ -67,6 +99,23 @@ rco config get RCO_AI_PROVIDER
 rco config reset --all
 ```
 
+Common keys (compact):
+
+| Key | What it does | Example |
+| --- | ------------- | ------- |
+| `RCO_AI_PROVIDER` | Which AI backend to use | `anthropic`, `openai`, `openrouter`, `groq`, `ollama`, `github-copilot`, ... |
+| `RCO_MODEL` | Model name for the provider | `claude-3-5-haiku-20241022`, `gpt-4o-mini`, `llama-3.1-70b-versatile` |
+| `RCO_API_KEY` | API key if required | `sk-...`, `gsk_...`, etc. |
+| `RCO_API_URL` | Custom endpoint (e.g., Ollama) | `http://localhost:11434` |
+| `RCO_COMMIT_TYPE` | Commit format | `conventional` or `gitmoji` |
+| `RCO_EMOJI` | Emojis in messages | `true` / `false` |
+| `RCO_LANGUAGE` | Output language | `en`, `es`, `fr`, ... |
+
+Tip: You can set multiple values at once:
+```bash
+rco config set RCO_AI_PROVIDER=anthropic RCO_MODEL=claude-3-5-haiku-20241022 RCO_EMOJI=true
+```
+
 ## Providers
 Works with 16+ providers. Examples:
 - **Claude (OAuth)**: `rco auth login`
@@ -78,6 +127,12 @@ Works with 16+ providers. Examples:
   # Remote Ollama:
   rco config set RCO_API_URL=http://localhost:11434
   ```
+
+Security & storage (optional `secure-storage` feature):
+- macOS: Keychain
+- Linux: Secret Service (GNOME Keyring / KWallet / KeePassXC)
+- Windows: Credential Manager
+- Automatic fallback to config file if unavailable
 
 ## Git hooks
 ```bash
@@ -113,6 +168,40 @@ jobs:
 ## Advanced
 - **MCP server** (for editors like Cursor): `rco mcp server --port 3000` or `rco mcp stdio`
 - **Commitlint config**: `rco commitlint`
+
+## CLI overview
+Subcommands:
+- `config` — set/get/reset values and check secure storage status
+- `hook` — install/uninstall git hooks
+- `commitlint` — generate commitlint configuration
+- `auth` — login/logout/status for OAuth (e.g., Claude)
+- `mcp` — run MCP server over TCP or stdio
+- `update` — check and install updates (supports Homebrew, Cargo, .deb/.rpm, binary, Snap)
+
+Global flags you can use with the default `rco` command:
+```text
+--fgm                 Use full GitMoji specification
+-c, --context <TEXT>  Additional context for the commit
+-y, --yes             Skip confirmation
+    --show-prompt     Print the AI prompt and exit
+```
+
+## Troubleshooting
+- **401 / Invalid API key**: Re‑authenticate (`rco auth login`) or set a valid `RCO_API_KEY`.
+- **Rate‑limited (429)**: Wait briefly; try a lighter model or another provider.
+- **Secure storage unavailable**: We automatically fall back to file storage; check `rco config status`.
+- **Hooks not running**: Ensure `.git/hooks/prepare-commit-msg` exists and is executable. Re‑install via `rco hook set`.
+- **Windows PATH issues**: Add the install dir (e.g., `%USERPROFILE%\\.cargo\\bin`) to PATH.
+- **Corporate proxy**: Set `HTTP_PROXY`/`HTTPS_PROXY` environment variables.
+
+## Uninstall
+- Homebrew: `brew uninstall rusty-commit`
+- Cargo: `cargo uninstall rusty-commit`
+- Remove config: delete `~/.config/rustycommit/`
+
+## Compatibility
+- Full OpenCommit config compatibility; easy migration.
+- Works with per‑repo overrides and multiple providers.
 
 ## Development
 ```bash

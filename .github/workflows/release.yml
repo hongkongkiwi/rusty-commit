@@ -172,5 +172,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
         continue-on-error: true

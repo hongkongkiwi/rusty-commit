@@ -3,7 +3,23 @@ use rusty_commit::auth::token_storage::{
 };
 use rusty_commit::config::Config;
 use std::fs;
+use std::sync::Mutex;
 use tempfile::tempdir;
+
+// Mutex to ensure tests that modify global state run sequentially
+static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
+// Helper to handle mutex properly without poisoning
+fn with_test_lock<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let _guard = TEST_MUTEX.lock().unwrap_or_else(|poisoned| {
+        // Clear the poison and continue - this handles poisoned mutexes
+        poisoned.into_inner()
+    });
+    f()
+}
 
 // Helper function to set up clean environment for each test
 fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
@@ -11,9 +27,18 @@ fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("HOME");
 
-    // Create unique temp directory
+    // Create unique temp directory with timestamp to ensure uniqueness
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let unique_name = format!("{}_{}", test_name, timestamp);
+    
     let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir.path().join(test_name);
+    let config_dir = temp_dir.path().join(&unique_name);
+    
+    // Ensure the config directory exists
+    std::fs::create_dir_all(&config_dir).unwrap();
 
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
@@ -114,98 +139,106 @@ fn test_token_expires_soon() {
 
 #[test]
 fn test_store_and_retrieve_tokens() {
-    let _temp_dir = setup_clean_env("test_store_and_retrieve_tokens");
+    with_test_lock(|| {
+        let _temp_dir = setup_clean_env("test_store_and_retrieve_tokens");
 
-    // Store tokens
-    let result = store_tokens("access_123", Some("refresh_456"), Some(3600));
-    assert!(result.is_ok());
+        // Store tokens
+        let result = store_tokens("access_123", Some("refresh_456"), Some(3600));
+        assert!(result.is_ok());
 
-    // Retrieve tokens
-    let tokens = get_tokens().unwrap();
-    assert!(tokens.is_some());
+        // Retrieve tokens
+        let tokens = get_tokens().unwrap();
+        assert!(tokens.is_some());
 
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.access_token, "access_123");
-    assert_eq!(tokens.refresh_token.as_deref(), Some("refresh_456"));
-    assert_eq!(tokens.token_type, "Bearer");
+        let tokens = tokens.unwrap();
+        assert_eq!(tokens.access_token, "access_123");
+        assert_eq!(tokens.refresh_token.as_deref(), Some("refresh_456"));
+        assert_eq!(tokens.token_type, "Bearer");
 
-    cleanup_env();
+        cleanup_env();
+    });
 }
 
 #[test]
 fn test_has_valid_token() {
-    let _temp_dir = setup_clean_env("test_has_valid_token");
+    with_test_lock(|| {
+        let _temp_dir = setup_clean_env("test_has_valid_token");
 
-    // No token initially
-    assert!(!has_valid_token());
+        // No token initially
+        assert!(!has_valid_token());
 
-    // Store a valid token
-    store_tokens("valid_token", None, Some(3600)).unwrap();
-    assert!(has_valid_token());
+        // Store a valid token
+        store_tokens("valid_token", None, Some(3600)).unwrap();
+        assert!(has_valid_token());
 
-    // Delete tokens and verify no valid token
-    delete_tokens().unwrap();
-    assert!(!has_valid_token());
+        // Delete tokens and verify no valid token
+        delete_tokens().unwrap();
+        assert!(!has_valid_token());
 
-    cleanup_env();
+        cleanup_env();
+    });
 }
 
 #[test]
 fn test_delete_tokens() {
-    let _temp_dir = setup_clean_env("test_delete_tokens");
+    with_test_lock(|| {
+        let _temp_dir = setup_clean_env("test_delete_tokens");
 
-    // Store tokens first
-    store_tokens("test_token", None, Some(3600)).unwrap();
-    assert!(has_valid_token());
+        // Store tokens first
+        store_tokens("test_token", None, Some(3600)).unwrap();
+        assert!(has_valid_token());
 
-    // Delete tokens
-    let result = delete_tokens();
-    assert!(result.is_ok());
-    assert!(!has_valid_token());
+        // Delete tokens
+        let result = delete_tokens();
+        assert!(result.is_ok());
+        assert!(!has_valid_token());
 
-    cleanup_env();
+        cleanup_env();
+    });
 }
 
 #[test]
 fn test_config_with_different_providers() {
-    let providers = vec![
-        "anthropic",
-        "openai",
-        "openrouter",
-        "groq",
-        "deepseek",
-        "mistral",
-        "amazon-bedrock",
-        "azure",
-        "together",
-        "deepinfra",
-        "huggingface",
-        "github-models",
-        "gemini",
-        "ollama",
-    ];
+    with_test_lock(|| {
+        let providers = vec![
+            "anthropic",
+            "openai",
+            "openrouter",
+            "groq",
+            "deepseek",
+            "mistral",
+            "amazon-bedrock",
+            "azure",
+            "together",
+            "deepinfra",
+            "huggingface",
+            "github-models",
+            "gemini",
+            "ollama",
+        ];
 
-    for provider in providers {
-        let _temp_dir = setup_clean_env(&format!(
-            "test_config_with_different_providers_{}",
-            provider
-        ));
+        for provider in providers {
+            let _temp_dir = setup_clean_env(&format!(
+                "test_config_with_different_providers_{}",
+                provider
+            ));
 
-        let mut config = Config::default();
-        config.ai_provider = Some(provider.to_string());
-        config.api_key = Some("test_key".to_string());
+            let mut config = Config::default();
+            config.ai_provider = Some(provider.to_string());
+            config.api_key = Some("test_key".to_string());
 
-        // Test that provider is set correctly
-        assert_eq!(config.ai_provider.as_deref(), Some(provider));
+            // Test that provider is set correctly
+            assert_eq!(config.ai_provider.as_deref(), Some(provider));
 
-        // Test saving and loading
-        assert!(config.save().is_ok());
-        let loaded_config = Config::load().unwrap();
-        assert_eq!(loaded_config.ai_provider.as_deref(), Some(provider));
-        assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
+            // Test saving and loading
+            assert!(config.save().is_ok());
+            let loaded_config = Config::load().unwrap();
+            assert_eq!(loaded_config.ai_provider.as_deref(), Some(provider));
+            assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
 
-        cleanup_env();
-    }
+            cleanup_env();
+        }
+    });
 }
 
 #[test]
@@ -220,62 +253,43 @@ fn test_oauth_client_creation() {
 
 #[test]
 fn test_provider_specific_configurations() {
-    // Test AWS Bedrock with bearer token
-    let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir
-        .path()
-        .join("test_provider_specific_configurations_bedrock");
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
-    std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
-    let mut config = Config::default();
-    config.ai_provider = Some("amazon-bedrock".to_string());
-    assert!(config.save().is_ok());
+    with_test_lock(|| {
+        // Test AWS Bedrock with bearer token
+        let _temp_dir1 = setup_clean_env("test_provider_specific_configurations_bedrock");
+        std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
+        let mut config = Config::default();
+        config.ai_provider = Some("amazon-bedrock".to_string());
+        assert!(config.save().is_ok());
+        std::env::remove_var("AWS_BEARER_TOKEN_BEDROCK");
+        cleanup_env();
 
-    // Clean up
-    std::env::remove_var("RCO_CONFIG_HOME");
-    std::env::remove_var("AWS_BEARER_TOKEN_BEDROCK");
+        // Test Ollama local configuration
+        let _temp_dir2 = setup_clean_env("test_provider_specific_configurations_ollama");
+        let mut ollama_config = Config::default();
+        ollama_config.ai_provider = Some("ollama".to_string());
+        ollama_config.api_url = Some("http://localhost:11434".to_string());
+        ollama_config.model = Some("mistral".to_string());
+        assert!(ollama_config.save().is_ok());
+        cleanup_env();
 
-    // Test Ollama local configuration
-    let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir
-        .path()
-        .join("test_provider_specific_configurations_ollama");
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
-    let mut ollama_config = Config::default();
-    ollama_config.ai_provider = Some("ollama".to_string());
-    ollama_config.api_url = Some("http://localhost:11434".to_string());
-    ollama_config.model = Some("mistral".to_string());
-    assert!(ollama_config.save().is_ok());
+        // Test Azure OpenAI configuration
+        let _temp_dir3 = setup_clean_env("test_provider_specific_configurations_azure");
+        let mut azure_config = Config::default();
+        azure_config.ai_provider = Some("azure".to_string());
+        azure_config.api_key = Some("azure_key".to_string());
+        azure_config.api_url = Some("https://test.openai.azure.com".to_string());
+        azure_config.model = Some("gpt-35-turbo".to_string());
+        assert!(azure_config.save().is_ok());
 
-    // Clean up
-    std::env::remove_var("RCO_CONFIG_HOME");
-
-    // Test Azure OpenAI configuration
-    let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir
-        .path()
-        .join("test_provider_specific_configurations_azure");
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
-    let mut azure_config = Config::default();
-    azure_config.ai_provider = Some("azure".to_string());
-    azure_config.api_key = Some("azure_key".to_string());
-    azure_config.api_url = Some("https://test.openai.azure.com".to_string());
-    azure_config.model = Some("gpt-35-turbo".to_string());
-    assert!(azure_config.save().is_ok());
-
-    let loaded_azure = Config::load().unwrap();
-    assert_eq!(loaded_azure.ai_provider.as_deref(), Some("azure"));
-    assert_eq!(loaded_azure.api_key.as_deref(), Some("azure_key"));
-    assert_eq!(
-        loaded_azure.api_url.as_deref(),
-        Some("https://test.openai.azure.com")
-    );
-
-    // Clean up
-    std::env::remove_var("RCO_CONFIG_HOME");
+        let loaded_azure = Config::load().unwrap();
+        assert_eq!(loaded_azure.ai_provider.as_deref(), Some("azure"));
+        assert_eq!(loaded_azure.api_key.as_deref(), Some("azure_key"));
+        assert_eq!(
+            loaded_azure.api_url.as_deref(),
+            Some("https://test.openai.azure.com")
+        );
+        cleanup_env();
+    });
 }
 
 #[test]
@@ -325,23 +339,25 @@ fn test_config_validation() {
 
 #[test]
 fn test_secure_vs_file_storage() {
-    let _temp_dir = setup_clean_env("test_secure_vs_file_storage");
-    let config_dir = std::env::var("RCO_CONFIG_HOME").unwrap();
+    with_test_lock(|| {
+        let _temp_dir = setup_clean_env("test_secure_vs_file_storage");
+        let config_dir = std::env::var("RCO_CONFIG_HOME").unwrap();
 
-    // Store tokens (should use file storage in test environment)
-    store_tokens("test_token", Some("refresh_token"), Some(3600)).unwrap();
+        // Store tokens (should use file storage in test environment)
+        store_tokens("test_token", Some("refresh_token"), Some(3600)).unwrap();
 
-    // Check that the auth file was created
-    let auth_file = std::path::PathBuf::from(&config_dir).join("auth.json");
+        // Check that the auth file was created
+        let auth_file = std::path::PathBuf::from(&config_dir).join("auth.json");
 
-    // The file should exist
-    assert!(auth_file.exists());
+        // The file should exist
+        assert!(auth_file.exists());
 
-    // Read and verify the content
-    let content = fs::read_to_string(&auth_file).unwrap();
-    assert!(content.contains("test_token"));
-    assert!(content.contains("refresh_token"));
-    assert!(content.contains("Bearer"));
+        // Read and verify the content
+        let content = fs::read_to_string(&auth_file).unwrap();
+        assert!(content.contains("test_token"));
+        assert!(content.contains("refresh_token"));
+        assert!(content.contains("Bearer"));
 
-    cleanup_env();
+        cleanup_env();
+    });
 }

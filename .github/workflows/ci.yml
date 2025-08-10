@@ -70,7 +70,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
         rust: [stable, beta]
         include:
           - os: ubuntu-latest
@@ -151,8 +151,11 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: rco-linux-amd64
-          # Note: macos-latest runners are ARM64, we build only for native arch
-          # Cross-compilation to x86_64 from ARM64 requires additional setup
+          # macos-13 runs on Intel x86_64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact: rco-macos-amd64
+          # macos-latest (14+) runs on Apple Silicon ARM64
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: rco-macos-arm64

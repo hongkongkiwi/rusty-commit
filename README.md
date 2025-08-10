@@ -211,6 +211,13 @@ cargo clippy --all-features -- -D warnings
 cargo fmt
 ```
 
+## Support the project
+
+If Rusty Commit saves you time, consider supporting ongoing development:
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-@hongkongkiwi-fd2e83?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/hongkongkiwi)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/hongkongkiwi)
+
 ## License
 MIT
 

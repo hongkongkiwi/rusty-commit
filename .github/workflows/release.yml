@@ -61,9 +61,9 @@ jobs:
             
             ### Using Cargo
             ```bash
-            cargo install rustycommit
+            cargo install rusty-commit
             # With secure storage
-            cargo install rustycommit --features secure-storage
+            cargo install rusty-commit --features secure-storage
             ```
 
   build-release:

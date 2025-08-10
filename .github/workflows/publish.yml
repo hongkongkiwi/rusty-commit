@@ -104,12 +104,12 @@ jobs:
           
           ### Via Cargo
           \`\`\`bash
-          cargo install rustycommit
+          cargo install rusty-commit
           \`\`\`
           
           ### Via Homebrew (coming soon)
           \`\`\`bash
-          brew install rustycommit
+          brew install rusty-commit
           \`\`\`
           
           ### Download Binary

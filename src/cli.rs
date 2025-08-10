@@ -32,6 +32,14 @@ pub struct GlobalOptions {
     /// Show the prompt that would be used without generating commit
     #[arg(long = "show-prompt", default_value = "false")]
     pub show_prompt: bool,
+
+    /// Disable running pre-hooks
+    #[arg(long = "no-pre-hooks", default_value = "false")]
+    pub no_pre_hooks: bool,
+
+    /// Disable running post-hooks
+    #[arg(long = "no-post-hooks", default_value = "false")]
+    pub no_post_hooks: bool,
 }
 
 #[derive(Subcommand)]
@@ -51,6 +59,9 @@ pub enum Commands {
 
     /// Start MCP (Model Context Protocol) server
     Mcp(McpCommand),
+    
+    /// Check for updates and update rusty-commit
+    Update(UpdateCommand),
 }
 
 #[derive(Parser)]
@@ -137,4 +148,19 @@ pub enum McpAction {
     },
     /// Start MCP server over STDIO (for direct integration)
     Stdio,
+}
+
+#[derive(Parser)]
+pub struct UpdateCommand {
+    /// Check for updates without installing
+    #[arg(short, long)]
+    pub check: bool,
+    
+    /// Force update even if already on latest version
+    #[arg(short, long)]
+    pub force: bool,
+    
+    /// Specify version to update to (e.g., "1.0.2")
+    #[arg(short, long)]
+    pub version: Option<String>,
 }

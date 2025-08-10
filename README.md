@@ -144,6 +144,7 @@ rco config set RCO_API_KEY=sk-...
 rco config set RCO_MODEL=gpt-4o-mini
 # Optional custom endpoint:
 # rco config set RCO_API_URL=https://api.openai.com/v1
+# Get API key: https://platform.openai.com/api-keys
 ```
 
 Anthropic (Claude):
@@ -154,6 +155,7 @@ rco auth login
 rco config set RCO_AI_PROVIDER=anthropic
 rco config set RCO_API_KEY=sk-ant-...
 rco config set RCO_MODEL=claude-3-5-haiku-20241022
+# API docs & keys: https://console.anthropic.com/settings/keys
 ```
 
 OpenRouter:
@@ -162,6 +164,7 @@ rco config set RCO_AI_PROVIDER=openrouter
 rco config set RCO_API_KEY=sk-or-...
 rco config set RCO_API_URL=https://openrouter.ai/api/v1
 rco config set RCO_MODEL=openai/gpt-4o-mini
+# Keys: https://openrouter.ai/keys
 ```
 
 Groq:
@@ -170,6 +173,7 @@ rco config set RCO_AI_PROVIDER=groq
 rco config set RCO_API_KEY=gsk_...
 rco config set RCO_API_URL=https://api.groq.com/openai/v1
 rco config set RCO_MODEL=llama-3.1-70b-versatile
+# Keys: https://console.groq.com/keys
 ```
 
 DeepSeek:
@@ -178,6 +182,7 @@ rco config set RCO_AI_PROVIDER=deepseek
 rco config set RCO_API_KEY=sk-...
 rco config set RCO_API_URL=https://api.deepseek.com/v1
 rco config set RCO_MODEL=deepseek-chat
+# Keys: https://platform.deepseek.com/api-keys
 ```
 
 Together AI:
@@ -186,6 +191,7 @@ rco config set RCO_AI_PROVIDER=together
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.together.xyz/v1
 rco config set RCO_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
+# Keys: https://api.together.xyz/settings/api-keys
 ```
 
 DeepInfra:
@@ -194,6 +200,7 @@ rco config set RCO_AI_PROVIDER=deepinfra
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.deepinfra.com/v1/openai
 rco config set RCO_MODEL=meta-llama/Meta-Llama-3-70B-Instruct
+# Keys: https://deepinfra.com/dash/api_keys
 ```
 
 Mistral AI:
@@ -202,6 +209,7 @@ rco config set RCO_AI_PROVIDER=mistral
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.mistral.ai/v1
 rco config set RCO_MODEL=mistral-small-latest
+# Keys: https://console.mistral.ai/api-keys
 ```
 
 Azure OpenAI:
@@ -211,6 +219,7 @@ rco config set RCO_API_KEY=<azure_api_key>
 rco config set RCO_API_URL=https://<your-resource>.openai.azure.com
 # Use your deployment name, not the model name
 rco config set RCO_MODEL=<deployment-name>
+# Docs: https://learn.microsoft.com/azure/ai-services/openai/how-to/create-resource
 ```
 
 Google Gemini:
@@ -218,6 +227,7 @@ Google Gemini:
 rco config set RCO_AI_PROVIDER=gemini
 rco config set RCO_API_KEY=...
 rco config set RCO_MODEL=gemini-pro
+# Keys: https://aistudio.google.com/app/apikey
 ```
 
 Perplexity:
@@ -227,6 +237,7 @@ rco config set RCO_API_KEY=...
 # Optional: custom endpoint
 # rco config set RCO_API_URL=https://api.perplexity.ai/chat/completions
 rco config set RCO_MODEL=llama-3.1-sonar-small-128k-online
+# Keys: https://www.perplexity.ai/settings/api
 ```
 
 Fireworks AI:
@@ -235,6 +246,7 @@ rco config set RCO_AI_PROVIDER=fireworks
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.fireworks.ai/inference/v1
 rco config set RCO_MODEL=accounts/fireworks/models/llama-v3p1-70b-instruct
+# Keys: https://app.fireworks.ai/users/api-keys
 ```
 
 Moonshot AI (Kimi):
@@ -243,6 +255,7 @@ rco config set RCO_AI_PROVIDER=moonshot
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.moonshot.cn/v1
 rco config set RCO_MODEL=kimi-k2
+# Docs & keys: https://platform.moonshot.ai/docs/introduction#text-generation-model
 ```
 
 Alibaba Model Studio (DashScope / Qwen Coder):
@@ -251,6 +264,18 @@ rco config set RCO_AI_PROVIDER=dashscope
 rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 rco config set RCO_MODEL=qwen3-coder-32b-instruct
+# Docs: https://www.alibabacloud.com/help/en/model-studio/qwen-coder
+# Keys: https://dashscope.console.aliyun.com/apiKey
+```
+
+Vertex AI (Google Cloud):
+```bash
+rco config set RCO_AI_PROVIDER=vertex
+# Set up a service that proxies to Vertex’s OpenAI-compatible endpoint or use a gateway
+# Example placeholder (requires gateway):
+rco config set RCO_API_URL=https://<your-gateway>/v1
+rco config set RCO_MODEL=google/gemini-1.5-pro
+# Getting started: https://cloud.google.com/vertex-ai/docs/generative-ai/start/quickstarts
 ```
 
 ## Git hooks

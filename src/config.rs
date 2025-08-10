@@ -47,6 +47,11 @@ pub struct Config {
 
     // Hooks
     pub hook_auto_uncomment: Option<bool>,
+    pub pre_gen_hook: Option<Vec<String>>,
+    pub pre_commit_hook: Option<Vec<String>>,
+    pub post_commit_hook: Option<Vec<String>>,
+    pub hook_strict: Option<bool>,
+    pub hook_timeout_ms: Option<u64>,
 
     // Global commitlint configuration
     pub commitlint_config: Option<String>,
@@ -78,6 +83,11 @@ impl Default for Config {
             action_enabled: Some(false),
             test_mock_type: None,
             hook_auto_uncomment: Some(false),
+            pre_gen_hook: None,
+            pre_commit_hook: None,
+            post_commit_hook: None,
+            hook_strict: Some(true),
+            hook_timeout_ms: Some(30000),
             commitlint_config: None,
             custom_prompt: None,
         }
@@ -246,6 +256,24 @@ impl Config {
                         .context("Invalid boolean for HOOK_AUTO_UNCOMMENT")?,
                 );
             }
+            "RCO_PRE_GEN_HOOK" => {
+                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                self.pre_gen_hook = Some(items);
+            }
+            "RCO_PRE_COMMIT_HOOK" => {
+                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                self.pre_commit_hook = Some(items);
+            }
+            "RCO_POST_COMMIT_HOOK" => {
+                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                self.post_commit_hook = Some(items);
+            }
+            "RCO_HOOK_STRICT" => {
+                self.hook_strict = Some(value.parse().context("Invalid boolean for HOOK_STRICT")?);
+            }
+            "RCO_HOOK_TIMEOUT_MS" => {
+                self.hook_timeout_ms = Some(value.parse().context("Invalid number for HOOK_TIMEOUT_MS")?);
+            }
             "RCO_COMMITLINT_CONFIG" => {
                 self.commitlint_config = Some(value.to_string());
             }
@@ -333,6 +361,11 @@ impl Config {
                     "RCO_GITPUSH" => self.gitpush = default.gitpush,
                     "RCO_ONE_LINE_COMMIT" => self.one_line_commit = default.one_line_commit,
                     "RCO_ACTION_ENABLED" => self.action_enabled = default.action_enabled,
+                    "RCO_PRE_GEN_HOOK" => self.pre_gen_hook = default.pre_gen_hook.clone(),
+                    "RCO_PRE_COMMIT_HOOK" => self.pre_commit_hook = default.pre_commit_hook.clone(),
+                    "RCO_POST_COMMIT_HOOK" => self.post_commit_hook = default.post_commit_hook.clone(),
+                    "RCO_HOOK_STRICT" => self.hook_strict = default.hook_strict,
+                    "RCO_HOOK_TIMEOUT_MS" => self.hook_timeout_ms = default.hook_timeout_ms,
                     _ => anyhow::bail!("Unknown configuration key: {}", key),
                 }
             }
@@ -448,6 +481,11 @@ impl Config {
         merge_field!(action_enabled);
         merge_field!(test_mock_type);
         merge_field!(hook_auto_uncomment);
+        merge_field!(pre_gen_hook);
+        merge_field!(pre_commit_hook);
+        merge_field!(post_commit_hook);
+        merge_field!(hook_strict);
+        merge_field!(hook_timeout_ms);
         merge_field!(commitlint_config);
         merge_field!(custom_prompt);
     }

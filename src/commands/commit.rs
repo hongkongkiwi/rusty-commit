@@ -9,6 +9,7 @@ use crate::config::Config;
 use crate::git;
 use crate::providers;
 use crate::utils;
+use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
 
 pub async fn execute(options: GlobalOptions) -> Result<()> {
     // Ensure we're in a git repository
@@ -79,6 +80,27 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         return Ok(());
     }
 
+    // Run pre-generation hooks (optional)
+    if !options.no_pre_hooks {
+        if let Some(hooks) = config.pre_gen_hook.clone() {
+            let envs = vec![
+                ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+                ("RCO_MAX_TOKENS", (config.tokens_max_input.unwrap_or(4096)).to_string()),
+                ("RCO_DIFF_TOKENS", token_count.to_string()),
+                ("RCO_CONTEXT", options.context.clone().unwrap_or_default()),
+                ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+            ];
+            run_hooks(HookOptions {
+                name: "pre-gen",
+                commands: hooks,
+                strict: config.hook_strict.unwrap_or(true),
+                timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                envs,
+            })?;
+        }
+    }
+
     // Generate commit message
     let commit_message = generate_commit_message(
         &config,
@@ -87,6 +109,34 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         options.full_gitmoji,
     )
     .await?;
+
+    // Run pre-commit hooks (can modify message via temp file)
+    let mut final_message = commit_message.clone();
+    if !options.no_pre_hooks {
+        if let Some(hooks) = config.pre_commit_hook.clone() {
+            let commit_file = write_temp_commit_file(&final_message)?;
+            let envs = vec![
+                ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+                ("RCO_COMMIT_MESSAGE", final_message.clone()),
+                ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
+                ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+            ];
+            run_hooks(HookOptions {
+                name: "pre-commit",
+                commands: hooks,
+                strict: config.hook_strict.unwrap_or(true),
+                timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                envs,
+            })?;
+            // Read back possibly modified commit file
+            if let Ok(updated) = std::fs::read_to_string(&commit_file) {
+                if !updated.trim().is_empty() {
+                    final_message = updated;
+                }
+            }
+        }
+    }
 
     // Display the generated commit message
     println!("\n{}", "Generated commit message:".green().bold());
@@ -103,12 +153,47 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     match action {
         CommitAction::Commit => {
-            perform_commit(&commit_message)?;
+            perform_commit(&final_message)?;
+            // Post-commit hooks
+            if !options.no_post_hooks {
+                if let Some(hooks) = config.post_commit_hook.clone() {
+                    let envs = vec![
+                        ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+                        ("RCO_COMMIT_MESSAGE", final_message.clone()),
+                        ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                        ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+                    ];
+                    run_hooks(HookOptions {
+                        name: "post-commit",
+                        commands: hooks,
+                        strict: config.hook_strict.unwrap_or(true),
+                        timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                        envs,
+                    })?;
+                }
+            }
             println!("{}", "✅ Changes committed successfully!".green());
         }
         CommitAction::Edit => {
-            let edited_message = edit_commit_message(&commit_message)?;
+            let edited_message = edit_commit_message(&final_message)?;
             perform_commit(&edited_message)?;
+            if !options.no_post_hooks {
+                if let Some(hooks) = config.post_commit_hook.clone() {
+                    let envs = vec![
+                        ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+                        ("RCO_COMMIT_MESSAGE", edited_message.clone()),
+                        ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                        ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+                    ];
+                    run_hooks(HookOptions {
+                        name: "post-commit",
+                        commands: hooks,
+                        strict: config.hook_strict.unwrap_or(true),
+                        timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                        envs,
+                    })?;
+                }
+            }
             println!("{}", "✅ Changes committed successfully!".green());
         }
         CommitAction::Cancel => {

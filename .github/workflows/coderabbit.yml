@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: CodeRabbit AI Review
         uses: coderabbitai/ai-pr-reviewer@latest
+        env:
+          CODERABBIT_API_KEY: ${{ secrets.CODERABBIT_API_KEY }}
         with:
           # CodeRabbit will automatically use the configuration from .coderabbit.yaml
           # No additional configuration needed here

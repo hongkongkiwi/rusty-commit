@@ -11,7 +11,7 @@
 
 ### 🌟 Why Rusty Commit
 - **Speed**: Native Rust binary with instant startup
-- **Choice**: Works with 16+ AI providers (OpenAI, Anthropic/Claude, OpenRouter, Groq, DeepSeek, GitHub Copilot, Ollama…)
+- **Choice**: Works with 16+ AI providers (OpenAI, Anthropic/Claude, OpenRouter, Groq, DeepSeek, GitHub Copilot, Ollama, Fireworks, Moonshot/Kimi, Alibaba DashScope/Qwen…)
 - **Secure**: Optional keychain storage via `--features secure-storage`
 - **Flexible**: Conventional commits, GitMoji, templates, multi‑language
 - **Integrated**: Git hooks, GitHub Actions, MCP server for editors

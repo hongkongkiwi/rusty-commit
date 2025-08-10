@@ -22,6 +22,39 @@ fn setup_test_env(test_name: &str) -> tempfile::TempDir {
     // Clean up any previous environment variables
     std::env::remove_var("HOME");
     std::env::remove_var("RCO_CONFIG_HOME");
+    
+    // Clear all RCO environment variables that might interfere with tests
+    let env_vars_to_clear = [
+        "RCO_AI_PROVIDER",
+        "RCO_API_KEY",
+        "RCO_MODEL",
+        "RCO_EMOJI",
+        "RCO_GITPUSH",
+        "RCO_LANGUAGE",
+        "RCO_TOKENS_MAX_OUTPUT",
+        "RCO_API_URL",
+        "RCO_TOKENS_MAX_INPUT",
+        "RCO_COMMIT_TYPE",
+        "RCO_DESCRIPTION",
+        "RCO_DESCRIPTION_CAPITALIZE",
+        "RCO_DESCRIPTION_ADD_PERIOD",
+        "RCO_DESCRIPTION_MAX_LENGTH",
+        "RCO_MESSAGE_TEMPLATE_PLACEHOLDER",
+        "RCO_PROMPT_MODULE",
+        "RCO_ONE_LINE_COMMIT",
+        "RCO_WHY",
+        "RCO_OMIT_SCOPE",
+        "RCO_ACTION_ENABLED",
+        "RCO_TEST_MOCK_TYPE",
+        "RCO_HOOK_AUTO_UNCOMMENT",
+        "RCO_COMMITLINT_CONFIG",
+        "RCO_CUSTOM_PROMPT",
+    ];
+    
+    for var in &env_vars_to_clear {
+        std::env::remove_var(var);
+    }
+    
     std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
     std::env::set_var("RCO_DISABLE_SECURE_STORAGE", "1");
 
@@ -42,6 +75,38 @@ fn cleanup_test_env() {
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("RCO_IGNORE_REPO_CONFIG");
     std::env::remove_var("RCO_DISABLE_SECURE_STORAGE");
+    
+    // Also clear all RCO environment variables for complete cleanup
+    let env_vars_to_clear = [
+        "RCO_AI_PROVIDER",
+        "RCO_API_KEY",
+        "RCO_MODEL",
+        "RCO_EMOJI",
+        "RCO_GITPUSH",
+        "RCO_LANGUAGE",
+        "RCO_TOKENS_MAX_OUTPUT",
+        "RCO_API_URL",
+        "RCO_TOKENS_MAX_INPUT",
+        "RCO_COMMIT_TYPE",
+        "RCO_DESCRIPTION",
+        "RCO_DESCRIPTION_CAPITALIZE",
+        "RCO_DESCRIPTION_ADD_PERIOD",
+        "RCO_DESCRIPTION_MAX_LENGTH",
+        "RCO_MESSAGE_TEMPLATE_PLACEHOLDER",
+        "RCO_PROMPT_MODULE",
+        "RCO_ONE_LINE_COMMIT",
+        "RCO_WHY",
+        "RCO_OMIT_SCOPE",
+        "RCO_ACTION_ENABLED",
+        "RCO_TEST_MOCK_TYPE",
+        "RCO_HOOK_AUTO_UNCOMMENT",
+        "RCO_COMMITLINT_CONFIG",
+        "RCO_CUSTOM_PROMPT",
+    ];
+    
+    for var in &env_vars_to_clear {
+        std::env::remove_var(var);
+    }
 }
 
 #[test]
@@ -102,15 +167,7 @@ fn test_parse_legacy_format() {
         assert_eq!(config.language.as_deref(), Some("en"));
         assert_eq!(config.tokens_max_output, Some(1000));
 
-        // Clean up environment variables
-        std::env::remove_var("RCO_API_KEY");
-        std::env::remove_var("RCO_AI_PROVIDER");
-        std::env::remove_var("RCO_MODEL");
-        std::env::remove_var("RCO_EMOJI");
-        std::env::remove_var("RCO_GITPUSH");
-        std::env::remove_var("RCO_LANGUAGE");
-        std::env::remove_var("RCO_TOKENS_MAX_OUTPUT");
-
+        // Cleanup will handle removing all environment variables
         cleanup_test_env();
     });
 }

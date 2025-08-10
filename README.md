@@ -386,6 +386,42 @@ rco config set RCO_MODEL=claude-3-5-haiku-20241022
 
 ## Development
 
+### Using Just (Task Runner)
+
+We use `just` as our command runner for common development tasks:
+
+```bash
+# Install just
+cargo install just
+
+# See all available commands
+just
+
+# Common workflows
+just test           # Run tests
+just lint           # Run clippy
+just fmt            # Format code
+just check          # Run all checks (format, lint, test)
+just ci             # Run full CI locally
+
+# Building
+just build          # Build debug binary
+just build-release  # Build release binary
+just install        # Install locally
+
+# Maintenance
+just outdated       # Check for outdated dependencies
+just audit          # Security audit
+just update         # Update dependencies
+
+# Release management
+just release-patch  # Release patch version (1.0.0 -> 1.0.1)
+just release-minor  # Release minor version (1.0.0 -> 1.1.0)  
+just release-major  # Release major version (1.0.0 -> 2.0.0)
+```
+
+### Manual Commands
+
 ```bash
 # Build the project
 cargo build
@@ -414,6 +450,43 @@ cargo clippy --all-features -- -D warnings
 # Run security audit
 cargo audit
 ```
+
+### Releasing
+
+We provide a convenient release script that handles version bumping, tagging, and pushing:
+
+```bash
+# Release a patch version (1.0.0 -> 1.0.1)
+./release.sh patch
+# Or using just:
+just release-patch
+
+# Release a minor version (1.0.0 -> 1.1.0)
+./release.sh minor
+# Or using just:
+just release-minor
+
+# Release a major version (1.0.0 -> 2.0.0)
+./release.sh major
+# Or using just:
+just release-major
+
+# Release a specific version
+./release.sh 1.2.3
+# Or using just:
+just release 1.2.3
+```
+
+The release script will:
+1. Run tests and clippy to ensure quality
+2. Update version in Cargo.toml
+3. Commit the version bump
+4. Create an annotated git tag
+5. Push changes and tag to GitHub
+6. Trigger GitHub Actions to:
+   - Create a GitHub release
+   - Build binaries for all platforms
+   - Publish to crates.io
 
 ## Testing
 

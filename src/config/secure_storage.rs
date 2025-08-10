@@ -10,7 +10,7 @@
 //! - **iOS**: Uses iOS Keychain Services
 //! - **FreeBSD/OpenBSD**: Uses Secret Service if available
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 #[cfg(feature = "secure-storage")]
 use keyring::Entry;
@@ -32,15 +32,16 @@ pub fn store_secret(_key: &str, _value: &str) -> Result<()> {
     {
         match Entry::new(SERVICE_NAME, _key) {
             Ok(entry) => {
-                // Try to store, but don't fail if keyring is not available
-                if let Err(e) = entry.set_password(_value) {
-                    // Log the error for debugging but don't fail
-                    eprintln!("Note: Could not store in secure storage: {}", e);
-                }
+                // Propagate failure so callers can fall back to file storage
+                entry
+                    .set_password(_value)
+                    .map_err(|e| anyhow!("Failed to store secret in secure storage: {e}"))?;
             }
             Err(e) => {
-                // Platform doesn't support keyring
-                eprintln!("Note: Secure storage not available on this platform: {}", e);
+                // Signal to callers that secure storage isn't usable
+                return Err(anyhow!(
+                    "Secure storage not available on this platform: {e}"
+                ));
             }
         }
     }
@@ -99,6 +100,14 @@ pub fn delete_secret(_key: &str) -> Result<()> {
 /// Returns true only if the secure-storage feature is enabled AND
 /// the system has a working keychain.
 pub fn is_available() -> bool {
+    // Allow tests/CI to force-disable secure storage to ensure deterministic behavior
+    if std::env::var("RCO_DISABLE_SECURE_STORAGE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+    {
+        return false;
+    }
+
     #[cfg(feature = "secure-storage")]
     {
         // Try to create a test entry to see if keyring is available

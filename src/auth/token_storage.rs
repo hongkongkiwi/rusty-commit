@@ -118,24 +118,48 @@ pub fn store_tokens(
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            crate::config::secure_storage::store_secret("claude_access_token", access_token)?;
+            // Attempt secure storage; on failure fall through to file storage
+            if let Err(e) = crate::config::secure_storage::store_secret(
+                "claude_access_token",
+                access_token,
+            ) {
+                eprintln!(
+                    "Note: Could not store access token in secure storage: {}",
+                    e
+                );
+            } else {
+                if let Some(refresh) = refresh_token {
+                    if let Err(e) = crate::config::secure_storage::store_secret(
+                        "claude_refresh_token",
+                        refresh,
+                    ) {
+                        eprintln!(
+                            "Note: Could not store refresh token in secure storage: {}",
+                            e
+                        );
+                    }
+                }
 
-            if let Some(refresh) = refresh_token {
-                crate::config::secure_storage::store_secret("claude_refresh_token", refresh)?;
+                if let Some(expires_in) = expires_in {
+                    let expires_at = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                        + expires_in;
+                    if let Err(e) = crate::config::secure_storage::store_secret(
+                        "claude_token_expires_at",
+                        &expires_at.to_string(),
+                    ) {
+                        eprintln!(
+                            "Note: Could not store token expiry in secure storage: {}",
+                            e
+                        );
+                    }
+                }
+
+                // If we successfully stored the access token, prefer secure storage and return
+                return Ok(());
             }
-
-            if let Some(expires_in) = expires_in {
-                let expires_at = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)?
-                    .as_secs()
-                    + expires_in;
-                crate::config::secure_storage::store_secret(
-                    "claude_token_expires_at",
-                    &expires_at.to_string(),
-                )?;
-            }
-
-            return Ok(());
         }
     }
 

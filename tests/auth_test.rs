@@ -61,6 +61,8 @@ fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
 
     // Ensure repo-level config is ignored during tests for isolation
     std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
+    // Disable secure storage to force file-based, deterministic behavior in CI
+    std::env::set_var("RCO_DISABLE_SECURE_STORAGE", "1");
 
     // Create unique temp directory with timestamp to ensure uniqueness
     let timestamp = std::time::SystemTime::now()
@@ -89,6 +91,7 @@ fn cleanup_env() {
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("HOME");
     std::env::remove_var("RCO_IGNORE_REPO_CONFIG");
+    std::env::remove_var("RCO_DISABLE_SECURE_STORAGE");
 }
 
 #[test]

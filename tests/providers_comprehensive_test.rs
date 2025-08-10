@@ -22,6 +22,9 @@ fn clear_rco_env() {
     for key in vars {
         std::env::remove_var(key);
     }
+    // Re-assert isolation flags for all tests
+    std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
+    std::env::set_var("RCO_DISABLE_SECURE_STORAGE", "1");
 }
 
 fn setup_env() -> tempfile::TempDir {
@@ -32,6 +35,8 @@ fn setup_env() -> tempfile::TempDir {
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
+    // Disable secure storage to keep tests deterministic and file-based
+    std::env::set_var("RCO_DISABLE_SECURE_STORAGE", "1");
     temp_dir
 }
 

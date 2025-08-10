@@ -114,13 +114,17 @@ impl Config {
         // If we have an API key and secure storage is available, store it securely
         if let Some(ref api_key) = self.api_key {
             if secure_storage::is_available() {
-                // Store in secure storage
-                if let Err(e) = secure_storage::store_secret("RCO_API_KEY", api_key) {
-                    // Log warning but continue - fall back to file storage
-                    eprintln!("Warning: Could not store API key securely: {e}");
-                } else {
-                    // Don't save API key to file if stored securely
-                    save_config.api_key = None;
+                match secure_storage::store_secret("RCO_API_KEY", api_key) {
+                    Ok(_) => {
+                        // Don't save API key to file if stored securely
+                        save_config.api_key = None;
+                    }
+                    Err(e) => {
+                        // Fall back to file storage; keep api_key in file
+                        eprintln!(
+                            "Warning: Secure storage unavailable, falling back to file: {e}"
+                        );
+                    }
                 }
             }
         }

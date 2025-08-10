@@ -9,6 +9,7 @@ mod commands;
 mod config;
 mod git;
 mod providers;
+mod update;
 mod utils;
 
 use anyhow::Result;
@@ -47,6 +48,7 @@ async fn main() -> Result<()> {
         Some(cli::Commands::CommitLint(cmd)) => commands::commitlint::execute(cmd).await,
         Some(cli::Commands::Auth(cmd)) => commands::auth::execute(cmd).await,
         Some(cli::Commands::Mcp(cmd)) => commands::mcp::execute(cmd).await,
+        Some(cli::Commands::Update(cmd)) => commands::update::execute(cmd).await,
         None => {
             // Default to commit command
             commands::commit::execute(cli.global).await

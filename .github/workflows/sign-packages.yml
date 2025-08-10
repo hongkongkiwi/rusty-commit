@@ -1,0 +1,304 @@
+name: Sign Packages
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        required: false
+      GPG_PASSPHRASE:
+        required: false
+      GPG_KEY_ID:
+        required: false
+
+jobs:
+  sign-deb-packages:
+    name: Sign Debian Packages
+    runs-on: ubuntu-latest
+    if: secrets.GPG_PRIVATE_KEY != ''
+    steps:
+      - name: Setup GPG
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y debsigs dpkg-sig
+          
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          
+          # Configure GPG
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+          
+          # Get key ID
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+
+      - name: Download .deb packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: deb-*
+          path: ./debs
+
+      - name: Sign .deb packages
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Sign each .deb package
+          find ./debs -name "*.deb" | while read deb; do
+            echo "Signing $deb..."
+            
+            # Method 1: debsigs (adds signature inside the package)
+            debsigs --sign=origin --default-key="$GPG_KEY_ID" "$deb" || true
+            
+            # Method 2: dpkg-sig (adds signature to the package)
+            dpkg-sig --sign builder -k "$GPG_KEY_ID" "$deb" || true
+            
+            # Method 3: Create detached signature
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${deb}.asc" \
+                "$deb"
+          done
+
+      - name: Upload signed .deb packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-debs
+          path: |
+            ./debs/**/*.deb
+            ./debs/**/*.asc
+
+  sign-rpm-packages:
+    name: Sign RPM Packages
+    runs-on: ubuntu-latest
+    if: secrets.GPG_PRIVATE_KEY != ''
+    steps:
+      - name: Setup GPG and RPM
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          
+          # Get key ID
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          
+          # Configure RPM macros for signing
+          cat > ~/.rpmmacros << EOF
+          %_signature gpg
+          %_gpg_name $KEY_ID
+          %__gpg /usr/bin/gpg
+          %_gpg_sign_cmd %{__gpg} --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback --no-armor --digest-algo sha256 --detach-sign --sign %{__plaintext_filename} %{__signature_filename}
+          EOF
+
+      - name: Download .rpm packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rpm-*
+          path: ./rpms
+
+      - name: Sign .rpm packages
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Sign each .rpm package
+          find ./rpms -name "*.rpm" | while read rpm; do
+            echo "Signing $rpm..."
+            
+            # Method 1: rpm --addsign (adds signature to the package)
+            echo "$GPG_PASSPHRASE" | rpm --addsign "$rpm" 2>/dev/null || {
+              echo "rpm --addsign failed, trying alternative method..."
+            }
+            
+            # Method 2: Create detached signature
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${rpm}.asc" \
+                "$rpm"
+          done
+
+      - name: Upload signed .rpm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-rpms
+          path: |
+            ./rpms/**/*.rpm
+            ./rpms/**/*.asc
+
+  sign-binaries:
+    name: Sign Binary Archives
+    runs-on: ubuntu-latest
+    if: secrets.GPG_PRIVATE_KEY != ''
+    steps:
+      - name: Setup GPG
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          
+          # Configure GPG
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+
+      - name: Download binary archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: archive-*
+          path: ./archives
+
+      - name: Create detached signatures
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Sign each archive
+          find ./archives -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while read archive; do
+            echo "Signing $archive..."
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${archive}.asc" \
+                "$archive"
+          done
+
+      - name: Upload signatures
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-signatures
+          path: ./archives/**/*.asc
+
+  macos-codesign:
+    name: Code Sign macOS Binaries
+    runs-on: macos-latest
+    if: secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != ''
+    steps:
+      - name: Download macOS binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rco-macos-*
+          path: ./macos
+
+      - name: Setup Apple certificates
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+        run: |
+          # Create keychain
+          security create-keychain -p actions temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p actions temp.keychain
+          
+          # Import certificate
+          echo "$APPLE_CERTIFICATE" | base64 -d > certificate.p12
+          security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions temp.keychain
+
+      - name: Code sign binaries
+        env:
+          APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+        run: |
+          find ./macos -name "rco" | while read binary; do
+            echo "Signing $binary..."
+            codesign --force --timestamp --options runtime \
+                     --sign "$APPLE_IDENTITY" \
+                     --identifier "com.rustycommit.rco" \
+                     "$binary"
+            
+            # Verify signature
+            codesign --verify --verbose "$binary"
+          done
+
+      - name: Notarize binaries (optional)
+        if: secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          find ./macos -name "rco" | while read binary; do
+            echo "Notarizing $binary..."
+            
+            # Create a zip for notarization
+            zip -j "${binary}.zip" "$binary"
+            
+            # Submit for notarization
+            xcrun notarytool submit "${binary}.zip" \
+                  --apple-id "$APPLE_ID" \
+                  --password "$APPLE_APP_PASSWORD" \
+                  --team-id "$APPLE_TEAM_ID" \
+                  --wait
+            
+            # Staple the notarization
+            xcrun stapler staple "$binary"
+          done
+
+      - name: Upload signed macOS binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-macos
+          path: ./macos/**/*
+
+  windows-codesign:
+    name: Code Sign Windows Binaries
+    runs-on: windows-latest
+    if: secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != ''
+    steps:
+      - name: Download Windows binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rco-windows-*
+          path: ./windows
+
+      - name: Setup certificate
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          # Import certificate
+          $cert = [System.Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $certPath = "certificate.pfx"
+          [System.IO.File]::WriteAllBytes($certPath, $cert)
+          
+          # Import to certificate store
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+
+      - name: Sign binaries
+        run: |
+          # Find and sign all .exe files
+          Get-ChildItem -Path ./windows -Filter "*.exe" -Recurse | ForEach-Object {
+            Write-Host "Signing $($_.FullName)..."
+            
+            & signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
+                      /d "Rusty Commit" `
+                      /du "https://github.com/hongkongkiwi/rusty-commit" `
+                      $_.FullName
+            
+            # Verify signature
+            & signtool verify /pa $_.FullName
+          }
+
+      - name: Upload signed Windows binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows
+          path: ./windows/**/*

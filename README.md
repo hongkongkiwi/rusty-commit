@@ -49,6 +49,22 @@ cargo install rusty-commit                      # basic
 cargo install rusty-commit --features secure-storage  # store API keys in system keychain
 ```
 
+### Alpine Linux
+```bash
+# x86_64
+apk add --no-cache curl
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-x86_64.tar.gz | tar xz
+sudo mv rco /usr/local/bin/
+
+# aarch64
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-aarch64.tar.gz | tar xz
+sudo mv rco /usr/local/bin/
+
+# riscv64
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-riscv64.tar.gz | tar xz
+sudo mv rco /usr/local/bin/
+```
+
 ## Quick start
 ```bash
 # 1) Authenticate (Claude OAuth) or set an API key

@@ -34,4 +34,5 @@ pub mod commands;
 pub mod config;
 pub mod git;
 pub mod providers;
+pub mod update;
 pub mod utils;

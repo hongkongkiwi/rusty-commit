@@ -24,6 +24,20 @@ fn init_test_git_repo(dir: &std::path::Path) {
         .current_dir(dir)
         .output()
         .expect("Failed to set git name");
+
+    // Create initial commit to establish main branch
+    fs::write(dir.join(".gitignore"), "").expect("Failed to create .gitignore");
+    StdCommand::new("git")
+        .args(["add", ".gitignore"])
+        .current_dir(dir)
+        .output()
+        .expect("Failed to add .gitignore");
+
+    StdCommand::new("git")
+        .args(["commit", "-m", "Initial commit"])
+        .current_dir(dir)
+        .output()
+        .expect("Failed to create initial commit");
 }
 
 #[test]

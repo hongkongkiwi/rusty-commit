@@ -19,7 +19,7 @@ fn test_cli_version() {
     cmd.arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("rustycommit"));
+        .stdout(predicate::str::contains("rco"));
 }
 
 #[test]

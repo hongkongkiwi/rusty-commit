@@ -107,16 +107,16 @@ jobs:
         run: |
           if [ "${{ steps.copilot-commit.outcome }}" = "success" ]; then
             echo "✅ Used GitHub Copilot for commit generation"
-            echo "provider=github-copilot" >> $GITHUB_OUTPUT
+            echo "provider=github-copilot" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.groq-commit.outcome }}" = "success" ]; then
             echo "✅ Used Groq for commit generation"
-            echo "provider=groq" >> $GITHUB_OUTPUT
+            echo "provider=groq" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.openai-commit.outcome }}" = "success" ]; then
             echo "✅ Used OpenAI for commit generation"
-            echo "provider=openai" >> $GITHUB_OUTPUT
+            echo "provider=openai" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.deepseek-commit.outcome }}" = "success" ]; then
             echo "✅ Used DeepSeek for commit generation"
-            echo "provider=deepseek" >> $GITHUB_OUTPUT
+            echo "provider=deepseek" >> "$GITHUB_OUTPUT"
           else
             echo "❌ All providers failed"
             echo "provider=none" >> $GITHUB_OUTPUT

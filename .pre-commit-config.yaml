@@ -18,3 +18,9 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+      - id: actionlint
+        name: Lint GitHub Actions workflows
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+        stages: [pre-commit]

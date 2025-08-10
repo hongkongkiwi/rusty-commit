@@ -26,13 +26,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "release" ]]; then
-            {
-              echo "tag=${{ github.event.release.tag_name }}"
-            } >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           else
-            {
-              echo "tag=${{ github.event.inputs.tag }}"
-            } >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare workspace
@@ -113,7 +109,7 @@ jobs:
           EOF
 
       - name: Publish to GitHub Pages (gh-pages branch)
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages

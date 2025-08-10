@@ -22,11 +22,11 @@ jobs:
 
       - name: Get version
         id: get_version
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref }}
           name: Release ${{ steps.get_version.outputs.version }}
@@ -170,7 +170,7 @@ jobs:
           Compress-Archive -Path "archive\*" -DestinationPath "${{ matrix.archive-name }}"
 
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./${{ matrix.archive-name }}
           tag_name: ${{ github.ref }}
@@ -202,7 +202,7 @@ jobs:
           cosign-release: 'v2.2.2'
 
       - name: Configure Cosign key (optional)
-        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' }}
+        if: env.COSIGN_PRIVATE_KEY != ''
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
@@ -210,9 +210,9 @@ jobs:
           echo "$COSIGN_PRIVATE_KEY" | base64 -d > cosign.key
           chmod 600 cosign.key
           if [ -n "${COSIGN_PASSWORD:-}" ]; then
-            echo "COSIGN_PASSWORD=$COSIGN_PASSWORD" >> $GITHUB_ENV
+            echo "COSIGN_PASSWORD=$COSIGN_PASSWORD" >> "$GITHUB_ENV"
           fi
-          echo "COSIGN_KEY_ARGS=--key cosign.key" >> $GITHUB_ENV
+          echo "COSIGN_KEY_ARGS=--key cosign.key" >> "$GITHUB_ENV"
 
       - name: Setup GPG
         if: env.GPG_PRIVATE_KEY != ''
@@ -238,7 +238,7 @@ jobs:
         run: |
           cd artifacts
           # Sign all package types with Cosign keyless signing
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while read file; do
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while IFS= read -r file; do
             filename=$(basename "$file")
             echo "Signing $filename with Cosign..."
             
@@ -246,7 +246,7 @@ jobs:
             cosign sign-blob "$file" \
               --yes \
               --oidc-issuer https://token.actions.githubusercontent.com \
-              ${COSIGN_KEY_ARGS:-} \
+              "${COSIGN_KEY_ARGS:-}" \
               --bundle "${file}.cosign.bundle" \
               --output-certificate "${file}.cosign.cert" \
               --output-signature "${file}.cosign.sig"
@@ -268,7 +268,7 @@ jobs:
         run: |
           cd artifacts
           # Find all release files and generate checksums
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while read file; do
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while IFS= read -r file; do
             sha256sum "$file" | sed 's|^\./||' >> ../checksums.txt
           done
           cd ..
@@ -333,7 +333,7 @@ jobs:
         run: |
           cd artifacts
           # Sign each tar.gz and zip file with detached signature
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while read file; do
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while IFS= read -r file; do
             echo "Signing $file..."
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \
@@ -344,14 +344,14 @@ jobs:
           cd ..
 
       - name: Upload checksums
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./SHA256SUMS.txt
           tag_name: ${{ github.ref }}
 
       - name: Upload signed checksums
         if: env.GPG_PRIVATE_KEY != ''
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./SHA256SUMS.txt.asc
           tag_name: ${{ github.ref }}
@@ -382,7 +382,7 @@ jobs:
         run: |
           cd artifacts
           # Upload all .asc signature files
-          find . -name "*.asc" | while read sig; do
+          find . -name "*.asc" | while IFS= read -r sig; do
             filename=$(basename "$sig")
             echo "Uploading GPG signature: $filename"
             curl -X POST \
@@ -396,7 +396,7 @@ jobs:
         run: |
           cd artifacts
           # Upload Cosign signature files (.sig, .cert, .bundle) for all packages
-          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) | while read sig; do
+          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) | while IFS= read -r sig; do
             filename=$(basename "$sig")
             echo "Uploading Cosign artifact: $filename"
             curl -X POST \

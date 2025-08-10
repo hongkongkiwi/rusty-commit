@@ -18,7 +18,8 @@ jobs:
   sign-deb-packages:
     name: Sign Debian Packages
     runs-on: ubuntu-latest
-    if: secrets.GPG_PRIVATE_KEY != ''
+    # Conditional signing based on GPG key availability
+    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:
@@ -52,7 +53,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           # Sign each .deb package
-          find ./debs -name "*.deb" | while read deb; do
+          find ./debs -name "*.deb" | while IFS= read -r deb; do
             echo "Signing $deb..."
             
             # Method 1: debsigs (adds signature inside the package)
@@ -80,7 +81,8 @@ jobs:
   sign-rpm-packages:
     name: Sign RPM Packages
     runs-on: ubuntu-latest
-    if: secrets.GPG_PRIVATE_KEY != ''
+    # Conditional signing based on GPG key availability
+    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG and RPM
         env:
@@ -117,7 +119,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           # Sign each .rpm package
-          find ./rpms -name "*.rpm" | while read rpm; do
+          find ./rpms -name "*.rpm" | while IFS= read -r rpm; do
             echo "Signing $rpm..."
             
             # Method 1: rpm --addsign (adds signature to the package)
@@ -144,7 +146,8 @@ jobs:
   sign-binaries:
     name: Sign Binary Archives
     runs-on: ubuntu-latest
-    if: secrets.GPG_PRIVATE_KEY != ''
+    # Conditional signing based on GPG key availability
+    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:
@@ -170,7 +173,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           # Sign each archive
-          find ./archives -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while read archive; do
+          find ./archives -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while IFS= read -r archive; do
             echo "Signing $archive..."
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \
@@ -216,7 +219,7 @@ jobs:
         env:
           APPLE_IDENTITY: ${{ secrets.APPLE_IDENTITY }}
         run: |
-          find ./macos -name "rco" | while read binary; do
+          find ./macos -name "rco" | while IFS= read -r binary; do
             echo "Signing $binary..."
             codesign --force --timestamp --options runtime \
                      --sign "$APPLE_IDENTITY" \
@@ -228,13 +231,13 @@ jobs:
           done
 
       - name: Notarize binaries (optional)
-        if: secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != ''
+        if: false  # Apple signing not yet configured
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          find ./macos -name "rco" | while read binary; do
+          find ./macos -name "rco" | while IFS= read -r binary; do
             echo "Notarizing $binary..."
             
             # Create a zip for notarization
@@ -260,7 +263,7 @@ jobs:
   windows-codesign:
     name: Code Sign Windows Binaries
     runs-on: windows-latest
-    if: secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != ''
+    if: false  # Windows signing not yet configured
     steps:
       - name: Download Windows binaries
         uses: actions/download-artifact@v4
@@ -306,7 +309,8 @@ jobs:
   alpine-sign:
     name: Sign Alpine Packages (.apk)
     runs-on: ubuntu-latest
-    if: secrets.GPG_PRIVATE_KEY != ''
+    # Conditional signing based on GPG key availability
+    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:
@@ -356,7 +360,7 @@ jobs:
         run: |
           # Alpine packages are signed with abuild-sign
           # For now, we'll create detached GPG signatures as Alpine native signing is complex
-          find ./apks -name "*.apk" | while read apk; do
+          find ./apks -name "*.apk" | while IFS= read -r apk; do
             echo "Creating GPG signature for $apk..."
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \

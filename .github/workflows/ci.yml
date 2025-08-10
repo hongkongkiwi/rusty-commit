@@ -72,8 +72,9 @@ jobs:
     needs: lint
     env:
       # Run tests single-threaded to avoid global env/cwd races across files
+      # (tests use shared env like HOME/RCO_CONFIG_HOME and manipulate CWD)
       RUST_TEST_THREADS: 1
-      # Ensure repo-level config does not interfere with tests
+      # Ensure repo-level config does not interfere with tests (we use per-test RCO_CONFIG_HOME)
       RCO_IGNORE_REPO_CONFIG: 1
     strategy:
       matrix:

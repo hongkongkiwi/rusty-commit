@@ -159,6 +159,10 @@ jobs:
           mkdir -p "${PKGNAME}/DEBIAN"
           mkdir -p "${PKGNAME}/usr/bin"
           mkdir -p "${PKGNAME}/usr/share/doc/rusty-commit"
+          mkdir -p "${PKGNAME}/usr/share/man/man1"
+          mkdir -p "${PKGNAME}/usr/share/bash-completion/completions"
+          mkdir -p "${PKGNAME}/usr/share/zsh/vendor-completions"
+          mkdir -p "${PKGNAME}/usr/share/fish/vendor_completions.d"
 
           # Copy binary
           cp binary/rco "${PKGNAME}/usr/bin/"
@@ -184,6 +188,15 @@ jobs:
           # Copy documentation
           cp README.md "${PKGNAME}/usr/share/doc/rusty-commit/"
           cp LICENSE "${PKGNAME}/usr/share/doc/rusty-commit/" || true
+          
+          # Copy man page
+          cp man/rco.1 "${PKGNAME}/usr/share/man/man1/" || true
+          gzip -9 "${PKGNAME}/usr/share/man/man1/rco.1" || true
+          
+          # Copy shell completions
+          cp completions/rco.bash "${PKGNAME}/usr/share/bash-completion/completions/rco" || true
+          cp completions/_rco "${PKGNAME}/usr/share/zsh/vendor-completions/_rco" || true
+          cp completions/rco.fish "${PKGNAME}/usr/share/fish/vendor_completions.d/rco.fish" || true
 
           # Build the package
           dpkg-deb --build "${PKGNAME}"
@@ -242,10 +255,23 @@ jobs:
           # Create RPM build structure
           mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
           mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin
+          mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/man/man1
+          mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/bash-completion/completions
+          mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/zsh/site-functions
+          mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/fish/vendor_completions.d
 
           # Copy binary
           cp binary/rco rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/
           chmod 755 rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/rco
+          
+          # Copy man page
+          cp man/rco.1 rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/man/man1/ || true
+          gzip -9 rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/man/man1/rco.1 || true
+          
+          # Copy shell completions
+          cp completions/rco.bash rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/bash-completion/completions/rco || true
+          cp completions/_rco rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/zsh/site-functions/_rco || true
+          cp completions/rco.fish rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/share/fish/vendor_completions.d/rco.fish || true
 
           # Create spec file
           cat > rpmbuild/SPECS/rusty-commit.spec << EOF
@@ -263,6 +289,10 @@ jobs:
 
           %files
           /usr/bin/rco
+          /usr/share/man/man1/rco.1.gz
+          /usr/share/bash-completion/completions/rco
+          /usr/share/zsh/site-functions/_rco
+          /usr/share/fish/vendor_completions.d/rco.fish
 
           %changelog
           * $(date '+%a %b %d %Y') Rusty Commit Contributors - ${VERSION}
@@ -362,8 +392,19 @@ jobs:
 
           package() {
               mkdir -p \${pkgdir}/usr/bin
+              mkdir -p \${pkgdir}/usr/share/man/man1
+              mkdir -p \${pkgdir}/usr/share/bash-completion/completions
+              mkdir -p \${pkgdir}/usr/share/zsh/site-functions
+              mkdir -p \${pkgdir}/usr/share/fish/vendor_completions.d
+              
               cp /workspace/binary/rco \${pkgdir}/usr/bin/
               chmod 755 \${pkgdir}/usr/bin/rco
+              
+              # Copy man page and completions if they exist
+              [ -f /workspace/man/rco.1 ] && cp /workspace/man/rco.1 \${pkgdir}/usr/share/man/man1/ && gzip -9 \${pkgdir}/usr/share/man/man1/rco.1
+              [ -f /workspace/completions/rco.bash ] && cp /workspace/completions/rco.bash \${pkgdir}/usr/share/bash-completion/completions/rco
+              [ -f /workspace/completions/_rco ] && cp /workspace/completions/_rco \${pkgdir}/usr/share/zsh/site-functions/_rco
+              [ -f /workspace/completions/rco.fish ] && cp /workspace/completions/rco.fish \${pkgdir}/usr/share/fish/vendor_completions.d/rco.fish
           }
           APKEOF
 
@@ -444,10 +485,13 @@ jobs:
 
           # Create completion scripts directory
           mkdir -p "${DIRNAME}/completions"
-
-          # Generate shell completions (if available)
-          # This would require adding clap_complete to dependencies
-          # and generating at build time
+          
+          # Copy shell completions
+          cp completions/* "${DIRNAME}/completions/" 2>/dev/null || true
+          
+          # Create man directory and copy man page
+          mkdir -p "${DIRNAME}/man"
+          cp man/rco.1 "${DIRNAME}/man/" 2>/dev/null || true
 
           # Create install script
           cat > "${DIRNAME}/install.sh" << 'EOF'
@@ -465,6 +509,35 @@ jobs:
           # Copy binary
           sudo cp rco "$BIN_DIR/"
           sudo chmod 755 "$BIN_DIR/rco"
+          
+          # Install man page if present
+          if [ -f man/rco.1 ]; then
+              echo "Installing man page..."
+              sudo mkdir -p "$PREFIX/share/man/man1"
+              sudo cp man/rco.1 "$PREFIX/share/man/man1/"
+              sudo gzip -9f "$PREFIX/share/man/man1/rco.1" 2>/dev/null || true
+          fi
+          
+          # Install shell completions if present
+          if [ -d completions ]; then
+              echo "Installing shell completions..."
+              # Bash
+              if [ -f completions/rco.bash ]; then
+                  sudo mkdir -p /etc/bash_completion.d
+                  sudo cp completions/rco.bash /etc/bash_completion.d/rco
+              fi
+              # Zsh
+              if [ -f completions/_rco ]; then
+                  sudo mkdir -p "$PREFIX/share/zsh/site-functions"
+                  sudo cp completions/_rco "$PREFIX/share/zsh/site-functions/_rco"
+              fi
+              # Fish
+              if [ -f completions/rco.fish ]; then
+                  fish_dir="$HOME/.config/fish/completions"
+                  mkdir -p "$fish_dir"
+                  cp completions/rco.fish "$fish_dir/rco.fish"
+              fi
+          fi
 
           echo "Installation complete!"
           echo "Run 'rco --help' to get started"
@@ -524,6 +597,21 @@ jobs:
           Copy-Item "README.md" -Destination "$dirname\"
           if (Test-Path "LICENSE") {
             Copy-Item "LICENSE" -Destination "$dirname\"
+          }
+          if (Test-Path "INSTALL.md") {
+            Copy-Item "INSTALL.md" -Destination "$dirname\"
+          }
+          
+          # Copy completions
+          if (Test-Path "completions") {
+            New-Item -ItemType Directory -Force -Path "$dirname\completions"
+            Copy-Item "completions\*" -Destination "$dirname\completions\" -Recurse
+          }
+          
+          # Copy man page (for reference on Windows)
+          if (Test-Path "man") {
+            New-Item -ItemType Directory -Force -Path "$dirname\man"
+            Copy-Item "man\*" -Destination "$dirname\man\" -Recurse
           }
 
           # Create install script

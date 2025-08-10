@@ -121,9 +121,7 @@ impl Config {
                     }
                     Err(e) => {
                         // Fall back to file storage; keep api_key in file
-                        eprintln!(
-                            "Warning: Secure storage unavailable, falling back to file: {e}"
-                        );
+                        eprintln!("Warning: Secure storage unavailable, falling back to file: {e}");
                     }
                 }
             }

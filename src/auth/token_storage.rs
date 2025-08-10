@@ -119,20 +119,18 @@ pub fn store_tokens(
     {
         if crate::config::secure_storage::is_available() {
             // Attempt secure storage; on failure fall through to file storage
-            if let Err(e) = crate::config::secure_storage::store_secret(
-                "claude_access_token",
-                access_token,
-            ) {
+            if let Err(e) =
+                crate::config::secure_storage::store_secret("claude_access_token", access_token)
+            {
                 eprintln!(
                     "Note: Could not store access token in secure storage: {}",
                     e
                 );
             } else {
                 if let Some(refresh) = refresh_token {
-                    if let Err(e) = crate::config::secure_storage::store_secret(
-                        "claude_refresh_token",
-                        refresh,
-                    ) {
+                    if let Err(e) =
+                        crate::config::secure_storage::store_secret("claude_refresh_token", refresh)
+                    {
                         eprintln!(
                             "Note: Could not store refresh token in secure storage: {}",
                             e

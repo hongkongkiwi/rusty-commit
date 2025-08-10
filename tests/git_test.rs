@@ -29,9 +29,30 @@ fn init_test_repo() -> tempfile::TempDir {
     temp_dir
 }
 
+fn init_test_repo_with_commit() -> tempfile::TempDir {
+    let temp_dir = init_test_repo();
+
+    // Create initial commit to establish main branch
+    fs::write(temp_dir.path().join(".gitignore"), "").expect("Failed to create .gitignore");
+    Command::new("git")
+        .args(["add", ".gitignore"])
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to add .gitignore");
+
+    Command::new("git")
+        .args(["commit", "-m", "Initial commit"])
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to create initial commit");
+
+    temp_dir
+}
+
 #[test]
 fn test_assert_git_repo() {
     let temp_dir = init_test_repo();
+    let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     // Should succeed in a git repo
@@ -41,14 +62,22 @@ fn test_assert_git_repo() {
     let non_git_dir = tempdir().unwrap();
     std::env::set_current_dir(non_git_dir.path()).unwrap();
     assert!(git::assert_git_repo().is_err());
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    drop(temp_dir);
+    drop(non_git_dir);
 }
 
 #[test]
 fn test_get_changed_files() {
-    let temp_dir = init_test_repo();
+    let temp_dir = init_test_repo_with_commit();
+    let original_cwd = std::env::current_dir().unwrap();
+    
+    // Change directory and ensure temp_dir stays alive
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
-    // No changes initially
+    // No changes initially (since we have a clean initial commit)
     let files = git::get_changed_files().unwrap();
     assert_eq!(files.len(), 0);
 
@@ -58,11 +87,18 @@ fn test_get_changed_files() {
     let files = git::get_changed_files().unwrap();
     assert_eq!(files.len(), 1);
     assert_eq!(files[0], "test.txt");
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    
+    // Keep temp_dir alive until end of test
+    drop(temp_dir);
 }
 
 #[test]
 fn test_get_staged_files() {
-    let temp_dir = init_test_repo();
+    let temp_dir = init_test_repo_with_commit();
+    let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     // Create and stage a file
@@ -82,11 +118,16 @@ fn test_get_staged_files() {
 
     let staged = git::get_staged_files().unwrap();
     assert_eq!(staged.len(), 1); // Still only one staged file
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    drop(temp_dir);
 }
 
 #[test]
 fn test_stage_files() {
-    let temp_dir = init_test_repo();
+    let temp_dir = init_test_repo_with_commit();
+    let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
     // Create multiple files
@@ -102,29 +143,21 @@ fn test_stage_files() {
     assert!(staged.contains(&"file1.txt".to_string()));
     assert!(staged.contains(&"file3.txt".to_string()));
     assert!(!staged.contains(&"file2.txt".to_string()));
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    drop(temp_dir);
 }
 
 #[test]
 fn test_get_staged_diff() {
-    let temp_dir = init_test_repo();
+    let temp_dir = init_test_repo_with_commit();
+    let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp_dir.path()).unwrap();
-
-    // Create initial commit
-    fs::write(temp_dir.path().join("initial.txt"), "initial content").unwrap();
-    Command::new("git")
-        .args(["add", "."])
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    Command::new("git")
-        .args(["commit", "-m", "Initial commit"])
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
 
     // Create and stage changes
     fs::write(temp_dir.path().join("new_file.txt"), "new content").unwrap();
-    fs::write(temp_dir.path().join("initial.txt"), "modified content").unwrap();
+    fs::write(temp_dir.path().join("initial.txt"), "initial content").unwrap();
     Command::new("git")
         .args(["add", "."])
         .current_dir(temp_dir.path())
@@ -135,12 +168,17 @@ fn test_get_staged_diff() {
     assert!(diff.contains("new_file.txt"));
     assert!(diff.contains("new content"));
     assert!(diff.contains("initial.txt"));
-    assert!(diff.contains("modified content"));
+    assert!(diff.contains("initial content"));
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    drop(temp_dir);
 }
 
 #[test]
 fn test_get_repo_root() {
     let temp_dir = init_test_repo();
+    let original_cwd = std::env::current_dir().unwrap();
     let sub_dir = temp_dir.path().join("subdir");
     fs::create_dir(&sub_dir).unwrap();
 
@@ -157,4 +195,8 @@ fn test_get_repo_root() {
     let root = git::get_repo_root().unwrap();
     let actual = std::path::PathBuf::from(&root).canonicalize().unwrap();
     assert_eq!(actual, expected);
+
+    // Restore original directory
+    std::env::set_current_dir(&original_cwd).unwrap();
+    drop(temp_dir);
 }

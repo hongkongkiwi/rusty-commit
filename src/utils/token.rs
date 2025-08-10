@@ -7,7 +7,7 @@ use tiktoken_rs::cl100k_base;
 /// # Examples
 ///
 /// ```ignore
-/// use rustycommit::utils::token::estimate_tokens;
+/// use rusty_commit::utils::token::estimate_tokens;
 ///
 /// let text = "Hello, world!";
 /// let tokens = estimate_tokens(text).unwrap();

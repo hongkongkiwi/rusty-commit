@@ -11,8 +11,8 @@
 //! # Example
 //!
 //! ```no_run
-//! use rustycommit::config::Config;
-//! use rustycommit::providers::create_provider;
+//! use rusty_commit::config::Config;
+//! use rusty_commit::providers::create_provider;
 //!
 //! # async fn example() -> anyhow::Result<()> {
 //! let config = Config::load()?;

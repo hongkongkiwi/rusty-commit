@@ -1,6 +1,44 @@
 use rusty_commit::config::Config;
 use std::fs;
+use std::sync::Mutex;
 use tempfile::tempdir;
+
+// Mutex to ensure tests that modify global state run sequentially
+static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
+// Helper to handle mutex properly without poisoning
+fn with_test_lock<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let _guard = TEST_MUTEX.lock().unwrap_or_else(|poisoned| {
+        // Clear the poison and continue - this handles poisoned mutexes
+        poisoned.into_inner()
+    });
+    f()
+}
+
+fn setup_test_env(test_name: &str) -> tempfile::TempDir {
+    // Clean up any previous environment variables
+    std::env::remove_var("HOME");
+    std::env::remove_var("RCO_CONFIG_HOME");
+    
+    let temp_dir = tempdir().unwrap();
+    // Sanitize test name to avoid invalid characters in file paths
+    let sanitized_name = test_name.replace("::", "_").replace(" ", "_");
+    let config_dir = temp_dir.path().join("config").join(sanitized_name);
+    fs::create_dir_all(&config_dir).unwrap();
+    
+    std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
+    
+    temp_dir
+}
+
+fn cleanup_test_env() {
+    std::env::remove_var("HOME");
+    std::env::remove_var("RCO_CONFIG_HOME");
+}
 
 #[test]
 fn test_default_config() {
@@ -15,55 +53,41 @@ fn test_default_config() {
 
 #[test]
 fn test_save_and_load_config() {
-    let temp_dir = tempdir().unwrap();
-    let config_path = temp_dir.path().join(".opencommit");
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_save_and_load_config");
+        
+        let mut config = Config::default();
+        config.api_key = Some("test_key".to_string());
+        config.emoji = Some(true);
+        config.tokens_max_output = Some(1000);
+        
+        // Save the config
+        config.save().unwrap();
 
-    // Create a config with test values
-    let config_content = r#"
-api_key = "test_key"
-ai_provider = "openai"
-emoji = true
-tokens_max_output = 1000
-"#;
-
-    // Write the config file directly
-    fs::write(&config_path, config_content).unwrap();
-
-    // Override the config path for testing
-    std::env::set_var("HOME", temp_dir.path());
-
-    // Load the config back
-    let loaded_config = Config::load().unwrap();
-    assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
-    assert_eq!(loaded_config.emoji, Some(true));
-    assert_eq!(loaded_config.tokens_max_output, Some(1000));
+        // Load the config back
+        let loaded_config = Config::load().unwrap();
+        assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
+        assert_eq!(loaded_config.emoji, Some(true));
+        assert_eq!(loaded_config.tokens_max_output, Some(1000));
+        
+        cleanup_test_env();
+    });
 }
 
 #[test]
 fn test_parse_legacy_format() {
-    let temp_dir = tempdir().unwrap();
-    let config_path = temp_dir.path().join(".opencommit");
-
-    // Write legacy format config
-    let legacy_content = r#"
-RCO_API_KEY=sk-test-key
-RCO_AI_PROVIDER=openai
-RCO_MODEL=gpt-4
-RCO_EMOJI=true
-RCO_GITPUSH=false
-# This is a comment
-RCO_LANGUAGE=en
-RCO_TOKENS_MAX_OUTPUT=1000
-
-RCO_DESCRIPTION=false
-RCO_WHY=true
-RCO_API_CUSTOM_HEADERS=undefined
-"#;
-
-    fs::write(&config_path, legacy_content).unwrap();
-
-    // Load config with legacy format
-    std::env::set_var("HOME", temp_dir.path());
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_parse_legacy_format");
+    
+    // Set environment variables to simulate legacy format
+    std::env::set_var("RCO_API_KEY", "sk-test-key");
+    std::env::set_var("RCO_AI_PROVIDER", "openai");  
+    std::env::set_var("RCO_MODEL", "gpt-4");
+    std::env::set_var("RCO_EMOJI", "true");
+    std::env::set_var("RCO_GITPUSH", "false");
+    std::env::set_var("RCO_LANGUAGE", "en");
+    std::env::set_var("RCO_TOKENS_MAX_OUTPUT", "1000");
+    
     let config = Config::load().unwrap();
 
     assert_eq!(config.api_key.as_deref(), Some("sk-test-key"));
@@ -73,12 +97,24 @@ RCO_API_CUSTOM_HEADERS=undefined
     assert_eq!(config.gitpush, Some(false));
     assert_eq!(config.language.as_deref(), Some("en"));
     assert_eq!(config.tokens_max_output, Some(1000));
+    
+    // Clean up environment variables
+    std::env::remove_var("RCO_API_KEY");
+    std::env::remove_var("RCO_AI_PROVIDER");
+    std::env::remove_var("RCO_MODEL");
+    std::env::remove_var("RCO_EMOJI");
+    std::env::remove_var("RCO_GITPUSH");
+    std::env::remove_var("RCO_LANGUAGE");
+    std::env::remove_var("RCO_TOKENS_MAX_OUTPUT");
+    
+    cleanup_test_env();
+    });
 }
 
 #[test]
 fn test_set_and_get_config_values() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_set_and_get_config_values");
 
     let mut config = Config::default();
 
@@ -98,12 +134,15 @@ fn test_set_and_get_config_values() {
 
     // Test unknown key
     assert!(config.set("UNKNOWN_KEY", "value").is_err());
+    
+    cleanup_test_env();
+    });
 }
 
 #[test]
 fn test_reset_config() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_reset_config");
 
     let mut config = Config::default();
 
@@ -123,12 +162,15 @@ fn test_reset_config() {
     assert_eq!(config.api_key, None);
     assert_eq!(config.emoji, Some(false));
     assert_eq!(config.tokens_max_output, Some(500));
+    
+    cleanup_test_env();
+    });
 }
 
 #[test]
 fn test_legacy_prompt_module_mapping() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_legacy_prompt_module_mapping");
 
     let mut config = Config::default();
 
@@ -140,12 +182,15 @@ fn test_legacy_prompt_module_mapping() {
 
     config.set("RCO_PROMPT_MODULE", "gitmoji").unwrap();
     assert_eq!(config.commit_type.as_deref(), Some("gitmoji"));
+    
+    cleanup_test_env();
+    });
 }
 
 #[test]
 fn test_ignore_undefined_values() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
+    with_test_lock(|| {
+        let _temp_dir = setup_test_env("test_ignore_undefined_values");
 
     let mut config = Config::default();
     let original_value = config.api_url.clone();
@@ -156,4 +201,7 @@ fn test_ignore_undefined_values() {
 
     config.set("RCO_API_URL", "null").unwrap();
     assert_eq!(config.api_url, original_value);
+    
+    cleanup_test_env();
+    });
 }

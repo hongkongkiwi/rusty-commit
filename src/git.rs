@@ -16,7 +16,7 @@ use std::process::Command;
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// git::assert_git_repo().expect("Not in a git repository");
 /// ```
@@ -36,7 +36,7 @@ pub fn assert_git_repo() -> Result<()> {
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// let staged = git::get_staged_files().unwrap();
 /// for file in staged {
@@ -77,7 +77,7 @@ pub fn get_staged_files() -> Result<Vec<String>> {
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// let changed = git::get_changed_files().unwrap();
 /// println!("Found {} changed files", changed.len());
@@ -92,7 +92,8 @@ pub fn get_changed_files() -> Result<Vec<String>> {
     let mut changed_files = Vec::new();
     for entry in statuses.iter() {
         let status = entry.status();
-        if !status.contains(git2::Status::CURRENT) && !status.contains(git2::Status::IGNORED) {
+        // Include files that are modified in working tree or untracked, but not ignored
+        if !status.contains(git2::Status::IGNORED) && !status.is_empty() {
             if let Some(path) = entry.path() {
                 changed_files.push(path.to_string());
             }
@@ -115,7 +116,7 @@ pub fn get_changed_files() -> Result<Vec<String>> {
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// let files = vec!["src/main.rs".to_string(), "Cargo.toml".to_string()];
 /// git::stage_files(&files).unwrap();
@@ -150,7 +151,7 @@ pub fn stage_files(files: &[String]) -> Result<()> {
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// let diff = git::get_staged_diff().unwrap();
 /// println!("Staged changes:\n{}", diff);
@@ -191,7 +192,7 @@ pub fn get_staged_diff() -> Result<String> {
 /// # Examples
 ///
 /// ```no_run
-/// use rustycommit::git;
+/// use rusty_commit::git;
 ///
 /// let root = git::get_repo_root().unwrap();
 /// println!("Repository root: {}", root);

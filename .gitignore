@@ -92,6 +92,13 @@ criterion/
 *.p12
 auth_tokens.json
 credentials.json
+*.rsa
+*.rsa.pub
+cosign.key
+cosign.pub
+
+# Temporary build/signing artifacts
+temp/
 
 # Claude Code specific
 .claude/

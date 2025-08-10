@@ -24,12 +24,21 @@ fn clear_rco_env() {
     }
 }
 
+fn setup_env() -> tempfile::TempDir {
+    // Ensure isolation for each test by using a unique config home
+    let temp_dir = tempdir().unwrap();
+    let config_dir = temp_dir.path().join("config");
+    std::fs::create_dir_all(&config_dir).unwrap();
+    std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
+    temp_dir
+}
+
 #[test]
 fn test_anthropic_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("anthropic".to_string());
@@ -49,8 +58,7 @@ fn test_anthropic_provider_config() {
 fn test_openai_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("openai".to_string());
@@ -69,8 +77,7 @@ fn test_openai_provider_config() {
 fn test_openrouter_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("openrouter".to_string());
@@ -94,8 +101,7 @@ fn test_openrouter_provider_config() {
 fn test_groq_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("groq".to_string());
@@ -119,8 +125,7 @@ fn test_groq_provider_config() {
 fn test_deepseek_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("deepseek".to_string());
@@ -141,8 +146,7 @@ fn test_deepseek_provider_config() {
 fn test_mistral_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("mistral".to_string());
@@ -163,8 +167,7 @@ fn test_mistral_provider_config() {
 fn test_aws_bedrock_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         // Test with API key method
         std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
@@ -196,8 +199,7 @@ fn test_aws_bedrock_provider_config() {
 fn test_azure_openai_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("azure".to_string());
@@ -222,8 +224,7 @@ fn test_azure_openai_provider_config() {
 fn test_together_ai_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("together".to_string());
@@ -250,8 +251,7 @@ fn test_together_ai_provider_config() {
 fn test_deepinfra_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("deepinfra".to_string());
@@ -278,8 +278,7 @@ fn test_deepinfra_provider_config() {
 fn test_huggingface_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("huggingface".to_string());
@@ -306,8 +305,7 @@ fn test_huggingface_provider_config() {
 fn test_github_models_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("github-models".to_string());
@@ -331,8 +329,7 @@ fn test_github_models_provider_config() {
 fn test_github_copilot_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("github-copilot".to_string());
@@ -350,8 +347,7 @@ fn test_github_copilot_provider_config() {
 fn test_gemini_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("gemini".to_string());
@@ -457,8 +453,7 @@ fn test_all_supported_providers_list() {
 
         // Test that all providers can be configured
         for provider in supported_providers {
-            let temp_dir = tempdir().unwrap();
-            std::env::set_var("HOME", temp_dir.path());
+            let _temp_dir = setup_env();
 
             let mut config = Config::default();
             config.ai_provider = Some(provider.to_string());

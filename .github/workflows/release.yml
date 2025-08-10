@@ -108,11 +108,11 @@ jobs:
             archive-name: rustycommit-linux-armv7.tar.gz
             use-cross: true
 
-          # macOS builds
+          # macOS builds  
           - os: macos-latest
             target: x86_64-apple-darwin
             archive-name: rustycommit-macos-x86_64.tar.gz
-            use-cross: false
+            use-cross: true
 
           - os: macos-latest
             target: aarch64-apple-darwin

@@ -1,13 +1,15 @@
 # Rusty Commit (rco)
 
 [![CI](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml)
+<!-- Uncomment these badges once published to crates.io:
 [![Crates.io](https://img.shields.io/crates/v/rusty-commit.svg)](https://crates.io/crates/rusty-commit)
 [![Documentation](https://docs.rs/rusty-commit/badge.svg)](https://docs.rs/rusty-commit)
+-->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 🚀 Write great commit messages in seconds — fast, local, and secure. 🦀
 
-`rco` is a Rust-native, AI‑powered commit assistant. It’s a drop‑in, high‑performance alternative compatible with OpenCommit configs.
+`rco` is a Rust-native, AI‑powered commit assistant.
 
 ### 🌟 Why Rusty Commit
 - **Speed**: Native Rust binary with instant startup
@@ -17,21 +19,22 @@
 - **Integrated**: Git hooks, GitHub Actions, MCP server for editors
 
 ## Contents
-- Installation
-- Quick start
-- Examples
-- Configuration
-- Providers
-- CLI overview
-- Git hooks
-- Updates
-- GitHub Action
-- Advanced
-- Troubleshooting
-- Uninstall
-- Compatibility
-- Development
-- License & Credits
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Examples](#examples)
+- [Configuration](#configuration)
+- [Providers](#providers)
+- [CLI overview](#cli-overview)
+- [Git hooks](#git-hooks)
+- [Updates](#updates)
+- [GitHub Action](#github-action-minimal)
+- [Advanced](#advanced)
+- [Troubleshooting](#troubleshooting)
+- [Uninstall](#uninstall)
+- [Compatibility](#compatibility)
+- [Development](#development)
+- [License](#license)
+- [Credits](#credits)
 
 ## Installation
 
@@ -119,7 +122,6 @@ Allow ±60s clock-skew; add backoff on 429; improve error messages for invalid c
 ## Configuration
 - **Global**: `~/.config/rustycommit/config.{toml,json}`
 - **Per‑repo**: `.rustycommit.toml` / `.rco.toml`
-- **Legacy**: reads `~/.opencommit` if present
 
 Basics:
 ```bash
@@ -416,7 +418,6 @@ Global flags you can use with the default `rco` command:
 - Remove config: delete `~/.config/rustycommit/`
 
 ## Compatibility
-- Full OpenCommit config compatibility; easy migration.
 - Works with per‑repo overrides and multiple providers.
 
 ## Development
@@ -467,8 +468,9 @@ If Rusty Commit saves you time, consider supporting ongoing development:
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/hongkongkiwi)
 
 ## License
-MIT
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Credits
-Rusty Commit is inspired by and compatible with the original
+Rusty Commit is inspired by the original
 [OpenCommit](https://github.com/di-sukharev/opencommit) by [@di-sukharev](https://github.com/di-sukharev).

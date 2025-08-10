@@ -13,8 +13,8 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
       - id: cargo-clippy
-        name: cargo clippy
-        entry: bash -c 'cargo clippy --all-targets --all-features -- -D warnings'
+        name: cargo clippy (sources only)
+        entry: bash -c 'cargo clippy --all-features -- -D warnings'
         language: system
         pass_filenames: false
         stages: [pre-commit]

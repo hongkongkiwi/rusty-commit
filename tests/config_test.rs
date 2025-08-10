@@ -22,6 +22,7 @@ fn setup_test_env(test_name: &str) -> tempfile::TempDir {
     // Clean up any previous environment variables
     std::env::remove_var("HOME");
     std::env::remove_var("RCO_CONFIG_HOME");
+    std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
 
     let temp_dir = tempdir().unwrap();
     // Sanitize test name to avoid invalid characters in file paths
@@ -38,6 +39,7 @@ fn setup_test_env(test_name: &str) -> tempfile::TempDir {
 fn cleanup_test_env() {
     std::env::remove_var("HOME");
     std::env::remove_var("RCO_CONFIG_HOME");
+    std::env::remove_var("RCO_IGNORE_REPO_CONFIG");
 }
 
 #[test]

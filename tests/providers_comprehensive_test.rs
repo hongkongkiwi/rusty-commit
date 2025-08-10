@@ -31,6 +31,7 @@ fn setup_env() -> tempfile::TempDir {
     std::fs::create_dir_all(&config_dir).unwrap();
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
+    std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
     temp_dir
 }
 

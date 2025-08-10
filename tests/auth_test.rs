@@ -26,6 +26,25 @@ fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
     // Clean up any existing environment variables
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("HOME");
+    
+    // Clear all RCO environment variables that might interfere with tests
+    let env_vars_to_clear = [
+        "RCO_AI_PROVIDER", "RCO_API_KEY", "RCO_MODEL", "RCO_EMOJI",
+        "RCO_GITPUSH", "RCO_LANGUAGE", "RCO_TOKENS_MAX_OUTPUT",
+        "RCO_API_URL", "RCO_TOKENS_MAX_INPUT", "RCO_COMMIT_TYPE",
+        "RCO_DESCRIPTION", "RCO_DESCRIPTION_CAPITALIZE", "RCO_DESCRIPTION_ADD_PERIOD",
+        "RCO_DESCRIPTION_MAX_LENGTH", "RCO_MESSAGE_TEMPLATE_PLACEHOLDER",
+        "RCO_PROMPT_MODULE", "RCO_ONE_LINE_COMMIT", "RCO_WHY", "RCO_OMIT_SCOPE",
+        "RCO_ACTION_ENABLED", "RCO_TEST_MOCK_TYPE", "RCO_HOOK_AUTO_UNCOMMENT",
+        "RCO_COMMITLINT_CONFIG", "RCO_CUSTOM_PROMPT"
+    ];
+    
+    for var in &env_vars_to_clear {
+        std::env::remove_var(var);
+    }
+
+    // Ensure repo-level config is ignored during tests for isolation
+    std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
 
     // Create unique temp directory with timestamp to ensure uniqueness
     let timestamp = std::time::SystemTime::now()
@@ -53,6 +72,7 @@ fn cleanup_env() {
     let _ = delete_tokens();
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("HOME");
+    std::env::remove_var("RCO_IGNORE_REPO_CONFIG");
 }
 
 #[test]
@@ -204,14 +224,7 @@ fn test_config_with_different_providers() {
         // without complex race condition issues
         let _temp_dir = setup_clean_env("test_config_provider");
 
-        // Clear any existing RCO environment variables that might interfere
-        std::env::remove_var("RCO_AI_PROVIDER");
-        std::env::remove_var("RCO_API_KEY");
-        std::env::remove_var("RCO_MODEL");
-        std::env::remove_var("RCO_EMOJI");
-        std::env::remove_var("RCO_GITPUSH");
-        std::env::remove_var("RCO_LANGUAGE");
-        std::env::remove_var("RCO_TOKENS_MAX_OUTPUT");
+        // Environment variables are now cleared by setup_clean_env
 
         let mut config = Config::default();
         config.ai_provider = Some("anthropic".to_string());
@@ -222,7 +235,15 @@ fn test_config_with_different_providers() {
 
         // Test saving and loading
         assert!(config.save().is_ok());
+        
+        // Debug: Print environment state before loading
+        println!("Debug: RCO_AI_PROVIDER env var before load: {:?}", std::env::var("RCO_AI_PROVIDER"));
+        
         let loaded_config = Config::load().unwrap();
+        
+        // Debug: Print loaded config
+        println!("Debug: loaded config ai_provider: {:?}", loaded_config.ai_provider);
+        
         assert_eq!(loaded_config.ai_provider.as_deref(), Some("anthropic"));
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
 

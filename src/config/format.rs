@@ -64,8 +64,16 @@ impl ConfigLocations {
             home.join(".config").join("rustycommit").join("config.toml")
         };
 
-        // Repository-specific config (if in a git repo)
-        let repo = if let Ok(repo) = git2::Repository::open_from_env() {
+        // Respect an opt-out for repo-level config (useful for tests/CI isolation)
+        let ignore_repo_config = std::env::var("RCO_IGNORE_REPO_CONFIG")
+            .ok()
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+
+        // Repository-specific config (if in a git repo and not ignored)
+        let repo = if ignore_repo_config {
+            None
+        } else if let Ok(repo) = git2::Repository::open_from_env() {
             let workdir = repo
                 .workdir()
                 .context("Could not get repository working directory")?;

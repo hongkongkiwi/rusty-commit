@@ -34,10 +34,12 @@ jobs:
           echo "$(date): Automated update" >> AUTOMATED_UPDATES.log
 
           # Create a simple report
-          echo "# Daily Report - $(date +%Y-%m-%d)" > daily-report.md
-          echo "" >> daily-report.md
-          echo "- Repository status: Active" >> daily-report.md
-          echo "- Last commit: $(git log -1 --pretty=format:'%h %s')" >> daily-report.md
+          {
+            echo "# Daily Report - $(date +%Y-%m-%d)"
+            echo ""
+            echo "- Repository status: Active"
+            echo "- Last commit: $(git log -1 --pretty=format:'%h %s')"
+          } > daily-report.md
 
       - name: Generate commit with OpenRouter (multi-model access)
         uses: hongkongkiwi/rustycommit@main

@@ -29,16 +29,16 @@ jobs:
         id: version
         run: |
           VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d'"' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Current version: $VERSION"
 
           # Check if this version is already published
           if cargo search rusty-commit --limit 1 | grep -q "rusty-commit = \"$VERSION\""; then
             echo "::warning::Version $VERSION is already published on crates.io"
-            echo "already_published=true" >> $GITHUB_OUTPUT
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
           else
             echo "Version $VERSION is not yet published"
-            echo "already_published=false" >> $GITHUB_OUTPUT
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run tests
@@ -88,19 +88,25 @@ jobs:
       - name: Summary
         run: |
           if [ "${{ inputs.dry_run }}" == "true" ]; then
-            echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
-            echo "Would have published version ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "## Dry Run Complete"
+              echo "Would have published version ${{ steps.version.outputs.version }}"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             if [ "${{ steps.version.outputs.already_published }}" == "true" ]; then
-              echo "## Release Skipped" >> $GITHUB_STEP_SUMMARY
-              echo "Version ${{ steps.version.outputs.version }} was already published" >> $GITHUB_STEP_SUMMARY
+              {
+                echo "## Release Skipped"
+                echo "Version ${{ steps.version.outputs.version }} was already published"
+              } >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "## Release Complete" >> $GITHUB_STEP_SUMMARY
-              echo "Successfully published version ${{ steps.version.outputs.version }} to crates.io" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-              echo "1. Create a GitHub release with tag v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-              echo "2. Upload release binaries" >> $GITHUB_STEP_SUMMARY
-              echo "3. Update documentation" >> $GITHUB_STEP_SUMMARY
+              {
+                echo "## Release Complete"
+                echo "Successfully published version ${{ steps.version.outputs.version }} to crates.io"
+                echo ""
+                echo "### Next Steps"
+                echo "1. Create a GitHub release with tag v${{ steps.version.outputs.version }}"
+                echo "2. Upload release binaries"
+                echo "3. Update documentation"
+              } >> "$GITHUB_STEP_SUMMARY"
             fi
           fi

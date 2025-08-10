@@ -119,6 +119,6 @@ jobs:
             echo "provider=deepseek" >> "$GITHUB_OUTPUT"
           else
             echo "❌ All providers failed"
-            echo "provider=none" >> $GITHUB_OUTPUT
+            echo "provider=none" >> "$GITHUB_OUTPUT"
             exit 1
           fi

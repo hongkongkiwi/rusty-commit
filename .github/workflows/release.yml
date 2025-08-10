@@ -157,9 +157,9 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           mkdir -p archive
-          cp target/${{ matrix.target }}/release/rco archive/ 2>/dev/null || true
+          cp "target/${{ matrix.target }}/release/rco" archive/ 2>/dev/null || true
           cd archive
-          tar czf ../${{ matrix.archive-name }} .
+          tar czf "../${{ matrix.archive-name }}" .
 
       - name: Create archive (Windows)
         if: matrix.os == 'windows-latest'
@@ -224,8 +224,12 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
 
           # Configure GPG
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          echo "use-agent" >> ~/.gnupg/gpg.conf
+          {
+            echo "allow-loopback-pinentry"
+          } >> ~/.gnupg/gpg-agent.conf
+          {
+            echo "use-agent"
+          } >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye
 
           # Test signing
@@ -238,7 +242,7 @@ jobs:
         run: |
           cd artifacts
           # Sign all package types with Cosign keyless signing
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while IFS= read -r file; do
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) -print0 | while IFS= read -r -d '' file; do
             filename=$(basename "$file")
             echo "Signing $filename with Cosign..."
 
@@ -268,15 +272,17 @@ jobs:
         run: |
           cd artifacts
           # Find all release files and generate checksums
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while IFS= read -r file; do
-            sha256sum "$file" | sed 's|^\./||' >> ../checksums.txt
-          done
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) -print0 | while IFS= read -r -d '' file; do
+            sha256sum "$file" | sed 's|^\./||'
+          done >> ../checksums.txt
           cd ..
 
           # Create formatted checksum file
-          echo "# SHA256 Checksums for Rusty Commit ${{ needs.create-release.outputs.version }}" > SHA256SUMS.txt
-          echo "# Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> SHA256SUMS.txt
-          echo "" >> SHA256SUMS.txt
+          {
+            echo "# SHA256 Checksums for Rusty Commit ${{ needs.create-release.outputs.version }}"
+            echo "# Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+          } > SHA256SUMS.txt
           if [ -f checksums.txt ]; then
             sort checksums.txt >> SHA256SUMS.txt
           fi
@@ -296,7 +302,7 @@ jobs:
           cosign sign-blob SHA256SUMS.txt \
             --yes \
             --oidc-issuer https://token.actions.githubusercontent.com \
-            ${COSIGN_KEY_ARGS:-} \
+            "${COSIGN_KEY_ARGS:-}" \
             --bundle SHA256SUMS.txt.cosign.bundle \
             --output-certificate SHA256SUMS.txt.cosign.cert \
             --output-signature SHA256SUMS.txt.cosign.sig
@@ -321,7 +327,7 @@ jobs:
           cosign sign-blob install.sh.release \
             --yes \
             --oidc-issuer https://token.actions.githubusercontent.com \
-            ${COSIGN_KEY_ARGS:-} \
+            "${COSIGN_KEY_ARGS:-}" \
             --bundle install.sh.cosign.bundle \
             --output-certificate install.sh.cosign.cert \
             --output-signature install.sh.cosign.sig
@@ -333,7 +339,7 @@ jobs:
         run: |
           cd artifacts
           # Sign each tar.gz and zip file with detached signature
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while IFS= read -r file; do
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
             echo "Signing $file..."
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \
@@ -382,7 +388,7 @@ jobs:
         run: |
           cd artifacts
           # Upload all .asc signature files
-          find . -name "*.asc" | while IFS= read -r sig; do
+          find . -name "*.asc" -print0 | while IFS= read -r -d '' sig; do
             filename=$(basename "$sig")
             echo "Uploading GPG signature: $filename"
             curl -X POST \
@@ -396,7 +402,7 @@ jobs:
         run: |
           cd artifacts
           # Upload Cosign signature files (.sig, .cert, .bundle) for all packages
-          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) | while IFS= read -r sig; do
+          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) -print0 | while IFS= read -r -d '' sig; do
             filename=$(basename "$sig")
             echo "Uploading Cosign artifact: $filename"
             curl -X POST \

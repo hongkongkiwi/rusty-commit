@@ -90,3 +90,4 @@ opengrep --config=p/security-audit --config=p/secrets --config=p/rust .
                 });
               }
             }
+

@@ -237,6 +237,22 @@ rco config set RCO_API_URL=https://api.fireworks.ai/inference/v1
 rco config set RCO_MODEL=accounts/fireworks/models/llama-v3p1-70b-instruct
 ```
 
+Moonshot AI (Kimi):
+```bash
+rco config set RCO_AI_PROVIDER=moonshot
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://api.moonshot.cn/v1
+rco config set RCO_MODEL=kimi-k2
+```
+
+Alibaba Model Studio (DashScope / Qwen Coder):
+```bash
+rco config set RCO_AI_PROVIDER=dashscope
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+rco config set RCO_MODEL=qwen3-coder-32b-instruct
+```
+
 ## Git hooks
 ```bash
 rco hook set    # install prepare-commit-msg hook

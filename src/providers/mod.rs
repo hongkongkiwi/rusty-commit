@@ -32,7 +32,8 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
         "perplexity" => Ok(Box::new(perplexity::PerplexityProvider::new(config)?)),
         // OpenAI-compatible providers
         "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | "huggingface"
-        | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai" => {
+        | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai"
+        | "moonshot" | "dashscope" | "alibaba" | "qwen" | "qwen-coder" => {
             Ok(Box::new(openai::OpenAIProvider::new(config)?))
         }
         _ => anyhow::bail!("Unsupported AI provider: {}", provider),

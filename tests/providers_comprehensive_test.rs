@@ -455,6 +455,9 @@ fn test_all_supported_providers_list() {
             "huggingface",
             "github-models",
             "ollama",
+            "fireworks",
+            "moonshot",
+            "dashscope",
         ];
 
         // Test that all providers can be configured

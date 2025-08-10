@@ -98,6 +98,9 @@ fn test_config_commands_comprehensive() {
         ("RCO_AI_PROVIDER", "github-copilot"),
         ("RCO_AI_PROVIDER", "gemini"),
         ("RCO_AI_PROVIDER", "ollama"),
+        ("RCO_AI_PROVIDER", "fireworks"),
+        ("RCO_AI_PROVIDER", "moonshot"),
+        ("RCO_AI_PROVIDER", "dashscope"),
     ];
 
     for (key, value) in test_cases {
@@ -139,6 +142,8 @@ fn test_config_model_settings() {
         ("mistral-large-latest", "mistral"),
         ("gemini-1.5-pro", "gemini"),
         ("meta-llama/Llama-3.2-3B-Instruct", "together"),
+        ("kimi-k2", "moonshot"),
+        ("qwen3-coder-32b-instruct", "dashscope"),
     ];
 
     for (model, provider) in model_tests {
@@ -249,6 +254,9 @@ fn test_config_api_urls() {
         ("https://models.inference.ai.azure.com", "github-models"),
         ("https://generativelanguage.googleapis.com/v1beta", "gemini"),
         ("http://localhost:11434", "ollama"),
+        ("https://api.fireworks.ai/inference/v1", "fireworks"),
+        ("https://api.moonshot.cn/v1", "moonshot"),
+        ("https://dashscope.aliyuncs.com/compatible-mode/v1", "dashscope"),
     ];
 
     for (url, provider) in url_tests {

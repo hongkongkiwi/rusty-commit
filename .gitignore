@@ -27,6 +27,7 @@ $RECYCLE.BIN/
 # Logs
 *.log
 logs/
+ci_logs/
 
 # Environment variables
 .env

@@ -397,13 +397,13 @@ fn test_main_command_options() {
         .stdout(predicate::str::contains("--context"))
         .stdout(predicate::str::contains("--yes"));
 
-    // Test --version
+    // Test --version (don't pin exact number to avoid churn)
     let mut cmd = Command::cargo_bin("rco").unwrap();
     cmd.current_dir(temp_dir.path())
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("1.0.1"));
+        .stdout(predicate::str::contains("rco "));
 }
 
 #[test]

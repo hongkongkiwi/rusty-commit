@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 ```
 
 The script auto‑detects your platform and installs via Homebrew, .deb/.rpm, Cargo, or binary.
+All packages and binaries are signed with GPG and checksums are verified automatically.
 
 ### Cargo
 ```bash

@@ -1,4 +1,4 @@
-name: OpenGrep Security Scan
+name: Semgrep Security Scan
 
 on:
   push:
@@ -14,16 +14,16 @@ permissions:
   actions: read
 
 jobs:
-  opengrep:
-    name: OpenGrep Security Analysis
+  semgrep:
+    name: Semgrep Security Analysis
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run OpenGrep
-        uses: opengrep/semgrep-action@v1
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
         with:
           # Scan for security issues, secrets, and code quality
           config: >-
@@ -41,7 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3.27.4
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
         if: always()
@@ -59,26 +59,26 @@ jobs:
               const results = sarif.runs?.[0]?.results || [];
 
               if (results.length > 0) {
-                const comment = `## 🔍 OpenGrep Security Scan Results
-                
+                const comment = `## 🔍 Semgrep Security Scan Results
+
                 Found ${results.length} potential security issue(s) in this PR.
-                
+
                 Please review the **Security** tab in this repository for detailed findings, or check the workflow logs.
-                
+
                 **Common issues to look for:**
                 - Hardcoded secrets or credentials
                 - SQL injection vulnerabilities
                 - Cross-site scripting (XSS) risks
                 - Insecure cryptographic practices
                 - Unsafe deserialization
-                
-                💡 **Tip**: You can run OpenGrep locally with:
+
+                💡 **Tip**: You can run Semgrep locally with:
                 \`\`\`bash
-                # Install opengrep
-                pip install opengrep
-                
+                # Install semgrep
+                pip install semgrep
+
                 # Scan your code
-                opengrep --config=p/security-audit --config=p/secrets --config=p/rust .
+                semgrep --config=p/security-audit --config=p/secrets --config=p/rust .
                 \`\`\`
                 `;
 
@@ -90,4 +90,3 @@ jobs:
                 });
               }
             }
-

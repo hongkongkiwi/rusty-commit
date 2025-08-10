@@ -341,7 +341,7 @@ jobs:
             # Setup for package building
             su - builder -c 'abuild-keygen -a -i -n'
 
-            VERSION="${{ steps.version.outputs.version }}"
+            VERSION='${{ steps.version.outputs.version }}'
 
             # Create package structure
             mkdir -p /home/builder/packages/rusty-commit

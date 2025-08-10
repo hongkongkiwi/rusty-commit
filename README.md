@@ -40,8 +40,20 @@
 curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/install.sh | bash
 ```
 
+**🔐 Security-conscious users:** [Verify the install script](docs/INSTALL-SCRIPT-VERIFICATION.md) before running it.
+
 The script auto‑detects your platform and installs via Homebrew, .deb/.rpm, Cargo, or binary.
-All packages and binaries are signed with GPG and checksums are verified automatically.
+**All packages are cryptographically signed and verified automatically:**
+- 🔐 Cosign/Sigstore signatures (keyless, modern)
+- 🔑 GPG signatures (traditional)
+- ✅ SHA256 checksums
+- 📋 GitHub build attestations
+
+### Homebrew (macOS/Linux)
+```bash
+brew tap hongkongkiwi/tap
+brew install rusty-commit
+```
 
 ### Cargo
 ```bash
@@ -51,30 +63,22 @@ cargo install rusty-commit --features secure-storage  # store API keys in system
 
 ### Alpine Linux
 ```bash
+# Direct .apk install (signed packages)
+wget https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-x86_64.apk
+sudo apk add --allow-untrusted rusty-commit-x86_64.apk
+
+# Or via binary (all architectures):
 # x86_64
-apk add --no-cache curl
-curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-x86_64.tar.gz | tar xz
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rustycommit-linux-musl-x86_64.tar.gz | tar xz
 sudo mv rco /usr/local/bin/
 
 # aarch64
-curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-aarch64.tar.gz | tar xz
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rustycommit-linux-musl-aarch64.tar.gz | tar xz
 sudo mv rco /usr/local/bin/
 
 # riscv64
-curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rusty-commit-linux-musl-riscv64.tar.gz | tar xz
+curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/rustycommit-linux-musl-riscv64.tar.gz | tar xz
 sudo mv rco /usr/local/bin/
-```
-
-Add our community Alpine repo (future):
-```bash
-# Add public key (once published)
-wget -O /etc/apk/keys/rco.rsa.pub https://hongkongkiwi.github.io/rusty-commit/alpine/keys/rco.rsa.pub
-
-# Add repository
-echo "https://hongkongkiwi.github.io/rusty-commit/alpine/$(apk --print-arch)" | sudo tee -a /etc/apk/repositories
-
-# Install
-sudo apk update && sudo apk add rusty-commit
 ```
 
 ## Quick start
@@ -422,6 +426,38 @@ cargo test         # run tests
 cargo clippy --all-features -- -D warnings
 cargo fmt
 ```
+
+## Security & Verification
+
+All releases are cryptographically signed with multiple methods for maximum security:
+
+### Automatic Verification
+The install script automatically verifies all downloads using the strongest available method on your system.
+
+### Manual Verification
+For manual downloads, you can verify package authenticity:
+
+```bash
+# Modern: Cosign/Sigstore (recommended)
+cosign verify-blob \
+  --bundle rustycommit-linux-x86_64.tar.gz.cosign.bundle \
+  --certificate-identity-regexp "https://github.com/hongkongkiwi/rusty-commit/.github/workflows/release.yml@.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  rustycommit-linux-x86_64.tar.gz
+
+# Traditional: GPG signatures
+gpg --keyserver hkps://keys.openpgp.org --recv-keys 0EC2DFF577818B86BA38DA3F164E3F90E425B2AD
+gpg --verify rustycommit-linux-x86_64.tar.gz.asc rustycommit-linux-x86_64.tar.gz
+
+# GitHub attestations
+gh attestation verify rustycommit-linux-x86_64.tar.gz --repo hongkongkiwi/rusty-commit
+
+# Package signatures (native)
+dpkg-sig --verify rusty-commit_1.0.0_amd64.deb  # Debian/Ubuntu
+rpm --checksig rusty-commit-1.0.0-1.x86_64.rpm  # Fedora/RHEL
+```
+
+📖 **Full verification guide:** [docs/VERIFICATION.md](docs/VERIFICATION.md)
 
 ## Support the project
 

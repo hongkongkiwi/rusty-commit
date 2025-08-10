@@ -10,6 +10,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write  # Required for uploading release assets
+
 jobs:
   build-binaries:
     name: Build Binaries (${{ matrix.target }})
@@ -89,7 +92,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.84.0
         with:
           targets: ${{ matrix.target }}
 
@@ -193,14 +196,9 @@ jobs:
 
       - name: Upload to Release
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./rusty-commit_${{ steps.version.outputs.version }}_${{ matrix.arch.deb }}.deb
-          asset_name: rusty-commit_${{ steps.version.outputs.version }}_${{ matrix.arch.deb }}.deb
-          asset_content_type: application/vnd.debian.binary-package
+          files: ./rusty-commit_${{ steps.version.outputs.version }}_${{ matrix.arch.deb }}.deb
 
   package-rpm:
     name: Package RPM (.rpm)
@@ -484,14 +482,9 @@ jobs:
 
       - name: Upload to Release
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ matrix.archive }}
-          asset_name: ${{ matrix.archive }}
-          asset_content_type: application/gzip
+          files: ./${{ matrix.archive }}
 
   package-windows-zip:
     name: Package Windows (.zip)
@@ -561,14 +554,9 @@ jobs:
 
       - name: Upload to Release
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./rusty-commit-windows-x86_64.zip
-          asset_name: rusty-commit-windows-x86_64.zip
-          asset_content_type: application/zip
+          files: ./rusty-commit-windows-x86_64.zip
 
   package-snap:
     name: Package Snap (.snap)
@@ -648,3 +636,19 @@ jobs:
               --data-binary "@$snap" \
               "${{ github.event.release.upload_url }}?name=$asset_name"
           done
+
+  sign-packages:
+    name: Sign packages and archives
+    needs:
+      - package-deb
+      - package-rpm
+      - package-alpine
+      - package-tarball
+      - package-windows-zip
+    uses: ./.github/workflows/sign-packages.yml
+    with:
+      version: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}
+    secrets:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}

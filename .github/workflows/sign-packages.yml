@@ -162,7 +162,7 @@ jobs:
       - name: Download binary archives
         uses: actions/download-artifact@v4
         with:
-          pattern: archive-*
+          pattern: tarball-*
           path: ./archives
 
       - name: Create detached signatures
@@ -302,3 +302,74 @@ jobs:
         with:
           name: signed-windows
           path: ./windows/**/*
+
+  alpine-sign:
+    name: Sign Alpine Packages (.apk)
+    runs-on: ubuntu-latest
+    if: secrets.GPG_PRIVATE_KEY != ''
+    steps:
+      - name: Setup GPG
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          
+          # Configure GPG
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+          
+          # Install Alpine package tools
+          sudo apt-get update
+          sudo apt-get install -y alpine-sdk
+          
+          # Setup abuild (Alpine package build system)
+          sudo addgroup -g 1000 abuild
+          sudo adduser -D -G abuild -u 1000 builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/builder
+          
+          # Create abuild key from GPG key
+          sudo -u builder mkdir -p /home/builder/.abuild
+          
+          # Export GPG key in format suitable for abuild
+          gpg --armor --export "$GPG_KEY_ID" | sudo -u builder tee /home/builder/.abuild/rusty-commit.rsa.pub
+          gpg --armor --export-secret-keys "$GPG_KEY_ID" | sudo -u builder tee /home/builder/.abuild/rusty-commit.rsa
+          
+          # Set up abuild config
+          echo "PACKAGER_PRIVKEY=/home/builder/.abuild/rusty-commit.rsa" | sudo -u builder tee /home/builder/.abuild/abuild.conf
+          
+          sudo chmod 600 /home/builder/.abuild/rusty-commit.rsa
+          sudo chmod 644 /home/builder/.abuild/rusty-commit.rsa.pub
+
+      - name: Download .apk packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apk-*
+          path: ./apks
+
+      - name: Sign .apk packages
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Alpine packages are signed with abuild-sign
+          # For now, we'll create detached GPG signatures as Alpine native signing is complex
+          find ./apks -name "*.apk" | while read apk; do
+            echo "Creating GPG signature for $apk..."
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${apk}.asc" \
+                "$apk"
+            echo "Signed: $(basename "$apk")"
+          done
+
+      - name: Upload signed .apk packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-apk
+          path: |
+            ./apks/**/*.apk
+            ./apks/**/*.asc

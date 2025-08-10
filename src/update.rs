@@ -302,6 +302,10 @@ async fn download_with_verification(
         println!("{}", "Checksum verified".green());
     }
     
+    // TODO: Add Cosign signature verification in future version
+    // This would require integrating with cosign binary or sigstore-rs crate
+    // For now, checksums provide integrity verification
+    
     Ok(bytes)
 }
 

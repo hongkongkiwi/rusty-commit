@@ -126,11 +126,11 @@ pub fn get_platform_info() -> String {
     {
         // Try to detect which secret service is available
         if std::env::var("GNOME_KEYRING_CONTROL").is_ok() {
-            return "GNOME Keyring".to_string();
+            "GNOME Keyring".to_string()
         } else if std::env::var("KDE_FULL_SESSION").is_ok() {
-            return "KWallet".to_string();
+            "KWallet".to_string()
         } else {
-            return "Linux Secret Service".to_string();
+            "Linux Secret Service".to_string()
         }
     }
 

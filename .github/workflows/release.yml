@@ -90,6 +90,11 @@ jobs:
             use-cross: true
 
           - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
+            archive-name: rustycommit-linux-riscv64.tar.gz
+            use-cross: true
+
+          - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             archive-name: rustycommit-linux-armv7.tar.gz
             use-cross: true
@@ -163,3 +168,191 @@ jobs:
 
   # Crate publishing is now handled by publish.yml which triggers on release published event
   # OS package creation is handled by package-release.yml which also triggers on release published event
+
+  # Sign and finalize release artifacts
+  sign-and-finalize:
+    name: Sign Release Artifacts
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write  # Required for Sigstore keyless signing
+      attestations: write  # Required for GitHub attestations
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.2'
+
+      - name: Setup GPG
+        if: env.GPG_PRIVATE_KEY != ''
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          
+          # Configure GPG
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+          
+          # Test signing
+          echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback --armor --detach-sign > /dev/null
+          
+          echo "GPG signing configured successfully"
+
+      - name: Sign binaries with Cosign (Sigstore)
+        run: |
+          cd artifacts
+          # Sign each binary/archive with Cosign keyless signing
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while read file; do
+            filename=$(basename "$file")
+            echo "Signing $filename with Cosign..."
+            
+            # Keyless signing with GitHub OIDC
+            cosign sign-blob "$file" \
+              --yes \
+              --oidc-issuer https://token.actions.githubusercontent.com \
+              --bundle "${file}.cosign.bundle" \
+              --output-certificate "${file}.cosign.cert" \
+              --output-signature "${file}.cosign.sig"
+            
+            echo "Created Cosign bundle for $filename"
+          done
+          cd ..
+
+      - name: Generate GitHub Attestations
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
+
+      - name: Generate and sign checksums
+        run: |
+          cd artifacts
+          # Find all release files and generate checksums
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while read file; do
+            sha256sum "$file" | sed 's|^\./||' >> ../checksums.txt
+          done
+          cd ..
+          
+          # Create formatted checksum file
+          echo "# SHA256 Checksums for Rusty Commit ${{ needs.create-release.outputs.version }}" > SHA256SUMS.txt
+          echo "# Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> SHA256SUMS.txt
+          echo "" >> SHA256SUMS.txt
+          if [ -f checksums.txt ]; then
+            sort checksums.txt >> SHA256SUMS.txt
+          fi
+          
+          # Sign checksum file if GPG available
+          if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+            gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output SHA256SUMS.txt.asc \
+                SHA256SUMS.txt
+            echo "Checksum file signed with GPG"
+          fi
+          
+          # Also sign checksums with Cosign
+          echo "Signing checksums with Cosign..."
+          cosign sign-blob SHA256SUMS.txt \
+            --yes \
+            --oidc-issuer https://token.actions.githubusercontent.com \
+            --bundle SHA256SUMS.txt.cosign.bundle \
+            --output-certificate SHA256SUMS.txt.cosign.cert \
+            --output-signature SHA256SUMS.txt.cosign.sig
+
+      - name: Create detached signatures for binaries
+        if: env.GPG_PRIVATE_KEY != ''
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd artifacts
+          # Sign each tar.gz and zip file with detached signature
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) | while read file; do
+            echo "Signing $file..."
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${file}.asc" \
+                "$file"
+          done
+          cd ..
+
+      - name: Upload checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./SHA256SUMS.txt
+          asset_name: SHA256SUMS.txt
+          asset_content_type: text/plain
+
+      - name: Upload signed checksums
+        if: env.GPG_PRIVATE_KEY != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./SHA256SUMS.txt.asc
+          asset_name: SHA256SUMS.txt.asc
+          asset_content_type: text/plain
+
+      - name: Upload binary signatures
+        if: env.GPG_PRIVATE_KEY != ''
+        run: |
+          cd artifacts
+          # Upload all .asc signature files
+          find . -name "*.asc" | while read sig; do
+            filename=$(basename "$sig")
+            echo "Uploading GPG signature: $filename"
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$sig" \
+              "${{ needs.create-release.outputs.upload_url }}?name=$filename&label=${filename}"
+          done
+
+      - name: Upload Cosign signatures and bundles
+        run: |
+          cd artifacts
+          # Upload Cosign signature files (.sig, .cert, .bundle)
+          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) | while read sig; do
+            filename=$(basename "$sig")
+            echo "Uploading Cosign artifact: $filename"
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$sig" \
+              "${{ needs.create-release.outputs.upload_url }}?name=$filename&label=${filename}"
+          done
+          
+          # Upload main checksum Cosign files
+          cd ..
+          for file in SHA256SUMS.txt.cosign.*; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $file"
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary "@$file" \
+                "${{ needs.create-release.outputs.upload_url }}?name=$file&label=$file"
+            fi
+          done

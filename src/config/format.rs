@@ -56,10 +56,13 @@ pub struct ConfigLocations {
 impl ConfigLocations {
     /// Get all config locations to check
     pub fn get() -> Result<Self> {
-        let home = dirs::home_dir().context("Could not find home directory")?;
-
         // Global config locations (in priority order)
-        let global = home.join(".config").join("rustycommit").join("config.toml");
+        let global = if let Ok(config_home) = std::env::var("RCO_CONFIG_HOME") {
+            PathBuf::from(config_home).join("config.toml")
+        } else {
+            let home = dirs::home_dir().context("Could not find home directory")?;
+            home.join(".config").join("rustycommit").join("config.toml")
+        };
 
         // Repository-specific config (if in a git repo)
         let repo = if let Ok(repo) = git2::Repository::open_from_env() {

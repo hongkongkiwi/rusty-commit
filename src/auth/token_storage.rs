@@ -17,8 +17,12 @@ pub struct TokenStorage {
 impl TokenStorage {
     /// Get the path to the auth token file
     fn auth_file_path() -> Result<PathBuf> {
-        let home = home_dir().context("Could not find home directory")?;
-        let config_dir = home.join(".config").join("rustycommit");
+        let config_dir = if let Ok(config_home) = std::env::var("RCO_CONFIG_HOME") {
+            PathBuf::from(config_home)
+        } else {
+            let home = home_dir().context("Could not find home directory")?;
+            home.join(".config").join("rustycommit")
+        };
 
         // Ensure directory exists
         if !config_dir.exists() {

@@ -5,6 +5,31 @@ use rusty_commit::config::Config;
 use std::fs;
 use tempfile::tempdir;
 
+// Helper function to set up clean environment for each test
+fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
+    // Clean up any existing environment variables
+    std::env::remove_var("RCO_CONFIG_HOME");
+    std::env::remove_var("HOME");
+    
+    // Create unique temp directory
+    let temp_dir = tempdir().unwrap();
+    let config_dir = temp_dir.path().join(test_name);
+    
+    std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
+    
+    // Clean up any existing tokens first
+    let _ = delete_tokens();
+    
+    temp_dir
+}
+
+fn cleanup_env() {
+    let _ = delete_tokens();
+    std::env::remove_var("RCO_CONFIG_HOME");
+    std::env::remove_var("HOME");
+}
+
 #[test]
 fn test_token_storage_creation() {
     let token = TokenStorage {
@@ -89,15 +114,7 @@ fn test_token_expires_soon() {
 
 #[test]
 fn test_store_and_retrieve_tokens() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var(
-        "RCO_CONFIG_HOME",
-        temp_dir.path().join(".config/rustycommit"),
-    );
-
-    // Clean up any existing tokens first
-    let _ = delete_tokens();
+    let _temp_dir = setup_clean_env("test_store_and_retrieve_tokens");
 
     // Store tokens
     let result = store_tokens("access_123", Some("refresh_456"), Some(3600));
@@ -111,15 +128,13 @@ fn test_store_and_retrieve_tokens() {
     assert_eq!(tokens.access_token, "access_123");
     assert_eq!(tokens.refresh_token.as_deref(), Some("refresh_456"));
     assert_eq!(tokens.token_type, "Bearer");
+    
+    cleanup_env();
 }
 
 #[test]
 fn test_has_valid_token() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
-
-    // Clean up any existing tokens first
-    let _ = delete_tokens();
+    let _temp_dir = setup_clean_env("test_has_valid_token");
 
     // No token initially
     assert!(!has_valid_token());
@@ -131,15 +146,13 @@ fn test_has_valid_token() {
     // Delete tokens and verify no valid token
     delete_tokens().unwrap();
     assert!(!has_valid_token());
+    
+    cleanup_env();
 }
 
 #[test]
 fn test_delete_tokens() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
-
-    // Clean up any existing tokens first
-    let _ = delete_tokens();
+    let _temp_dir = setup_clean_env("test_delete_tokens");
 
     // Store tokens first
     store_tokens("test_token", None, Some(3600)).unwrap();
@@ -149,6 +162,8 @@ fn test_delete_tokens() {
     let result = delete_tokens();
     assert!(result.is_ok());
     assert!(!has_valid_token());
+    
+    cleanup_env();
 }
 
 #[test]
@@ -171,12 +186,7 @@ fn test_config_with_different_providers() {
     ];
 
     for provider in providers {
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
-        std::env::set_var(
-            "RCO_CONFIG_HOME",
-            temp_dir.path().join(".config/rustycommit"),
-        );
+        let _temp_dir = setup_clean_env(&format!("test_config_with_different_providers_{}", provider));
 
         let mut config = Config::default();
         config.ai_provider = Some(provider.to_string());
@@ -190,6 +200,8 @@ fn test_config_with_different_providers() {
         let loaded_config = Config::load().unwrap();
         assert_eq!(loaded_config.ai_provider.as_deref(), Some(provider));
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
+        
+        cleanup_env();
     }
 }
 
@@ -207,36 +219,37 @@ fn test_oauth_client_creation() {
 fn test_provider_specific_configurations() {
     // Test AWS Bedrock with bearer token
     let temp_dir = tempdir().unwrap();
+    let config_dir = temp_dir.path().join("test_provider_specific_configurations_bedrock");
     std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var(
-        "RCO_CONFIG_HOME",
-        temp_dir.path().join(".config/rustycommit"),
-    );
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
     let mut config = Config::default();
     config.ai_provider = Some("amazon-bedrock".to_string());
     assert!(config.save().is_ok());
+    
+    // Clean up
+    std::env::remove_var("RCO_CONFIG_HOME");
+    std::env::remove_var("AWS_BEARER_TOKEN_BEDROCK");
 
     // Test Ollama local configuration
     let temp_dir = tempdir().unwrap();
+    let config_dir = temp_dir.path().join("test_provider_specific_configurations_ollama");
     std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var(
-        "RCO_CONFIG_HOME",
-        temp_dir.path().join(".config/rustycommit"),
-    );
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     let mut ollama_config = Config::default();
     ollama_config.ai_provider = Some("ollama".to_string());
     ollama_config.api_url = Some("http://localhost:11434".to_string());
     ollama_config.model = Some("mistral".to_string());
     assert!(ollama_config.save().is_ok());
+    
+    // Clean up
+    std::env::remove_var("RCO_CONFIG_HOME");
 
     // Test Azure OpenAI configuration
     let temp_dir = tempdir().unwrap();
+    let config_dir = temp_dir.path().join("test_provider_specific_configurations_azure");
     std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var(
-        "RCO_CONFIG_HOME",
-        temp_dir.path().join(".config/rustycommit"),
-    );
+    std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     let mut azure_config = Config::default();
     azure_config.ai_provider = Some("azure".to_string());
     azure_config.api_key = Some("azure_key".to_string());
@@ -251,6 +264,9 @@ fn test_provider_specific_configurations() {
         loaded_azure.api_url.as_deref(),
         Some("https://test.openai.azure.com")
     );
+    
+    // Clean up
+    std::env::remove_var("RCO_CONFIG_HOME");
 }
 
 #[test]
@@ -300,19 +316,14 @@ fn test_config_validation() {
 
 #[test]
 fn test_secure_vs_file_storage() {
-    let temp_dir = tempdir().unwrap();
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var(
-        "RCO_CONFIG_HOME",
-        temp_dir.path().join(".config/rustycommit"),
-    );
+    let _temp_dir = setup_clean_env("test_secure_vs_file_storage");
+    let config_dir = std::env::var("RCO_CONFIG_HOME").unwrap();
 
     // Store tokens (should use file storage in test environment)
     store_tokens("test_token", Some("refresh_token"), Some(3600)).unwrap();
 
     // Check that the auth file was created
-    let auth_dir = temp_dir.path().join(".config").join("rustycommit");
-    let auth_file = auth_dir.join("auth.json");
+    let auth_file = std::path::PathBuf::from(&config_dir).join("auth.json");
 
     // The file should exist
     assert!(auth_file.exists());
@@ -322,4 +333,6 @@ fn test_secure_vs_file_storage() {
     assert!(content.contains("test_token"));
     assert!(content.contains("refresh_token"));
     assert!(content.contains("Bearer"));
+    
+    cleanup_env();
 }

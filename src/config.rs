@@ -87,8 +87,12 @@ impl Default for Config {
 impl Config {
     /// Get the new global config path
     pub fn global_config_path() -> Result<PathBuf> {
-        let home = home_dir().context("Could not find home directory")?;
-        Ok(home.join(".config").join("rustycommit").join("config.toml"))
+        if let Ok(config_home) = env::var("RCO_CONFIG_HOME") {
+            Ok(PathBuf::from(config_home).join("config.toml"))
+        } else {
+            let home = home_dir().context("Could not find home directory")?;
+            Ok(home.join(".config").join("rustycommit").join("config.toml"))
+        }
     }
 
     /// Load configuration with proper priority handling

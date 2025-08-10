@@ -31,6 +31,13 @@ jobs:
             asset_name: rco-linux-aarch64
             use_cross: true
 
+          # Linux RISC-V 64
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
+            artifact_name: rco
+            asset_name: rco-linux-riscv64
+            use_cross: true
+
           # Linux ARM v7
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
@@ -43,6 +50,18 @@ jobs:
             target: x86_64-unknown-linux-musl
             artifact_name: rco
             asset_name: rco-linux-musl-x86_64
+            use_cross: true
+
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            artifact_name: rco
+            asset_name: rco-linux-musl-aarch64
+            use_cross: true
+
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-musl
+            artifact_name: rco
+            asset_name: rco-linux-musl-riscv64
             use_cross: true
 
           # macOS x86_64
@@ -102,6 +121,7 @@ jobs:
           - { rust: x86_64-unknown-linux-gnu, deb: amd64, artifact: rco-linux-x86_64 }
           - { rust: aarch64-unknown-linux-gnu, deb: arm64, artifact: rco-linux-aarch64 }
           - { rust: armv7-unknown-linux-gnueabihf, deb: armhf, artifact: rco-linux-armv7 }
+          - { rust: riscv64gc-unknown-linux-gnu, deb: riscv64, artifact: rco-linux-riscv64 }
     steps:
       - uses: actions/checkout@v4
 
@@ -383,6 +403,9 @@ jobs:
           - { artifact: rco-linux-aarch64, archive: rusty-commit-linux-aarch64.tar.gz }
           - { artifact: rco-linux-armv7, archive: rusty-commit-linux-armv7.tar.gz }
           - { artifact: rco-linux-musl-x86_64, archive: rusty-commit-linux-musl-x86_64.tar.gz }
+          - { artifact: rco-linux-musl-aarch64, archive: rusty-commit-linux-musl-aarch64.tar.gz }
+          - { artifact: rco-linux-riscv64, archive: rusty-commit-linux-riscv64.tar.gz }
+          - { artifact: rco-linux-musl-riscv64, archive: rusty-commit-linux-musl-riscv64.tar.gz }
           - { artifact: rco-macos-x86_64, archive: rusty-commit-macos-x86_64.tar.gz }
           - { artifact: rco-macos-aarch64, archive: rusty-commit-macos-aarch64.tar.gz }
     steps:

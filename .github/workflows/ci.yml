@@ -70,6 +70,11 @@ jobs:
     name: Test
     runs-on: ${{ matrix.os }}
     needs: lint
+    env:
+      # Run tests single-threaded to avoid global env/cwd races across files
+      RUST_TEST_THREADS: 1
+      # Ensure repo-level config does not interfere with tests
+      RCO_IGNORE_REPO_CONFIG: 1
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-13, windows-latest]

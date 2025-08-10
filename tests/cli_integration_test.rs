@@ -403,7 +403,7 @@ fn test_main_command_options() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("1.0.0"));
+        .stdout(predicate::str::contains("1.0.1"));
 }
 
 #[test]

@@ -58,7 +58,7 @@ jobs:
       
       - name: Create issue if updates needed
         if: steps.outdated.outputs.count > 0 || steps.audit.outputs.vulnerabilities > 0
-        uses: peter-evans/create-issue-from-file@v4
+        uses: peter-evans/create-issue-from-file@v5
         with:
           title: "Weekly Dependency Report - ${{ steps.outdated.outputs.count }} updates, ${{ steps.audit.outputs.vulnerabilities }} vulnerabilities"
           content-filepath: ./outdated.md
@@ -109,7 +109,7 @@ jobs:
           cargo clippy -- -D warnings
       
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: deps/update-dependencies

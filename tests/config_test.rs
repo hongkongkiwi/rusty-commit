@@ -46,18 +46,18 @@ fn test_parse_legacy_format() {
 
     // Write legacy format config
     let legacy_content = r#"
-OCO_API_KEY=sk-test-key
-OCO_AI_PROVIDER=openai
-OCO_MODEL=gpt-4
-OCO_EMOJI=true
-OCO_GITPUSH=false
+RCO_API_KEY=sk-test-key
+RCO_AI_PROVIDER=openai
+RCO_MODEL=gpt-4
+RCO_EMOJI=true
+RCO_GITPUSH=false
 # This is a comment
-OCO_LANGUAGE=en
-OCO_TOKENS_MAX_OUTPUT=1000
+RCO_LANGUAGE=en
+RCO_TOKENS_MAX_OUTPUT=1000
 
-OCO_DESCRIPTION=false
-OCO_WHY=true
-OCO_API_CUSTOM_HEADERS=undefined
+RCO_DESCRIPTION=false
+RCO_WHY=true
+RCO_API_CUSTOM_HEADERS=undefined
 "#;
 
     fs::write(&config_path, legacy_content).unwrap();
@@ -83,18 +83,18 @@ fn test_set_and_get_config_values() {
     let mut config = Config::default();
 
     // Test setting various types
-    config.set("OCO_API_KEY", "new_key").unwrap();
-    assert_eq!(config.get("OCO_API_KEY").unwrap(), "new_key");
+    config.set("RCO_API_KEY", "new_key").unwrap();
+    assert_eq!(config.get("RCO_API_KEY").unwrap(), "new_key");
 
-    config.set("OCO_EMOJI", "true").unwrap();
-    assert_eq!(config.get("OCO_EMOJI").unwrap(), "true");
+    config.set("RCO_EMOJI", "true").unwrap();
+    assert_eq!(config.get("RCO_EMOJI").unwrap(), "true");
 
-    config.set("OCO_TOKENS_MAX_INPUT", "8192").unwrap();
-    assert_eq!(config.get("OCO_TOKENS_MAX_INPUT").unwrap(), "8192");
+    config.set("RCO_TOKENS_MAX_INPUT", "8192").unwrap();
+    assert_eq!(config.get("RCO_TOKENS_MAX_INPUT").unwrap(), "8192");
 
     // Test invalid values
-    assert!(config.set("OCO_EMOJI", "not_a_bool").is_err());
-    assert!(config.set("OCO_TOKENS_MAX_INPUT", "not_a_number").is_err());
+    assert!(config.set("RCO_EMOJI", "not_a_bool").is_err());
+    assert!(config.set("RCO_TOKENS_MAX_INPUT", "not_a_number").is_err());
 
     // Test unknown key
     assert!(config.set("UNKNOWN_KEY", "value").is_err());
@@ -113,7 +113,7 @@ fn test_reset_config() {
     config.tokens_max_output = Some(1000);
 
     // Reset specific keys
-    config.reset(Some(&vec!["OCO_EMOJI".to_string()])).unwrap();
+    config.reset(Some(&vec!["RCO_EMOJI".to_string()])).unwrap();
     assert_eq!(config.api_key.as_deref(), Some("custom_key"));
     assert_eq!(config.emoji, Some(false)); // Reset to default
     assert_eq!(config.tokens_max_output, Some(1000));
@@ -134,11 +134,11 @@ fn test_legacy_prompt_module_mapping() {
 
     // Test mapping of legacy prompt module
     config
-        .set("OCO_PROMPT_MODULE", "conventional-commit")
+        .set("RCO_PROMPT_MODULE", "conventional-commit")
         .unwrap();
     assert_eq!(config.commit_type.as_deref(), Some("conventional"));
 
-    config.set("OCO_PROMPT_MODULE", "gitmoji").unwrap();
+    config.set("RCO_PROMPT_MODULE", "gitmoji").unwrap();
     assert_eq!(config.commit_type.as_deref(), Some("gitmoji"));
 }
 
@@ -151,9 +151,9 @@ fn test_ignore_undefined_values() {
     let original_value = config.api_url.clone();
 
     // These should be ignored
-    config.set("OCO_API_URL", "undefined").unwrap();
+    config.set("RCO_API_URL", "undefined").unwrap();
     assert_eq!(config.api_url, original_value);
 
-    config.set("OCO_API_URL", "null").unwrap();
+    config.set("RCO_API_URL", "null").unwrap();
     assert_eq!(config.api_url, original_value);
 }

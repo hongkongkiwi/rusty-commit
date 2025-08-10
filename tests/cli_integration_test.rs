@@ -69,21 +69,21 @@ fn test_config_commands_comprehensive() {
 
     // Test setting various provider configurations
     let test_cases = vec![
-        ("OCO_AI_PROVIDER", "anthropic"),
-        ("OCO_AI_PROVIDER", "openai"),
-        ("OCO_AI_PROVIDER", "openrouter"),
-        ("OCO_AI_PROVIDER", "groq"),
-        ("OCO_AI_PROVIDER", "deepseek"),
-        ("OCO_AI_PROVIDER", "mistral"),
-        ("OCO_AI_PROVIDER", "amazon-bedrock"),
-        ("OCO_AI_PROVIDER", "azure"),
-        ("OCO_AI_PROVIDER", "together"),
-        ("OCO_AI_PROVIDER", "deepinfra"),
-        ("OCO_AI_PROVIDER", "huggingface"),
-        ("OCO_AI_PROVIDER", "github-models"),
-        ("OCO_AI_PROVIDER", "github-copilot"),
-        ("OCO_AI_PROVIDER", "gemini"),
-        ("OCO_AI_PROVIDER", "ollama"),
+        ("RCO_AI_PROVIDER", "anthropic"),
+        ("RCO_AI_PROVIDER", "openai"),
+        ("RCO_AI_PROVIDER", "openrouter"),
+        ("RCO_AI_PROVIDER", "groq"),
+        ("RCO_AI_PROVIDER", "deepseek"),
+        ("RCO_AI_PROVIDER", "mistral"),
+        ("RCO_AI_PROVIDER", "amazon-bedrock"),
+        ("RCO_AI_PROVIDER", "azure"),
+        ("RCO_AI_PROVIDER", "together"),
+        ("RCO_AI_PROVIDER", "deepinfra"),
+        ("RCO_AI_PROVIDER", "huggingface"),
+        ("RCO_AI_PROVIDER", "github-models"),
+        ("RCO_AI_PROVIDER", "github-copilot"),
+        ("RCO_AI_PROVIDER", "gemini"),
+        ("RCO_AI_PROVIDER", "ollama"),
     ];
 
     for (key, value) in test_cases {
@@ -133,7 +133,7 @@ fn test_config_model_settings() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_AI_PROVIDER={}", provider))
+            .arg(format!("RCO_AI_PROVIDER={}", provider))
             .assert()
             .success();
 
@@ -142,11 +142,11 @@ fn test_config_model_settings() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_MODEL={}", model))
+            .arg(format!("RCO_MODEL={}", model))
             .assert()
             .success()
             .stdout(predicate::str::contains(format!(
-                "OCO_MODEL set to: {}",
+                "RCO_MODEL set to: {}",
                 model
             )));
 
@@ -155,10 +155,10 @@ fn test_config_model_settings() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("get")
-            .arg("OCO_MODEL")
+            .arg("RCO_MODEL")
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("OCO_MODEL: {}", model)));
+            .stdout(predicate::str::contains(format!("RCO_MODEL: {}", model)));
     }
 }
 
@@ -168,12 +168,12 @@ fn test_config_boolean_values() {
     let home = temp_dir.path();
 
     let boolean_tests = vec![
-        ("OCO_EMOJI", "true"),
-        ("OCO_EMOJI", "false"),
-        ("OCO_GITPUSH", "true"),
-        ("OCO_GITPUSH", "false"),
-        ("OCO_DESCRIPTION_CAPITALIZE", "true"),
-        ("OCO_DESCRIPTION_CAPITALIZE", "false"),
+        ("RCO_EMOJI", "true"),
+        ("RCO_EMOJI", "false"),
+        ("RCO_GITPUSH", "true"),
+        ("RCO_GITPUSH", "false"),
+        ("RCO_DESCRIPTION_CAPITALIZE", "true"),
+        ("RCO_DESCRIPTION_CAPITALIZE", "false"),
     ];
 
     for (key, value) in boolean_tests {
@@ -197,9 +197,9 @@ fn test_config_numeric_values() {
     let home = temp_dir.path();
 
     let numeric_tests = vec![
-        ("OCO_TOKENS_MAX_INPUT", "8192"),
-        ("OCO_TOKENS_MAX_OUTPUT", "1000"),
-        ("OCO_DESCRIPTION_MAX_LENGTH", "72"),
+        ("RCO_TOKENS_MAX_INPUT", "8192"),
+        ("RCO_TOKENS_MAX_OUTPUT", "1000"),
+        ("RCO_DESCRIPTION_MAX_LENGTH", "72"),
     ];
 
     for (key, value) in numeric_tests {
@@ -243,7 +243,7 @@ fn test_config_api_urls() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_AI_PROVIDER={}", provider))
+            .arg(format!("RCO_AI_PROVIDER={}", provider))
             .assert()
             .success();
 
@@ -252,11 +252,11 @@ fn test_config_api_urls() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_API_URL={}", url))
+            .arg(format!("RCO_API_URL={}", url))
             .assert()
             .success()
             .stdout(predicate::str::contains(format!(
-                "OCO_API_URL set to: {}",
+                "RCO_API_URL set to: {}",
                 url
             )));
     }
@@ -268,9 +268,9 @@ fn test_config_invalid_values() {
     let home = temp_dir.path();
 
     let invalid_tests = vec![
-        ("OCO_EMOJI", "not_a_boolean"),
-        ("OCO_TOKENS_MAX_INPUT", "not_a_number"),
-        ("OCO_TOKENS_MAX_OUTPUT", "negative_number"),
+        ("RCO_EMOJI", "not_a_boolean"),
+        ("RCO_TOKENS_MAX_INPUT", "not_a_number"),
+        ("RCO_TOKENS_MAX_OUTPUT", "negative_number"),
         ("INVALID_KEY", "any_value"),
     ];
 
@@ -306,7 +306,7 @@ fn test_config_status() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("set")
-        .arg("OCO_AI_PROVIDER=openai")
+        .arg("RCO_AI_PROVIDER=openai")
         .assert()
         .success();
 
@@ -329,8 +329,8 @@ fn test_config_reset() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("set")
-        .arg("OCO_EMOJI=true")
-        .arg("OCO_GITPUSH=true")
+        .arg("RCO_EMOJI=true")
+        .arg("RCO_GITPUSH=true")
         .assert()
         .success();
 
@@ -339,20 +339,20 @@ fn test_config_reset() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("reset")
-        .arg("OCO_EMOJI")
+        .arg("RCO_EMOJI")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Reset keys: OCO_EMOJI"));
+        .stdout(predicate::str::contains("Reset keys: RCO_EMOJI"));
 
     // Verify reset
     let mut cmd = Command::cargo_bin("rco").unwrap();
     cmd.env("HOME", home)
         .arg("config")
         .arg("get")
-        .arg("OCO_EMOJI")
+        .arg("RCO_EMOJI")
         .assert()
         .success()
-        .stdout(predicate::str::contains("OCO_EMOJI: false"));
+        .stdout(predicate::str::contains("RCO_EMOJI: false"));
 
     // Reset all
     let mut cmd = Command::cargo_bin("rco").unwrap();
@@ -479,7 +479,7 @@ fn test_multiple_provider_configurations() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_AI_PROVIDER={}", provider))
+            .arg(format!("RCO_AI_PROVIDER={}", provider))
             .assert()
             .success();
 
@@ -488,7 +488,7 @@ fn test_multiple_provider_configurations() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("set")
-            .arg(format!("OCO_MODEL={}", model))
+            .arg(format!("RCO_MODEL={}", model))
             .assert()
             .success();
 
@@ -497,11 +497,11 @@ fn test_multiple_provider_configurations() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("get")
-            .arg("OCO_AI_PROVIDER")
+            .arg("RCO_AI_PROVIDER")
             .assert()
             .success()
             .stdout(predicate::str::contains(format!(
-                "OCO_AI_PROVIDER: {}",
+                "RCO_AI_PROVIDER: {}",
                 provider
             )));
 
@@ -509,9 +509,9 @@ fn test_multiple_provider_configurations() {
         cmd.env("HOME", home)
             .arg("config")
             .arg("get")
-            .arg("OCO_MODEL")
+            .arg("RCO_MODEL")
             .assert()
             .success()
-            .stdout(predicate::str::contains(format!("OCO_MODEL: {}", model)));
+            .stdout(predicate::str::contains(format!("RCO_MODEL: {}", model)));
     }
 }

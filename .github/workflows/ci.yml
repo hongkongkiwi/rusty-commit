@@ -151,9 +151,8 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: rco-linux-amd64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: rco-macos-amd64
+          # Note: macos-latest runners are ARM64, we build only for native arch
+          # Cross-compilation to x86_64 from ARM64 requires additional setup
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: rco-macos-arm64

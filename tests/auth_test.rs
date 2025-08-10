@@ -91,6 +91,7 @@ fn test_token_expires_soon() {
 fn test_store_and_retrieve_tokens() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
 
     // Clean up any existing tokens first
     let _ = delete_tokens();
@@ -169,6 +170,7 @@ fn test_config_with_different_providers() {
     for provider in providers {
         let temp_dir = tempdir().unwrap();
         std::env::set_var("HOME", temp_dir.path());
+        std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
 
         let mut config = Config::default();
         config.ai_provider = Some(provider.to_string());
@@ -197,16 +199,19 @@ fn test_oauth_client_creation() {
 
 #[test]
 fn test_provider_specific_configurations() {
+    // Test AWS Bedrock with bearer token
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
-
-    // Test AWS Bedrock with bearer token
+    std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
     std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
     let mut config = Config::default();
     config.ai_provider = Some("amazon-bedrock".to_string());
     assert!(config.save().is_ok());
 
     // Test Ollama local configuration
+    let temp_dir = tempdir().unwrap();
+    std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
     let mut ollama_config = Config::default();
     ollama_config.ai_provider = Some("ollama".to_string());
     ollama_config.api_url = Some("http://localhost:11434".to_string());
@@ -214,6 +219,9 @@ fn test_provider_specific_configurations() {
     assert!(ollama_config.save().is_ok());
 
     // Test Azure OpenAI configuration
+    let temp_dir = tempdir().unwrap();
+    std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
     let mut azure_config = Config::default();
     azure_config.ai_provider = Some("azure".to_string());
     azure_config.api_key = Some("azure_key".to_string());
@@ -263,13 +271,13 @@ fn test_config_validation() {
     let mut config = Config::default();
 
     // Test setting valid values
-    assert!(config.set("OCO_AI_PROVIDER", "openai").is_ok());
-    assert!(config.set("OCO_EMOJI", "true").is_ok());
-    assert!(config.set("OCO_TOKENS_MAX_INPUT", "8192").is_ok());
+    assert!(config.set("RCO_AI_PROVIDER", "openai").is_ok());
+    assert!(config.set("RCO_EMOJI", "true").is_ok());
+    assert!(config.set("RCO_TOKENS_MAX_INPUT", "8192").is_ok());
 
     // Test setting invalid values
-    assert!(config.set("OCO_EMOJI", "invalid_bool").is_err());
-    assert!(config.set("OCO_TOKENS_MAX_INPUT", "not_a_number").is_err());
+    assert!(config.set("RCO_EMOJI", "invalid_bool").is_err());
+    assert!(config.set("RCO_TOKENS_MAX_INPUT", "not_a_number").is_err());
 
     // Test setting unknown keys
     assert!(config.set("UNKNOWN_KEY", "value").is_err());
@@ -279,6 +287,7 @@ fn test_config_validation() {
 fn test_secure_vs_file_storage() {
     let temp_dir = tempdir().unwrap();
     std::env::set_var("HOME", temp_dir.path());
+    std::env::set_var("RCO_CONFIG_HOME", temp_dir.path().join(".config/rustycommit"));
 
     // Store tokens (should use file storage in test environment)
     store_tokens("test_token", Some("refresh_token"), Some(3600)).unwrap();

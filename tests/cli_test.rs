@@ -66,20 +66,20 @@ fn test_config_set_and_get() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("set")
-        .arg("OCO_EMOJI=true")
+        .arg("RCO_EMOJI=true")
         .assert()
         .success()
-        .stdout(predicate::str::contains("OCO_EMOJI set to: true"));
+        .stdout(predicate::str::contains("RCO_EMOJI set to: true"));
 
     // Get the config value
     let mut cmd = Command::cargo_bin("rco").unwrap();
     cmd.env("HOME", home)
         .arg("config")
         .arg("get")
-        .arg("OCO_EMOJI")
+        .arg("RCO_EMOJI")
         .assert()
         .success()
-        .stdout(predicate::str::contains("OCO_EMOJI: true"));
+        .stdout(predicate::str::contains("RCO_EMOJI: true"));
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn test_config_reset() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("set")
-        .arg("OCO_EMOJI=true")
+        .arg("RCO_EMOJI=true")
         .assert()
         .success();
 
@@ -101,20 +101,20 @@ fn test_config_reset() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("reset")
-        .arg("OCO_EMOJI")
+        .arg("RCO_EMOJI")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Reset keys: OCO_EMOJI"));
+        .stdout(predicate::str::contains("Reset keys: RCO_EMOJI"));
 
     // Verify it was reset to default
     let mut cmd = Command::cargo_bin("rco").unwrap();
     cmd.env("HOME", home)
         .arg("config")
         .arg("get")
-        .arg("OCO_EMOJI")
+        .arg("RCO_EMOJI")
         .assert()
         .success()
-        .stdout(predicate::str::contains("OCO_EMOJI: false"));
+        .stdout(predicate::str::contains("RCO_EMOJI: false"));
 }
 
 #[test]
@@ -127,8 +127,8 @@ fn test_config_reset_all() {
     cmd.env("HOME", home)
         .arg("config")
         .arg("set")
-        .arg("OCO_EMOJI=true")
-        .arg("OCO_GITPUSH=true")
+        .arg("RCO_EMOJI=true")
+        .arg("RCO_GITPUSH=true")
         .assert()
         .success();
 

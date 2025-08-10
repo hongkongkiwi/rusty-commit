@@ -91,6 +91,12 @@ if ! cargo clippy --all-features -- -D warnings 2>/dev/null; then
     exit 1
 fi
 
+echo "Checking code formatting..."
+if ! cargo fmt --check; then
+    echo -e "${RED}Code formatting issues found! Run 'cargo fmt' to fix.${NC}"
+    exit 1
+fi
+
 # Update version in Cargo.toml
 echo "Updating Cargo.toml..."
 if [[ "$OSTYPE" == "darwin"* ]]; then

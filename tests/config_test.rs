@@ -22,7 +22,7 @@ fn setup_test_env(test_name: &str) -> tempfile::TempDir {
     // Clean up any previous environment variables
     std::env::remove_var("HOME");
     std::env::remove_var("RCO_CONFIG_HOME");
-    
+
     // Clear all RCO environment variables that might interfere with tests
     let env_vars_to_clear = [
         "RCO_AI_PROVIDER",
@@ -50,11 +50,11 @@ fn setup_test_env(test_name: &str) -> tempfile::TempDir {
         "RCO_COMMITLINT_CONFIG",
         "RCO_CUSTOM_PROMPT",
     ];
-    
+
     for var in &env_vars_to_clear {
         std::env::remove_var(var);
     }
-    
+
     std::env::set_var("RCO_IGNORE_REPO_CONFIG", "1");
     std::env::set_var("RCO_DISABLE_SECURE_STORAGE", "1");
 
@@ -75,7 +75,7 @@ fn cleanup_test_env() {
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("RCO_IGNORE_REPO_CONFIG");
     std::env::remove_var("RCO_DISABLE_SECURE_STORAGE");
-    
+
     // Also clear all RCO environment variables for complete cleanup
     let env_vars_to_clear = [
         "RCO_AI_PROVIDER",
@@ -103,7 +103,7 @@ fn cleanup_test_env() {
         "RCO_COMMITLINT_CONFIG",
         "RCO_CUSTOM_PROMPT",
     ];
-    
+
     for var in &env_vars_to_clear {
         std::env::remove_var(var);
     }

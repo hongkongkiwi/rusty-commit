@@ -284,6 +284,40 @@ rco hook set    # install prepare-commit-msg hook
 rco hook unset  # uninstall
 ```
 
+### Optional pre/post hooks (advanced)
+Disabled by default. If you want to run custom commands around commit generation, set these keys (globally or per‑repo). Hooks run in your shell and support strict mode and timeouts.
+
+Config keys:
+- `RCO_PRE_GEN_HOOK`: commands before message generation
+- `RCO_PRE_COMMIT_HOOK`: commands after generation; may edit the message via `RCO_COMMIT_FILE`
+- `RCO_POST_COMMIT_HOOK`: commands after `git commit`
+- `RCO_HOOK_STRICT` (default `true`), `RCO_HOOK_TIMEOUT_MS` (default `30000`)
+
+Examples:
+```bash
+# Run lint and tests before generating the message
+rco config set RCO_PRE_GEN_HOOK="just lint; just test -q"
+
+# Allow a script to edit the commit message before committing
+rco config set RCO_PRE_COMMIT_HOOK="./scripts/tweak_commit.sh"
+
+# Push after committing
+rco config set RCO_POST_COMMIT_HOOK="git push"
+
+# Looser behavior with longer timeout
+rco config set RCO_HOOK_STRICT=false
+rco config set RCO_HOOK_TIMEOUT_MS=60000
+
+# Per‑run disable
+rco --no-pre-hooks      # skip pre-gen + pre-commit hooks
+rco --no-post-hooks     # skip post-commit hooks
+```
+
+Hooks receive environment variables:
+- `RCO_REPO_ROOT`, `RCO_PROVIDER`, `RCO_MODEL`
+- `RCO_MAX_TOKENS`, `RCO_DIFF_TOKENS`, `RCO_CONTEXT` (pre‑gen)
+- `RCO_COMMIT_MESSAGE`, `RCO_COMMIT_FILE` (pre‑commit and post‑commit)
+
 ## Updates
 ```bash
 rco update --check   # see if a new version is available

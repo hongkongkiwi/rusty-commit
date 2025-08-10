@@ -28,6 +28,10 @@ const SERVICE_NAME: &str = "rustycommit";
 /// If the secure-storage feature is not enabled or the system doesn't
 /// support keychain, this will return Ok(()) without storing anything.
 pub fn store_secret(_key: &str, _value: &str) -> Result<()> {
+    // Respect explicit opt-out for tests/CI and deterministic behavior
+    if is_disabled_via_env() {
+        return Ok(());
+    }
     #[cfg(feature = "secure-storage")]
     {
         match Entry::new(SERVICE_NAME, _key) {
@@ -52,6 +56,10 @@ pub fn store_secret(_key: &str, _value: &str) -> Result<()> {
 ///
 /// Returns None if secure-storage is not enabled or the key doesn't exist.
 pub fn get_secret(_key: &str) -> Result<Option<String>> {
+    // Respect explicit opt-out for tests/CI and deterministic behavior
+    if is_disabled_via_env() {
+        return Ok(None);
+    }
     #[cfg(feature = "secure-storage")]
     {
         match Entry::new(SERVICE_NAME, _key) {
@@ -78,6 +86,10 @@ pub fn get_secret(_key: &str) -> Result<Option<String>> {
 ///
 /// If secure-storage is not enabled, this is a no-op.
 pub fn delete_secret(_key: &str) -> Result<()> {
+    // Respect explicit opt-out for tests/CI and deterministic behavior
+    if is_disabled_via_env() {
+        return Ok(());
+    }
     #[cfg(feature = "secure-storage")]
     {
         match Entry::new(SERVICE_NAME, _key) {
@@ -101,10 +113,7 @@ pub fn delete_secret(_key: &str) -> Result<()> {
 /// the system has a working keychain.
 pub fn is_available() -> bool {
     // Allow tests/CI to force-disable secure storage to ensure deterministic behavior
-    if std::env::var("RCO_DISABLE_SECURE_STORAGE")
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false)
-    {
+    if is_disabled_via_env() {
         return false;
     }
 
@@ -124,6 +133,13 @@ pub fn is_available() -> bool {
     {
         false
     }
+}
+
+/// Returns true if secure storage is explicitly disabled via environment.
+fn is_disabled_via_env() -> bool {
+    std::env::var("RCO_DISABLE_SECURE_STORAGE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
 }
 
 /// Get detailed platform information for secure storage

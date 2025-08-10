@@ -78,9 +78,9 @@ fi
 echo "Pulling latest changes..."
 git pull origin main
 
-# Run tests first
+# Run tests first (single-threaded to avoid env var race conditions)
 echo "Running tests..."
-if ! cargo test --all-features --quiet; then
+if ! cargo test --all-features --quiet -- --test-threads=1; then
     echo -e "${RED}Tests failed! Aborting release.${NC}"
     exit 1
 fi

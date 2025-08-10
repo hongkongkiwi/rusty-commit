@@ -167,7 +167,8 @@ fn test_parse_legacy_format() {
         assert_eq!(config.language.as_deref(), Some("en"));
         assert_eq!(config.tokens_max_output, Some(1000));
 
-        // Cleanup will handle removing all environment variables
+        // Cleanup MUST happen before the lock is released to prevent env var leakage
+        // Clean up environment variables immediately after test
         cleanup_test_env();
     });
 }

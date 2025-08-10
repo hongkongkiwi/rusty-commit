@@ -324,6 +324,12 @@ rco update --check   # see if a new version is available
 rco update           # update using your install method
 ```
 
+### Architectures
+Prebuilt archives and packages are provided for:
+- Linux: x86_64 (gnu, musl), aarch64 (gnu, musl), armv7 (gnueabihf), riscv64 (gnu, musl)
+- macOS: x86_64, aarch64
+- Windows: x86_64, i686
+
 ## GitHub Action (minimal)
 ```yaml
 name: AI Commits

@@ -211,6 +211,7 @@ jobs:
         arch:
           - { rust: x86_64-unknown-linux-gnu, rpm: x86_64, artifact: rco-linux-x86_64 }
           - { rust: aarch64-unknown-linux-gnu, rpm: aarch64, artifact: rco-linux-aarch64 }
+          - { rust: riscv64gc-unknown-linux-gnu, rpm: riscv64, artifact: rco-linux-riscv64 }
     steps:
       - uses: actions/checkout@v4
 

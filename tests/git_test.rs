@@ -73,7 +73,7 @@ fn test_assert_git_repo() {
 fn test_get_changed_files() {
     let temp_dir = init_test_repo_with_commit();
     let original_cwd = std::env::current_dir().unwrap();
-    
+
     // Change directory and ensure temp_dir stays alive
     std::env::set_current_dir(temp_dir.path()).unwrap();
 
@@ -90,7 +90,7 @@ fn test_get_changed_files() {
 
     // Restore original directory
     std::env::set_current_dir(&original_cwd).unwrap();
-    
+
     // Keep temp_dir alive until end of test
     drop(temp_dir);
 }

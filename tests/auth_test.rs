@@ -10,17 +10,17 @@ fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
     // Clean up any existing environment variables
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("HOME");
-    
+
     // Create unique temp directory
     let temp_dir = tempdir().unwrap();
     let config_dir = temp_dir.path().join(test_name);
-    
+
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
-    
+
     // Clean up any existing tokens first
     let _ = delete_tokens();
-    
+
     temp_dir
 }
 
@@ -128,7 +128,7 @@ fn test_store_and_retrieve_tokens() {
     assert_eq!(tokens.access_token, "access_123");
     assert_eq!(tokens.refresh_token.as_deref(), Some("refresh_456"));
     assert_eq!(tokens.token_type, "Bearer");
-    
+
     cleanup_env();
 }
 
@@ -146,7 +146,7 @@ fn test_has_valid_token() {
     // Delete tokens and verify no valid token
     delete_tokens().unwrap();
     assert!(!has_valid_token());
-    
+
     cleanup_env();
 }
 
@@ -162,7 +162,7 @@ fn test_delete_tokens() {
     let result = delete_tokens();
     assert!(result.is_ok());
     assert!(!has_valid_token());
-    
+
     cleanup_env();
 }
 
@@ -186,7 +186,10 @@ fn test_config_with_different_providers() {
     ];
 
     for provider in providers {
-        let _temp_dir = setup_clean_env(&format!("test_config_with_different_providers_{}", provider));
+        let _temp_dir = setup_clean_env(&format!(
+            "test_config_with_different_providers_{}",
+            provider
+        ));
 
         let mut config = Config::default();
         config.ai_provider = Some(provider.to_string());
@@ -200,7 +203,7 @@ fn test_config_with_different_providers() {
         let loaded_config = Config::load().unwrap();
         assert_eq!(loaded_config.ai_provider.as_deref(), Some(provider));
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
-        
+
         cleanup_env();
     }
 }
@@ -219,21 +222,25 @@ fn test_oauth_client_creation() {
 fn test_provider_specific_configurations() {
     // Test AWS Bedrock with bearer token
     let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir.path().join("test_provider_specific_configurations_bedrock");
+    let config_dir = temp_dir
+        .path()
+        .join("test_provider_specific_configurations_bedrock");
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
     let mut config = Config::default();
     config.ai_provider = Some("amazon-bedrock".to_string());
     assert!(config.save().is_ok());
-    
+
     // Clean up
     std::env::remove_var("RCO_CONFIG_HOME");
     std::env::remove_var("AWS_BEARER_TOKEN_BEDROCK");
 
     // Test Ollama local configuration
     let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir.path().join("test_provider_specific_configurations_ollama");
+    let config_dir = temp_dir
+        .path()
+        .join("test_provider_specific_configurations_ollama");
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     let mut ollama_config = Config::default();
@@ -241,13 +248,15 @@ fn test_provider_specific_configurations() {
     ollama_config.api_url = Some("http://localhost:11434".to_string());
     ollama_config.model = Some("mistral".to_string());
     assert!(ollama_config.save().is_ok());
-    
+
     // Clean up
     std::env::remove_var("RCO_CONFIG_HOME");
 
     // Test Azure OpenAI configuration
     let temp_dir = tempdir().unwrap();
-    let config_dir = temp_dir.path().join("test_provider_specific_configurations_azure");
+    let config_dir = temp_dir
+        .path()
+        .join("test_provider_specific_configurations_azure");
     std::env::set_var("HOME", temp_dir.path());
     std::env::set_var("RCO_CONFIG_HOME", &config_dir);
     let mut azure_config = Config::default();
@@ -264,7 +273,7 @@ fn test_provider_specific_configurations() {
         loaded_azure.api_url.as_deref(),
         Some("https://test.openai.azure.com")
     );
-    
+
     // Clean up
     std::env::remove_var("RCO_CONFIG_HOME");
 }
@@ -333,6 +342,6 @@ fn test_secure_vs_file_storage() {
     assert!(content.contains("test_token"));
     assert!(content.contains("refresh_token"));
     assert!(content.contains("Bearer"));
-    
+
     cleanup_env();
 }

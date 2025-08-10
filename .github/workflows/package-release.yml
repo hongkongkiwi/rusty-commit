@@ -92,7 +92,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.84.0
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
 
@@ -137,7 +137,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -222,7 +222,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -322,7 +322,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -348,22 +348,22 @@ jobs:
             cd /home/builder/packages/rusty-commit
 
             # Create APKBUILD
-            cat > APKBUILD << 'APKEOF'
+            cat > APKBUILD << APKEOF
           # Maintainer: Rusty Commit Contributors
           pkgname=rusty-commit
-          pkgver=\"\$VERSION\"
+          pkgver=\${VERSION}
           pkgrel=0
-          pkgdesc=\"Rust-powered AI commit message generator\"
-          url=\"https://github.com/hongkongkiwi/rusty-commit\"
-          arch=\"${{ matrix.arch.alpine }}\"
-          license=\"MIT\"
-          depends=\"git\"
-          source=\"\"
+          pkgdesc='Rust-powered AI commit message generator'
+          url='https://github.com/hongkongkiwi/rusty-commit'
+          arch='${{ matrix.arch.alpine }}'
+          license='MIT'
+          depends='git'
+          source=''
 
           package() {
-              mkdir -p \"\$pkgdir\"/usr/bin
-              cp /workspace/binary/rco \"\$pkgdir\"/usr/bin/
-              chmod 755 \"\$pkgdir\"/usr/bin/rco
+              mkdir -p \${pkgdir}/usr/bin
+              cp /workspace/binary/rco \${pkgdir}/usr/bin/
+              chmod 755 \${pkgdir}/usr/bin/rco
           }
           APKEOF
 
@@ -422,7 +422,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -504,7 +504,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -574,7 +574,7 @@ jobs:
             VERSION="v${{ github.event.inputs.version }}"
           fi
           VERSION="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Create snapcraft.yaml
         run: |

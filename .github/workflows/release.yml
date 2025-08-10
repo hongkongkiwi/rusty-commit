@@ -133,7 +133,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.84.0
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
 
@@ -201,8 +201,7 @@ jobs:
         with:
           cosign-release: 'v2.2.2'
 
-      - name: Configure Cosign key (optional)
-        if: env.COSIGN_PRIVATE_KEY != ''
+      - name: Configure Cosign key
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
@@ -215,7 +214,6 @@ jobs:
           echo "COSIGN_KEY_ARGS=--key cosign.key" >> "$GITHUB_ENV"
 
       - name: Setup GPG
-        if: env.GPG_PRIVATE_KEY != ''
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -287,15 +285,13 @@ jobs:
             sort checksums.txt >> SHA256SUMS.txt
           fi
 
-          # Sign checksum file if GPG available
-          if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+          # Sign checksum file with GPG
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                 --pinentry-mode loopback \
                 --armor --detach-sign \
                 --output SHA256SUMS.txt.asc \
                 SHA256SUMS.txt
-            echo "Checksum file signed with GPG"
-          fi
+          echo "Checksum file signed with GPG"
 
           # Also sign checksums with Cosign
           echo "Signing checksums with Cosign..."
@@ -312,15 +308,13 @@ jobs:
           # Copy install script to release artifacts
           cp install.sh install.sh.release
 
-          # Sign install script with GPG (if available)
-          if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+          # Sign install script with GPG
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                 --pinentry-mode loopback \
                 --armor --detach-sign \
                 --output install.sh.asc \
                 install.sh.release
-            echo "Install script signed with GPG"
-          fi
+          echo "Install script signed with GPG"
 
           # Sign install script with Cosign
           echo "Signing install script with Cosign..."
@@ -333,7 +327,6 @@ jobs:
             --output-signature install.sh.cosign.sig
 
       - name: Create detached signatures for binaries
-        if: env.GPG_PRIVATE_KEY != ''
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
@@ -356,7 +349,6 @@ jobs:
           tag_name: ${{ github.ref }}
 
       - name: Upload signed checksums
-        if: env.GPG_PRIVATE_KEY != ''
         uses: softprops/action-gh-release@v2
         with:
           files: ./SHA256SUMS.txt.asc
@@ -384,7 +376,6 @@ jobs:
           done
 
       - name: Upload binary signatures
-        if: env.GPG_PRIVATE_KEY != ''
         run: |
           cd artifacts
           # Upload all .asc signature files

@@ -60,26 +60,26 @@ jobs:
 
               if (results.length > 0) {
                 const comment = `## 🔍 OpenGrep Security Scan Results
-
-Found ${results.length} potential security issue(s) in this PR.
-
-Please review the **Security** tab in this repository for detailed findings, or check the workflow logs.
-
-**Common issues to look for:**
-- Hardcoded secrets or credentials
-- SQL injection vulnerabilities
-- Cross-site scripting (XSS) risks
-- Insecure cryptographic practices
-- Unsafe deserialization
-
-💡 **Tip**: You can run OpenGrep locally with:
-\`\`\`bash
-# Install opengrep
-pip install opengrep
-
-# Scan your code
-opengrep --config=p/security-audit --config=p/secrets --config=p/rust .
-\`\`\`
+                
+                Found ${results.length} potential security issue(s) in this PR.
+                
+                Please review the **Security** tab in this repository for detailed findings, or check the workflow logs.
+                
+                **Common issues to look for:**
+                - Hardcoded secrets or credentials
+                - SQL injection vulnerabilities
+                - Cross-site scripting (XSS) risks
+                - Insecure cryptographic practices
+                - Unsafe deserialization
+                
+                💡 **Tip**: You can run OpenGrep locally with:
+                \`\`\`bash
+                # Install opengrep
+                pip install opengrep
+                
+                # Scan your code
+                opengrep --config=p/security-audit --config=p/secrets --config=p/rust .
+                \`\`\`
                 `;
 
                 github.rest.issues.createComment({

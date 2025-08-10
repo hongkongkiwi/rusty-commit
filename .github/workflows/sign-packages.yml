@@ -13,13 +13,27 @@ on:
         required: false
       GPG_KEY_ID:
         required: false
+      APPLE_CERTIFICATE:
+        required: false
+      APPLE_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_IDENTITY:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_APP_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      WINDOWS_CERTIFICATE:
+        required: false
+      WINDOWS_CERTIFICATE_PASSWORD:
+        required: false
 
 jobs:
   sign-deb-packages:
     name: Sign Debian Packages
     runs-on: ubuntu-latest
-    # Conditional signing based on GPG key availability
-    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:
@@ -40,7 +54,7 @@ jobs:
 
           # Get key ID
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
-          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          echo "GPG_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
 
       - name: Download .deb packages
         uses: actions/download-artifact@v4
@@ -81,8 +95,6 @@ jobs:
   sign-rpm-packages:
     name: Sign RPM Packages
     runs-on: ubuntu-latest
-    # Conditional signing based on GPG key availability
-    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG and RPM
         env:
@@ -98,7 +110,7 @@ jobs:
 
           # Get key ID
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
-          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          echo "GPG_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
 
           # Configure RPM macros for signing
           cat > ~/.rpmmacros << EOF
@@ -146,8 +158,6 @@ jobs:
   sign-binaries:
     name: Sign Binary Archives
     runs-on: ubuntu-latest
-    # Conditional signing based on GPG key availability
-    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:
@@ -191,7 +201,6 @@ jobs:
   macos-codesign:
     name: Code Sign macOS Binaries
     runs-on: macos-latest
-    if: secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != ''
     steps:
       - name: Download macOS binaries
         uses: actions/download-artifact@v4
@@ -231,7 +240,6 @@ jobs:
           done
 
       - name: Notarize binaries (optional)
-        if: false  # Apple signing not yet configured
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
@@ -263,7 +271,6 @@ jobs:
   windows-codesign:
     name: Code Sign Windows Binaries
     runs-on: windows-latest
-    if: false  # Windows signing not yet configured
     steps:
       - name: Download Windows binaries
         uses: actions/download-artifact@v4
@@ -309,8 +316,6 @@ jobs:
   alpine-sign:
     name: Sign Alpine Packages (.apk)
     runs-on: ubuntu-latest
-    # Conditional signing based on GPG key availability
-    if: true  # Always run, check for key in steps
     steps:
       - name: Setup GPG
         env:

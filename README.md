@@ -134,6 +134,100 @@ Security & storage (optional `secure-storage` feature):
 - Windows: Credential Manager
 - Automatic fallback to config file if unavailable
 
+### Provider‑specific examples
+
+OpenAI:
+```bash
+rco config set RCO_AI_PROVIDER=openai
+rco config set RCO_API_KEY=sk-...
+rco config set RCO_MODEL=gpt-4o-mini
+# Optional custom endpoint:
+# rco config set RCO_API_URL=https://api.openai.com/v1
+```
+
+Anthropic (Claude):
+```bash
+# OAuth (recommended)
+rco auth login
+# Or API key
+rco config set RCO_AI_PROVIDER=anthropic
+rco config set RCO_API_KEY=sk-ant-...
+rco config set RCO_MODEL=claude-3-5-haiku-20241022
+```
+
+OpenRouter:
+```bash
+rco config set RCO_AI_PROVIDER=openrouter
+rco config set RCO_API_KEY=sk-or-...
+rco config set RCO_API_URL=https://openrouter.ai/api/v1
+rco config set RCO_MODEL=openai/gpt-4o-mini
+```
+
+Groq:
+```bash
+rco config set RCO_AI_PROVIDER=groq
+rco config set RCO_API_KEY=gsk_...
+rco config set RCO_API_URL=https://api.groq.com/openai/v1
+rco config set RCO_MODEL=llama-3.1-70b-versatile
+```
+
+DeepSeek:
+```bash
+rco config set RCO_AI_PROVIDER=deepseek
+rco config set RCO_API_KEY=sk-...
+rco config set RCO_API_URL=https://api.deepseek.com/v1
+rco config set RCO_MODEL=deepseek-chat
+```
+
+Together AI:
+```bash
+rco config set RCO_AI_PROVIDER=together
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://api.together.xyz/v1
+rco config set RCO_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
+```
+
+DeepInfra:
+```bash
+rco config set RCO_AI_PROVIDER=deepinfra
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://api.deepinfra.com/v1/openai
+rco config set RCO_MODEL=meta-llama/Meta-Llama-3-70B-Instruct
+```
+
+Mistral AI:
+```bash
+rco config set RCO_AI_PROVIDER=mistral
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://api.mistral.ai/v1
+rco config set RCO_MODEL=mistral-small-latest
+```
+
+Azure OpenAI:
+```bash
+rco config set RCO_AI_PROVIDER=azure
+rco config set RCO_API_KEY=<azure_api_key>
+rco config set RCO_API_URL=https://<your-resource>.openai.azure.com
+# Use your deployment name, not the model name
+rco config set RCO_MODEL=<deployment-name>
+```
+
+Google Gemini:
+```bash
+rco config set RCO_AI_PROVIDER=gemini
+rco config set RCO_API_KEY=...
+rco config set RCO_MODEL=gemini-pro
+```
+
+Perplexity:
+```bash
+rco config set RCO_AI_PROVIDER=perplexity
+rco config set RCO_API_KEY=...
+# Optional: custom endpoint
+# rco config set RCO_API_URL=https://api.perplexity.ai/chat/completions
+rco config set RCO_MODEL=llama-3.1-sonar-small-128k-online
+```
+
 ## Git hooks
 ```bash
 rco hook set    # install prepare-commit-msg hook

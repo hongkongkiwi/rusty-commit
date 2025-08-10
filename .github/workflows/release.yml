@@ -158,6 +158,20 @@ jobs:
         run: |
           mkdir -p archive
           cp "target/${{ matrix.target }}/release/rco" archive/ 2>/dev/null || true
+          # Include documentation and scripts
+          cp README.md archive/ 2>/dev/null || true
+          cp README_OAUTH.md archive/ 2>/dev/null || true
+          cp INSTALL.md archive/ 2>/dev/null || true
+          cp LICENSE archive/ 2>/dev/null || true
+          cp install.sh archive/ 2>/dev/null || true
+          # Include shell completions
+          mkdir -p archive/completions
+          cp -r completions/* archive/completions/ 2>/dev/null || true
+          # Include man page
+          mkdir -p archive/man
+          cp -r man/* archive/man/ 2>/dev/null || true
+          # Create a simple version file
+          echo "${{ needs.create-release.outputs.version }}" > archive/VERSION
           cd archive
           tar czf "../${{ matrix.archive-name }}" .
 
@@ -167,6 +181,20 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path archive
           Copy-Item "target\${{ matrix.target }}\release\rco.exe" -Destination "archive\"
+          # Include documentation
+          Copy-Item "README.md" -Destination "archive\" -ErrorAction SilentlyContinue
+          Copy-Item "README_OAUTH.md" -Destination "archive\" -ErrorAction SilentlyContinue
+          Copy-Item "INSTALL.md" -Destination "archive\" -ErrorAction SilentlyContinue
+          Copy-Item "LICENSE" -Destination "archive\" -ErrorAction SilentlyContinue
+          Copy-Item "install.sh" -Destination "archive\" -ErrorAction SilentlyContinue
+          # Include shell completions
+          New-Item -ItemType Directory -Force -Path "archive\completions"
+          Copy-Item "completions\*" -Destination "archive\completions\" -Recurse -ErrorAction SilentlyContinue
+          # Include man page
+          New-Item -ItemType Directory -Force -Path "archive\man"
+          Copy-Item "man\*" -Destination "archive\man\" -Recurse -ErrorAction SilentlyContinue
+          # Create version file
+          "${{ needs.create-release.outputs.version }}" | Out-File -FilePath "archive\VERSION" -Encoding UTF8
           Compress-Archive -Path "archive\*" -DestinationPath "${{ matrix.archive-name }}"
 
       - name: Upload Release Asset

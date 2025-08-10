@@ -1,0 +1,70 @@
+#compdef rco
+
+_rco() {
+    local -a commands
+    commands=(
+        'config:Manage configuration settings'
+        'auth:Manage authentication'
+        'status:Show status information'
+        'commit:Generate and create a commit'
+        'prepare:Prepare commit message'
+        'hook:Manage git hooks'
+        'commitlint:Lint commit messages'
+        'mcp:Model Context Protocol server'
+        'help:Show help information'
+    )
+
+    local -a config_commands
+    config_commands=(
+        'get:Get a configuration value'
+        'set:Set a configuration value'
+        'list:List all configuration values'
+        'status:Show configuration status'
+        'wizard:Run configuration wizard'
+        'generate-config:Generate default configuration'
+    )
+
+    local -a auth_commands
+    auth_commands=(
+        'login:Authenticate with a provider'
+        'logout:Remove authentication'
+        'status:Show authentication status'
+    )
+
+    local -a hook_commands
+    hook_commands=(
+        'install:Install git hooks'
+        'uninstall:Remove git hooks'
+    )
+
+    _arguments \
+        '(--help -h)'{--help,-h}'[Show help information]' \
+        '(--version -V)'{--version,-V}'[Show version information]' \
+        '(--verbose -v)'{--verbose,-v}'[Enable verbose output]' \
+        '(--yes -y)'{--yes,-y}'[Skip confirmation prompts]' \
+        '--model[AI model to use]:model:' \
+        '--provider[AI provider to use]:provider:' \
+        '1: :->command' \
+        '*: :->args'
+
+    case $state in
+        command)
+            _describe 'command' commands
+            ;;
+        args)
+            case $words[1] in
+                config)
+                    _describe 'config command' config_commands
+                    ;;
+                auth)
+                    _describe 'auth command' auth_commands
+                    ;;
+                hook)
+                    _describe 'hook command' hook_commands
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_rco "$@"

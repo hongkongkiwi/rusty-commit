@@ -31,7 +31,7 @@ tokio = { version = "1.35", features = ["full"] }
 async-trait = "0.1"
 
 # HTTP and API clients
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 async-openai = "0.29"
 backoff = { version = "0.4", features = ["tokio"] }
 

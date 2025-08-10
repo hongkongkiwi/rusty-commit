@@ -33,10 +33,10 @@ fn setup_clean_env(test_name: &str) -> tempfile::TempDir {
         .unwrap()
         .as_nanos();
     let unique_name = format!("{}_{}", test_name, timestamp);
-    
+
     let temp_dir = tempdir().unwrap();
     let config_dir = temp_dir.path().join(&unique_name);
-    
+
     // Ensure the config directory exists
     std::fs::create_dir_all(&config_dir).unwrap();
 

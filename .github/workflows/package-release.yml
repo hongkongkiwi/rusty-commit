@@ -310,6 +310,8 @@ jobs:
       matrix:
         arch:
           - { rust: x86_64-unknown-linux-musl, alpine: x86_64, artifact: rco-linux-musl-x86_64 }
+          - { rust: aarch64-unknown-linux-musl, alpine: aarch64, artifact: rco-linux-musl-aarch64 }
+          - { rust: riscv64gc-unknown-linux-musl, alpine: riscv64, artifact: rco-linux-musl-riscv64 }
     steps:
       - uses: actions/checkout@v4
 

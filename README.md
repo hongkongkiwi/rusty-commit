@@ -228,6 +228,14 @@ rco config set RCO_API_KEY=...
 rco config set RCO_MODEL=llama-3.1-sonar-small-128k-online
 ```
 
+Fireworks AI:
+```bash
+rco config set RCO_AI_PROVIDER=fireworks
+rco config set RCO_API_KEY=...
+rco config set RCO_API_URL=https://api.fireworks.ai/inference/v1
+rco config set RCO_MODEL=accounts/fireworks/models/llama-v3p1-70b-instruct
+```
+
 ## Git hooks
 ```bash
 rco hook set    # install prepare-commit-msg hook

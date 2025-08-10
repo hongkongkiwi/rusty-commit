@@ -1,10 +1,8 @@
 name: Publish to crates.io
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  release:
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,16 +21,17 @@ jobs:
         run: |
           # Extract version from Cargo.toml
           CARGO_VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d'"' -f2)
-          # Extract version from git tag
-          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          # Extract version from release tag
+          TAG_VERSION=${{ github.event.release.tag_name }}
+          TAG_VERSION=${TAG_VERSION#v}  # Remove 'v' prefix if present
 
           echo "Cargo.toml version: $CARGO_VERSION"
-          echo "Git tag version: $TAG_VERSION"
+          echo "Release tag version: $TAG_VERSION"
 
           # Compare versions (handle pre-release tags)
           if [[ ! "$TAG_VERSION" =~ ^"$CARGO_VERSION" ]]; then
             echo "Error: Version mismatch!"
-            echo "Cargo.toml has version $CARGO_VERSION but tag is v$TAG_VERSION"
+            echo "Cargo.toml has version $CARGO_VERSION but release tag is $TAG_VERSION"
             exit 1
           fi
 
@@ -62,80 +61,9 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
 
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: publish
-    permissions:
-      contents: write
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version
-        id: extract_version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Get the latest two tags
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
-
-          if [ -n "$PREVIOUS_TAG" ]; then
-            echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
-            CHANGELOG=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..$CURRENT_TAG)
-          else
-            echo "First release - showing all commits"
-            CHANGELOG=$(git log --pretty=format:"- %s")
-          fi
-
-          # Save changelog to file for the release body
-          cat > release_notes.md << EOF
-          ## What's Changed
-
-          $CHANGELOG
-
-          ## Installation
-
-          ### Via Cargo
-          \`\`\`bash
-          cargo install rusty-commit
-          \`\`\`
-
-          ### Via Homebrew (coming soon)
-          \`\`\`bash
-          brew install rusty-commit
-          \`\`\`
-
-          ### Download Binary
-          Download the appropriate binary for your platform from the assets below.
-
-          ## Full Changelog
-          https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG
-          EOF
-
-          echo "changelog_file=release_notes.md" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.extract_version.outputs.version }}
-          body_path: release_notes.md
-          draft: false
-          prerelease: ${{ contains(github.ref, '-') }}
-
   build-release-binaries:
     name: Build Release Binaries
-    needs: create-release
+    needs: publish
     strategy:
       matrix:
         include:
@@ -200,7 +128,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.tar.gz
           asset_name: ${{ matrix.asset_name }}.tar.gz
           asset_content_type: application/gzip
@@ -211,7 +139,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.zip
           asset_name: ${{ matrix.asset_name }}.zip
           asset_content_type: application/zip
@@ -220,7 +148,7 @@ jobs:
     name: Update Homebrew Formula
     runs-on: ubuntu-latest
     needs: [publish, build-release-binaries]
-    if: "!contains(github.ref, '-')"  # Only for stable releases
+    if: ${{ !github.event.release.prerelease }}  # Only for stable releases
     steps:
       - name: Trigger Homebrew formula update
         run: |

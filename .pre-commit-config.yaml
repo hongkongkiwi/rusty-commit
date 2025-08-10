@@ -4,12 +4,6 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
-  - repo: https://github.com/david-a-wheeler/cspell-precommit
-    rev: v6.31.2
-    hooks:
-      - id: cspell
-        additional_dependencies: []
-        args: ["--no-progress", "--no-summary"]
   - repo: local
     hooks:
       - id: cargo-fmt
@@ -17,16 +11,16 @@ repos:
         entry: bash -c 'cargo fmt --all'
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
       - id: cargo-clippy
         name: cargo clippy
         entry: bash -c 'cargo clippy --all-targets --all-features -- -D warnings'
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
       - id: cargo-test
         name: cargo test
         entry: bash -c 'cargo test --all-features'
         language: system
         pass_filenames: false
-        stages: [push]
+        stages: [pre-push]

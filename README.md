@@ -65,6 +65,18 @@ curl -fsSL https://github.com/hongkongkiwi/rusty-commit/releases/latest/download
 sudo mv rco /usr/local/bin/
 ```
 
+Add our community Alpine repo (future):
+```bash
+# Add public key (once published)
+wget -O /etc/apk/keys/rco.rsa.pub https://hongkongkiwi.github.io/rusty-commit/alpine/keys/rco.rsa.pub
+
+# Add repository
+echo "https://hongkongkiwi.github.io/rusty-commit/alpine/$(apk --print-arch)" | sudo tee -a /etc/apk/repositories
+
+# Install
+sudo apk update && sudo apk add rusty-commit
+```
+
 ## Quick start
 ```bash
 # 1) Authenticate (Claude OAuth) or set an API key

@@ -1,0 +1,117 @@
+name: Publish Alpine APK Repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.0.2)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-repo:
+    runs-on: ubuntu-latest
+    env:
+      REPO: hongkongkiwi/rusty-commit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine tag
+        id: get_tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare workspace
+        run: |
+          rm -rf alpine-repo
+          mkdir -p alpine-repo/alpine/x86_64 alpine-repo/alpine/aarch64 alpine-repo/alpine/riscv64 alpine-repo/alpine/keys
+
+      - name: Download APKs from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.get_tag.outputs.tag }}"
+          if [[ -z "$tag" ]]; then tag=$(gh release list --json tagName --limit 1 | jq -r '.[0].tagName'); fi
+          echo "Using tag: $tag"
+          gh release download "$tag" --pattern "*.apk" --dir downloads
+          ls -la downloads || true
+
+      - name: Sort APKs into arch folders
+        run: |
+          shopt -s nullglob
+          for f in downloads/*.apk; do
+            base=$(basename "$f")
+            case "$base" in
+              *x86_64*.apk) dest="alpine-repo/alpine/x86_64";;
+              *aarch64*.apk) dest="alpine-repo/alpine/aarch64";;
+              *riscv64*.apk) dest="alpine-repo/alpine/riscv64";;
+              *) echo "Skipping unknown arch: $base"; continue;;
+            esac
+            cp "$f" "$dest/"
+          done
+
+      - name: Generate APKINDEX for each arch
+        run: |
+          docker run --rm -v "$PWD/alpine-repo":/repo -w /repo alpine:latest sh -lc '
+            set -e
+            apk add --no-cache apk-tools abuild tar gzip
+            for arch in x86_64 aarch64 riscv64; do
+              cd /repo/alpine/$arch
+              if ls *.apk >/dev/null 2>&1; then
+                apk index -o APKINDEX.tar.gz *.apk || true
+              fi
+              cd /repo
+            done
+          '
+
+      - name: Sign APKINDEX (if keys provided)
+        if: ${{ secrets.ALPINE_PRIVATE_KEY && secrets.ALPINE_PUBLIC_KEY }}
+        env:
+          ABUILD_PRIVKEY: ${{ secrets.ALPINE_PRIVATE_KEY }}
+          ABUILD_PUBKEY: ${{ secrets.ALPINE_PUBLIC_KEY }}
+        run: |
+          mkdir -p ~/.abuild
+          echo "$ABUILD_PRIVKEY" | base64 -d > ~/.abuild/rco.rsa
+          chmod 600 ~/.abuild/rco.rsa
+          echo "$ABUILD_PUBKEY" | base64 -d > alpine-repo/alpine/keys/rco.rsa.pub
+          docker run --rm -v "$PWD/alpine-repo":/repo -v "$HOME/.abuild":/root/.abuild -w /repo alpine:latest sh -lc '
+            set -e
+            apk add --no-cache abuild
+            for arch in x86_64 aarch64 riscv64; do
+              if [ -f /repo/alpine/$arch/APKINDEX.tar.gz ]; then
+                abuild-sign -k /root/.abuild/rco.rsa /repo/alpine/$arch/APKINDEX.tar.gz || true
+              fi
+            done
+          '
+
+      - name: Create index.html
+        run: |
+          cat > alpine-repo/index.html << EOF
+          <html><body>
+          <h1>Rusty Commit Alpine Repository</h1>
+          <ul>
+            <li><a href="alpine/x86_64/">x86_64</a></li>
+            <li><a href="alpine/aarch64/">aarch64</a></li>
+            <li><a href="alpine/riscv64/">riscv64</a></li>
+            <li><a href="alpine/keys/">keys</a></li>
+          </ul>
+          </body></html>
+          EOF
+
+      - name: Publish to GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: alpine-repo
+          keep_files: true

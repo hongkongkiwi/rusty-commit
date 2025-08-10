@@ -85,10 +85,16 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         if let Some(hooks) = config.pre_gen_hook.clone() {
             let envs = vec![
                 ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
-                ("RCO_MAX_TOKENS", (config.tokens_max_input.unwrap_or(4096)).to_string()),
+                (
+                    "RCO_MAX_TOKENS",
+                    (config.tokens_max_input.unwrap_or(4096)).to_string(),
+                ),
                 ("RCO_DIFF_TOKENS", token_count.to_string()),
                 ("RCO_CONTEXT", options.context.clone().unwrap_or_default()),
-                ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                (
+                    "RCO_PROVIDER",
+                    config.ai_provider.clone().unwrap_or_default(),
+                ),
                 ("RCO_MODEL", config.model.clone().unwrap_or_default()),
             ];
             run_hooks(HookOptions {
@@ -119,7 +125,10 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
                 ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
                 ("RCO_COMMIT_MESSAGE", final_message.clone()),
                 ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
-                ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                (
+                    "RCO_PROVIDER",
+                    config.ai_provider.clone().unwrap_or_default(),
+                ),
                 ("RCO_MODEL", config.model.clone().unwrap_or_default()),
             ];
             run_hooks(HookOptions {
@@ -160,14 +169,19 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
                     let envs = vec![
                         ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
                         ("RCO_COMMIT_MESSAGE", final_message.clone()),
-                        ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                        (
+                            "RCO_PROVIDER",
+                            config.ai_provider.clone().unwrap_or_default(),
+                        ),
                         ("RCO_MODEL", config.model.clone().unwrap_or_default()),
                     ];
                     run_hooks(HookOptions {
                         name: "post-commit",
                         commands: hooks,
                         strict: config.hook_strict.unwrap_or(true),
-                        timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                        timeout: std::time::Duration::from_millis(
+                            config.hook_timeout_ms.unwrap_or(30000),
+                        ),
                         envs,
                     })?;
                 }
@@ -182,14 +196,19 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
                     let envs = vec![
                         ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
                         ("RCO_COMMIT_MESSAGE", edited_message.clone()),
-                        ("RCO_PROVIDER", config.ai_provider.clone().unwrap_or_default()),
+                        (
+                            "RCO_PROVIDER",
+                            config.ai_provider.clone().unwrap_or_default(),
+                        ),
                         ("RCO_MODEL", config.model.clone().unwrap_or_default()),
                     ];
                     run_hooks(HookOptions {
                         name: "post-commit",
                         commands: hooks,
                         strict: config.hook_strict.unwrap_or(true),
-                        timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                        timeout: std::time::Duration::from_millis(
+                            config.hook_timeout_ms.unwrap_or(30000),
+                        ),
                         envs,
                     })?;
                 }

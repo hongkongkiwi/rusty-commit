@@ -29,15 +29,15 @@ jobs:
           # Install required tools
           sudo apt-get update
           sudo apt-get install -y debsigs dpkg-sig
-          
+
           # Import GPG key
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          
+
           # Configure GPG
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "use-agent" >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye
-          
+
           # Get key ID
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
           echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
@@ -55,13 +55,13 @@ jobs:
           # Sign each .deb package
           find ./debs -name "*.deb" | while IFS= read -r deb; do
             echo "Signing $deb..."
-            
+
             # Method 1: debsigs (adds signature inside the package)
             debsigs --sign=origin --default-key="$GPG_KEY_ID" "$deb" || true
-            
+
             # Method 2: dpkg-sig (adds signature to the package)
             dpkg-sig --sign builder -k "$GPG_KEY_ID" "$deb" || true
-            
+
             # Method 3: Create detached signature
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \
@@ -92,14 +92,14 @@ jobs:
           # Install required tools
           sudo apt-get update
           sudo apt-get install -y rpm
-          
+
           # Import GPG key
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          
+
           # Get key ID
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
           echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
-          
+
           # Configure RPM macros for signing
           cat > ~/.rpmmacros << EOF
           %_signature gpg
@@ -121,12 +121,12 @@ jobs:
           # Sign each .rpm package
           find ./rpms -name "*.rpm" | while IFS= read -r rpm; do
             echo "Signing $rpm..."
-            
+
             # Method 1: rpm --addsign (adds signature to the package)
             echo "$GPG_PASSPHRASE" | rpm --addsign "$rpm" 2>/dev/null || {
               echo "rpm --addsign failed, trying alternative method..."
             }
-            
+
             # Method 2: Create detached signature
             gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
                 --pinentry-mode loopback \
@@ -156,7 +156,7 @@ jobs:
         run: |
           # Import GPG key
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          
+
           # Configure GPG
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "use-agent" >> ~/.gnupg/gpg.conf
@@ -209,7 +209,7 @@ jobs:
           security create-keychain -p actions temp.keychain
           security default-keychain -s temp.keychain
           security unlock-keychain -p actions temp.keychain
-          
+
           # Import certificate
           echo "$APPLE_CERTIFICATE" | base64 -d > certificate.p12
           security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
@@ -225,7 +225,7 @@ jobs:
                      --sign "$APPLE_IDENTITY" \
                      --identifier "com.rustycommit.rco" \
                      "$binary"
-            
+
             # Verify signature
             codesign --verify --verbose "$binary"
           done
@@ -239,17 +239,17 @@ jobs:
         run: |
           find ./macos -name "rco" | while IFS= read -r binary; do
             echo "Notarizing $binary..."
-            
+
             # Create a zip for notarization
             zip -j "${binary}.zip" "$binary"
-            
+
             # Submit for notarization
             xcrun notarytool submit "${binary}.zip" \
                   --apple-id "$APPLE_ID" \
                   --password "$APPLE_APP_PASSWORD" \
                   --team-id "$APPLE_TEAM_ID" \
                   --wait
-            
+
             # Staple the notarization
             xcrun stapler staple "$binary"
           done
@@ -280,7 +280,7 @@ jobs:
           $cert = [System.Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
           $certPath = "certificate.pfx"
           [System.IO.File]::WriteAllBytes($certPath, $cert)
-          
+
           # Import to certificate store
           $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
           Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
@@ -290,12 +290,12 @@ jobs:
           # Find and sign all .exe files
           Get-ChildItem -Path ./windows -Filter "*.exe" -Recurse | ForEach-Object {
             Write-Host "Signing $($_.FullName)..."
-            
+
             & signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
                       /d "Rusty Commit" `
                       /du "https://github.com/hongkongkiwi/rusty-commit" `
                       $_.FullName
-            
+
             # Verify signature
             & signtool verify /pa $_.FullName
           }
@@ -320,31 +320,31 @@ jobs:
         run: |
           # Import GPG key
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          
+
           # Configure GPG
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "use-agent" >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye
-          
+
           # Install Alpine package tools
           sudo apt-get update
           sudo apt-get install -y alpine-sdk
-          
+
           # Setup abuild (Alpine package build system)
           sudo addgroup -g 1000 abuild
           sudo adduser -D -G abuild -u 1000 builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/builder
-          
+
           # Create abuild key from GPG key
           sudo -u builder mkdir -p /home/builder/.abuild
-          
+
           # Export GPG key in format suitable for abuild
           gpg --armor --export "$GPG_KEY_ID" | sudo -u builder tee /home/builder/.abuild/rusty-commit.rsa.pub
           gpg --armor --export-secret-keys "$GPG_KEY_ID" | sudo -u builder tee /home/builder/.abuild/rusty-commit.rsa
-          
+
           # Set up abuild config
           echo "PACKAGER_PRIVKEY=/home/builder/.abuild/rusty-commit.rsa" | sudo -u builder tee /home/builder/.abuild/abuild.conf
-          
+
           sudo chmod 600 /home/builder/.abuild/rusty-commit.rsa
           sudo chmod 644 /home/builder/.abuild/rusty-commit.rsa.pub
 

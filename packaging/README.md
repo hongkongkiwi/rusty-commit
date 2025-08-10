@@ -121,7 +121,7 @@ For production releases, packages should be signed:
 After creation, packages can be distributed via:
 
 1. **GitHub Releases**: Automatically attached to releases
-2. **Package Repositories**: 
+2. **Package Repositories**:
    - APT repository for .deb
    - YUM/DNF repository for .rpm
    - Alpine package repository for .apk

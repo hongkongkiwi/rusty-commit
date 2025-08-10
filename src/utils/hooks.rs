@@ -1,7 +1,7 @@
-use std::process::{Command, Stdio};
-use std::time::Duration;
 use anyhow::{Context, Result};
 use std::fs;
+use std::process::{Command, Stdio};
+use std::time::Duration;
 
 pub struct HookOptions<'a> {
     pub name: &'a str,
@@ -29,7 +29,9 @@ pub fn run_hooks(opts: HookOptions) -> Result<()> {
 
         command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
-        let mut child = command.spawn().with_context(|| format!("Failed to start {} hook {}: {}", opts.name, idx + 1, cmd))?;
+        let mut child = command
+            .spawn()
+            .with_context(|| format!("Failed to start {} hook {}: {}", opts.name, idx + 1, cmd))?;
 
         // Simple timeout: wait with polling
         let start = std::time::Instant::now();
@@ -53,7 +55,9 @@ pub fn run_hooks(opts: HookOptions) -> Result<()> {
         if !status.success() {
             let msg = format!(
                 "{} hook failed (exit status {:?}) for command: {}",
-                opts.name, status.code(), cmd
+                opts.name,
+                status.code(),
+                cmd
             );
             if opts.strict {
                 return Err(anyhow::anyhow!(msg));

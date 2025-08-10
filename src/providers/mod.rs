@@ -33,10 +33,8 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
         // OpenAI-compatible providers
         "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | "huggingface"
         | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai"
-        | "moonshot" | "dashscope" | "alibaba" | "qwen" | "qwen-coder"
-        | "vertex" | "vertex-ai" | "google-vertex" => {
-            Ok(Box::new(openai::OpenAIProvider::new(config)?))
-        }
+        | "moonshot" | "dashscope" | "alibaba" | "qwen" | "qwen-coder" | "vertex" | "vertex-ai"
+        | "google-vertex" => Ok(Box::new(openai::OpenAIProvider::new(config)?)),
         _ => anyhow::bail!("Unsupported AI provider: {}", provider),
     }
 }

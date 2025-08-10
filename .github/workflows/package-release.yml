@@ -154,16 +154,16 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           PKGNAME="rusty-commit_${VERSION}_${{ matrix.arch.deb }}"
-          
+
           # Create directory structure
           mkdir -p "${PKGNAME}/DEBIAN"
           mkdir -p "${PKGNAME}/usr/bin"
           mkdir -p "${PKGNAME}/usr/share/doc/rusty-commit"
-          
+
           # Copy binary
           cp binary/rco "${PKGNAME}/usr/bin/"
           chmod 755 "${PKGNAME}/usr/bin/rco"
-          
+
           # Create control file
           cat > "${PKGNAME}/DEBIAN/control" << EOF
           Package: rusty-commit
@@ -180,11 +180,11 @@ jobs:
            secure credential storage, and full OpenCommit compatibility.
           Depends: git
           EOF
-          
+
           # Copy documentation
           cp README.md "${PKGNAME}/usr/share/doc/rusty-commit/"
           cp LICENSE "${PKGNAME}/usr/share/doc/rusty-commit/" || true
-          
+
           # Build the package
           dpkg-deb --build "${PKGNAME}"
 
@@ -238,15 +238,15 @@ jobs:
       - name: Create RPM package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          
+
           # Create RPM build structure
           mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
           mkdir -p rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin
-          
+
           # Copy binary
           cp binary/rco rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/
           chmod 755 rpmbuild/BUILDROOT/rusty-commit-${VERSION}-1.${{ matrix.arch.rpm }}/usr/bin/rco
-          
+
           # Create spec file
           cat > rpmbuild/SPECS/rusty-commit.spec << EOF
           Name:           rusty-commit
@@ -255,20 +255,20 @@ jobs:
           Summary:        Rust-powered AI commit message generator
           License:        MIT
           URL:            https://github.com/hongkongkiwi/rusty-commit
-          
+
           %description
           Blazing-fast commit messages powered by AI and written in Rust.
           Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
           Groq, DeepSeek, and more.
-          
+
           %files
           /usr/bin/rco
-          
+
           %changelog
           * $(date '+%a %b %d %Y') Rusty Commit Contributors - ${VERSION}
           - Release ${VERSION}
           EOF
-          
+
           # Build RPM
           cd rpmbuild
           rpmbuild --define "_topdir $(pwd)" \
@@ -337,16 +337,16 @@ jobs:
             adduser -D builder
             addgroup builder abuild
             echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-            
+
             # Setup for package building
             su - builder -c 'abuild-keygen -a -i -n'
-            
+
             VERSION=${{ steps.version.outputs.version }}
-            
+
             # Create package structure
             mkdir -p /home/builder/packages/rusty-commit
             cd /home/builder/packages/rusty-commit
-            
+
             # Create APKBUILD
             cat > APKBUILD << 'APKEOF'
           # Maintainer: Rusty Commit Contributors
@@ -359,17 +359,17 @@ jobs:
           license=\"MIT\"
           depends=\"git\"
           source=\"\"
-          
+
           package() {
               mkdir -p \"\$pkgdir\"/usr/bin
               cp /workspace/binary/rco \"\$pkgdir\"/usr/bin/
               chmod 755 \"\$pkgdir\"/usr/bin/rco
           }
           APKEOF
-            
+
             # Build package
             su - builder -c 'cd /home/builder/packages/rusty-commit && abuild -r'
-            
+
             # Copy built package
             cp /home/builder/packages/*/rusty-commit*.apk /workspace/
           "
@@ -433,44 +433,44 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DIRNAME="rusty-commit-${VERSION}"
-          
+
           # Create directory structure
           mkdir -p "${DIRNAME}"
           cp binary/rco "${DIRNAME}/" || cp binary/rco.exe "${DIRNAME}/" || true
           chmod 755 "${DIRNAME}/rco" || true
           cp README.md "${DIRNAME}/"
           cp LICENSE "${DIRNAME}/" || true
-          
+
           # Create completion scripts directory
           mkdir -p "${DIRNAME}/completions"
-          
+
           # Generate shell completions (if available)
           # This would require adding clap_complete to dependencies
           # and generating at build time
-          
+
           # Create install script
           cat > "${DIRNAME}/install.sh" << 'EOF'
           #!/bin/bash
           set -e
-          
+
           PREFIX="${PREFIX:-/usr/local}"
           BIN_DIR="$PREFIX/bin"
-          
+
           echo "Installing rusty-commit to $BIN_DIR"
-          
+
           # Create bin directory if it doesn't exist
           sudo mkdir -p "$BIN_DIR"
-          
+
           # Copy binary
           sudo cp rco "$BIN_DIR/"
           sudo chmod 755 "$BIN_DIR/rco"
-          
+
           echo "Installation complete!"
           echo "Run 'rco --help' to get started"
           EOF
-          
+
           chmod 755 "${DIRNAME}/install.sh"
-          
+
           # Create tarball
           tar czf "${{ matrix.archive }}" "${DIRNAME}"
 
@@ -516,7 +516,7 @@ jobs:
         run: |
           $version = "${{ steps.version.outputs.version }}"
           $dirname = "rusty-commit-$version"
-          
+
           # Create directory structure
           New-Item -ItemType Directory -Force -Path $dirname
           Copy-Item "binary\rco.exe" -Destination "$dirname\"
@@ -524,25 +524,25 @@ jobs:
           if (Test-Path "LICENSE") {
             Copy-Item "LICENSE" -Destination "$dirname\"
           }
-          
+
           # Create install script
           @"
           @echo off
           echo Installing rusty-commit...
-          
+
           set INSTALL_DIR=%LOCALAPPDATA%\rusty-commit
-          
+
           if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-          
+
           copy rco.exe "%INSTALL_DIR%\" >nul
-          
+
           echo.
           echo Installation complete!
           echo Please add %INSTALL_DIR% to your PATH environment variable.
           echo.
           pause
           "@ | Out-File -FilePath "$dirname\install.bat" -Encoding ASCII
-          
+
           # Create ZIP
           Compress-Archive -Path "$dirname\*" -DestinationPath "rusty-commit-windows-x86_64.zip"
 
@@ -588,11 +588,11 @@ jobs:
             Supports 16+ AI providers including Anthropic, OpenAI, OpenRouter,
             Groq, DeepSeek, and more. Features interactive authentication,
             secure credential storage, and full OpenCommit compatibility.
-          
+
           base: core22
           confinement: classic
           grade: stable
-          
+
           parts:
             rusty-commit:
               plugin: rust
@@ -602,7 +602,7 @@ jobs:
                 - pkg-config
               stage-packages:
                 - git
-          
+
           apps:
             rco:
               command: bin/rco

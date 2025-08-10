@@ -257,22 +257,38 @@ impl Config {
                 );
             }
             "RCO_PRE_GEN_HOOK" => {
-                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                let items = value
+                    .split(';')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
                 self.pre_gen_hook = Some(items);
             }
             "RCO_PRE_COMMIT_HOOK" => {
-                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                let items = value
+                    .split(';')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
                 self.pre_commit_hook = Some(items);
             }
             "RCO_POST_COMMIT_HOOK" => {
-                let items = value.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                let items = value
+                    .split(';')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
                 self.post_commit_hook = Some(items);
             }
             "RCO_HOOK_STRICT" => {
                 self.hook_strict = Some(value.parse().context("Invalid boolean for HOOK_STRICT")?);
             }
             "RCO_HOOK_TIMEOUT_MS" => {
-                self.hook_timeout_ms = Some(value.parse().context("Invalid number for HOOK_TIMEOUT_MS")?);
+                self.hook_timeout_ms = Some(
+                    value
+                        .parse()
+                        .context("Invalid number for HOOK_TIMEOUT_MS")?,
+                );
             }
             "RCO_COMMITLINT_CONFIG" => {
                 self.commitlint_config = Some(value.to_string());
@@ -363,7 +379,9 @@ impl Config {
                     "RCO_ACTION_ENABLED" => self.action_enabled = default.action_enabled,
                     "RCO_PRE_GEN_HOOK" => self.pre_gen_hook = default.pre_gen_hook.clone(),
                     "RCO_PRE_COMMIT_HOOK" => self.pre_commit_hook = default.pre_commit_hook.clone(),
-                    "RCO_POST_COMMIT_HOOK" => self.post_commit_hook = default.post_commit_hook.clone(),
+                    "RCO_POST_COMMIT_HOOK" => {
+                        self.post_commit_hook = default.post_commit_hook.clone()
+                    }
                     "RCO_HOOK_STRICT" => self.hook_strict = default.hook_strict,
                     "RCO_HOOK_TIMEOUT_MS" => self.hook_timeout_ms = default.hook_timeout_ms,
                     _ => anyhow::bail!("Unknown configuration key: {}", key),

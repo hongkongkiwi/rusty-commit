@@ -256,7 +256,10 @@ fn test_config_api_urls() {
         ("http://localhost:11434", "ollama"),
         ("https://api.fireworks.ai/inference/v1", "fireworks"),
         ("https://api.moonshot.cn/v1", "moonshot"),
-        ("https://dashscope.aliyuncs.com/compatible-mode/v1", "dashscope"),
+        (
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "dashscope",
+        ),
     ];
 
     for (url, provider) in url_tests {

@@ -17,7 +17,7 @@ jobs:
   opengrep:
     name: OpenGrep Security Analysis
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,22 +52,22 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             // Check if SARIF file exists and has findings
             if (fs.existsSync('semgrep.sarif')) {
               const sarif = JSON.parse(fs.readFileSync('semgrep.sarif', 'utf8'));
               const results = sarif.runs?.[0]?.results || [];
-              
+
               if (results.length > 0) {
                 const comment = `## 🔍 OpenGrep Security Scan Results
-                
+
 Found ${results.length} potential security issue(s) in this PR.
 
 Please review the **Security** tab in this repository for detailed findings, or check the workflow logs.
 
 **Common issues to look for:**
 - Hardcoded secrets or credentials
-- SQL injection vulnerabilities  
+- SQL injection vulnerabilities
 - Cross-site scripting (XSS) risks
 - Insecure cryptographic practices
 - Unsafe deserialization
@@ -81,7 +81,7 @@ pip install opengrep
 opengrep --config=p/security-audit --config=p/secrets --config=p/rust .
 \`\`\`
                 `;
-                
+
                 github.rest.issues.createComment({
                   issue_number: context.issue.number,
                   owner: context.repo.owner,

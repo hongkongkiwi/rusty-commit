@@ -222,16 +222,16 @@ jobs:
         run: |
           # Import GPG key
           echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          
+
           # Configure GPG
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           echo "use-agent" >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye
-          
+
           # Test signing
           echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
               --pinentry-mode loopback --armor --detach-sign > /dev/null
-          
+
           echo "GPG signing configured successfully"
 
       - name: Sign all artifacts with Cosign (keyless or key-based)
@@ -241,7 +241,7 @@ jobs:
           find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) | while IFS= read -r file; do
             filename=$(basename "$file")
             echo "Signing $filename with Cosign..."
-            
+
             # Keyless signing with GitHub OIDC
             cosign sign-blob "$file" \
               --yes \
@@ -250,7 +250,7 @@ jobs:
               --bundle "${file}.cosign.bundle" \
               --output-certificate "${file}.cosign.cert" \
               --output-signature "${file}.cosign.sig"
-            
+
             echo "Created Cosign bundle for $filename"
           done
           cd ..
@@ -272,7 +272,7 @@ jobs:
             sha256sum "$file" | sed 's|^\./||' >> ../checksums.txt
           done
           cd ..
-          
+
           # Create formatted checksum file
           echo "# SHA256 Checksums for Rusty Commit ${{ needs.create-release.outputs.version }}" > SHA256SUMS.txt
           echo "# Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> SHA256SUMS.txt
@@ -280,7 +280,7 @@ jobs:
           if [ -f checksums.txt ]; then
             sort checksums.txt >> SHA256SUMS.txt
           fi
-          
+
           # Sign checksum file if GPG available
           if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
@@ -290,7 +290,7 @@ jobs:
                 SHA256SUMS.txt
             echo "Checksum file signed with GPG"
           fi
-          
+
           # Also sign checksums with Cosign
           echo "Signing checksums with Cosign..."
           cosign sign-blob SHA256SUMS.txt \
@@ -305,7 +305,7 @@ jobs:
         run: |
           # Copy install script to release artifacts
           cp install.sh install.sh.release
-          
+
           # Sign install script with GPG (if available)
           if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
@@ -315,7 +315,7 @@ jobs:
                 install.sh.release
             echo "Install script signed with GPG"
           fi
-          
+
           # Sign install script with Cosign
           echo "Signing install script with Cosign..."
           cosign sign-blob install.sh.release \
@@ -364,8 +364,8 @@ jobs:
             -H "Content-Type: application/x-sh" \
             --data-binary "@install.sh.release" \
             "${{ needs.create-release.outputs.upload_url }}?name=install.sh&label=install.sh"
-          
-          # Upload install script signatures  
+
+          # Upload install script signatures
           for file in install.sh.asc install.sh.cosign.*; do
             if [ -f "$file" ]; then
               echo "Uploading install script signature: $file"
@@ -405,7 +405,7 @@ jobs:
               --data-binary "@$sig" \
               "${{ needs.create-release.outputs.upload_url }}?name=$filename&label=${filename}"
           done
-          
+
           # Upload main checksum Cosign files
           cd ..
           for file in SHA256SUMS.txt.cosign.*; do

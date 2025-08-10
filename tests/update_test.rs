@@ -20,7 +20,9 @@ fn test_update_help() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Check for updates and update rusty-commit"))
+        .stdout(predicate::str::contains(
+            "Check for updates and update rusty-commit",
+        ))
         .stdout(predicate::str::contains("--check"))
         .stdout(predicate::str::contains("--force"))
         .stdout(predicate::str::contains("--version"));

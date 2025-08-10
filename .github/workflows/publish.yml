@@ -163,7 +163,7 @@ jobs:
           echo "It's triggered by the same 'release published' event"
           echo "Packages being created:"
           echo "- Debian/Ubuntu (.deb) for amd64, arm64, armhf"
-          echo "- RPM (.rpm) for x86_64, aarch64"  
+          echo "- RPM (.rpm) for x86_64, aarch64"
           echo "- Alpine (.apk) for x86_64"
           echo "- Snap (.snap) universal package"
           echo "- Tarball (.tar.gz) with install script"

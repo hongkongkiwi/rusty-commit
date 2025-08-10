@@ -1,6 +1,5 @@
 use anyhow::{bail, Context, Result};
 use colored::*;
-use reqwest;
 use semver::Version;
 use std::env;
 use std::fs;
@@ -37,30 +36,27 @@ pub struct UpdateInfo {
 /// Validate version string format
 fn validate_version(version: &str) -> Result<()> {
     let clean_version = version.trim_start_matches('v');
-    Version::parse(clean_version)
-        .context("Invalid version format")?;
-    
+    Version::parse(clean_version).context("Invalid version format")?;
+
     // Additional validation: no path traversal
     if version.contains("..") || version.contains('/') || version.contains('\\') {
         bail!("Invalid characters in version string");
     }
-    
+
     Ok(())
 }
 
 /// Validate and sanitize file paths
 fn sanitize_path(path: &Path) -> Result<PathBuf> {
     // Resolve to absolute path and check for path traversal
-    let canonical = path
-        .canonicalize()
-        .context("Failed to resolve path")?;
-    
+    let canonical = path.canonicalize().context("Failed to resolve path")?;
+
     // Ensure path doesn't escape expected directories
     let path_str = canonical.to_string_lossy();
     if path_str.contains("..") {
         bail!("Path traversal detected");
     }
-    
+
     Ok(canonical)
 }
 
@@ -77,35 +73,34 @@ fn create_http_client() -> Result<reqwest::Client> {
 
 /// Detect how rusty-commit was installed (more secure version)
 pub fn detect_install_method() -> Result<InstallMethod> {
-    let exe_path = env::current_exe()
-        .context("Failed to get current executable path")?;
-    
+    let exe_path = env::current_exe().context("Failed to get current executable path")?;
+
     // Sanitize the path
     let exe_path = sanitize_path(&exe_path)?;
     let exe_str = exe_path.to_string_lossy();
-    
+
     // Check for Homebrew installation
     if exe_str.contains("/Cellar/") || exe_str.contains("homebrew") {
         return Ok(InstallMethod::Homebrew);
     }
-    
+
     // Check for Cargo installation
     if exe_str.contains(".cargo/bin") {
         return Ok(InstallMethod::Cargo);
     }
-    
+
     // Check for Snap installation
     if exe_str.contains("/snap/") {
         return Ok(InstallMethod::Snap);
     }
-    
+
     // Check for system package manager installations
     if exe_str.starts_with("/usr/bin/") || exe_str.starts_with("/usr/local/bin/") {
         // Try to detect package manager using safer methods
         if Path::new("/etc/debian_version").exists() {
             // Use dpkg-query which is safer than dpkg -S
             if let Ok(output) = Command::new("dpkg-query")
-                .args(&["-S", &exe_path.to_string_lossy()])
+                .args(["-S", &exe_path.to_string_lossy()])
                 .output()
             {
                 if output.status.success() {
@@ -113,11 +108,11 @@ pub fn detect_install_method() -> Result<InstallMethod> {
                 }
             }
         }
-        
+
         if Path::new("/etc/redhat-release").exists() || Path::new("/etc/fedora-release").exists() {
             // Check if installed via rpm (safer query)
             if let Ok(output) = Command::new("rpm")
-                .args(&["-qf", &exe_path.to_string_lossy()])
+                .args(["-qf", &exe_path.to_string_lossy()])
                 .output()
             {
                 if output.status.success() {
@@ -125,46 +120,49 @@ pub fn detect_install_method() -> Result<InstallMethod> {
                 }
             }
         }
-        
+
         // Likely a binary installation
         return Ok(InstallMethod::Binary);
     }
-    
+
     // Check if it's in a typical binary install location
     if exe_str.contains("/usr/local/bin/") || exe_str.contains("/opt/") {
         return Ok(InstallMethod::Binary);
     }
-    
+
     Ok(InstallMethod::Unknown)
 }
 
 /// Get the latest version from GitHub releases (with validation)
 pub async fn get_latest_version() -> Result<String> {
     let client = create_http_client()?;
-    
-    let url = format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO);
+
+    let url = format!(
+        "https://api.github.com/repos/{}/releases/latest",
+        GITHUB_REPO
+    );
     let response = client
         .get(&url)
         .send()
         .await
         .context("Failed to fetch latest release")?;
-    
+
     if !response.status().is_success() {
         bail!("GitHub API returned status: {}", response.status());
     }
-    
+
     let release: serde_json::Value = response
         .json()
         .await
         .context("Failed to parse release JSON")?;
-    
+
     let tag_name = release["tag_name"]
         .as_str()
         .context("Failed to get tag_name from release")?;
-    
+
     // Validate version format
     validate_version(tag_name)?;
-    
+
     // Remove 'v' prefix if present
     Ok(tag_name.trim_start_matches('v').to_string())
 }
@@ -175,12 +173,12 @@ pub async fn check_for_update() -> Result<UpdateInfo> {
     let latest_version = get_latest_version().await?;
     let install_method = detect_install_method()?;
     let executable_path = env::current_exe()?;
-    
+
     let current = Version::parse(&current_version)?;
     let latest = Version::parse(&latest_version)?;
-    
+
     let needs_update = latest > current;
-    
+
     Ok(UpdateInfo {
         current_version,
         latest_version,
@@ -193,27 +191,29 @@ pub async fn check_for_update() -> Result<UpdateInfo> {
 /// Update using Homebrew (safer version)
 async fn update_homebrew() -> Result<()> {
     println!("{}", "Updating via Homebrew...".blue());
-    
+
     // Check if brew exists first
-    which::which("brew")
-        .context("Homebrew not found in PATH")?;
-    
+    which::which("brew").context("Homebrew not found in PATH")?;
+
     // Update Homebrew
     let output = Command::new("brew")
-        .args(&["update"])
+        .args(["update"])
         .output()
         .context("Failed to run brew update")?;
-    
+
     if !output.status.success() {
-        bail!("brew update failed: {}", String::from_utf8_lossy(&output.stderr));
+        bail!(
+            "brew update failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
-    
+
     // Upgrade rusty-commit
     let output = Command::new("brew")
-        .args(&["upgrade", "rusty-commit"])
+        .args(["upgrade", "rusty-commit"])
         .output()
         .context("Failed to run brew upgrade")?;
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         if stderr.contains("already installed") {
@@ -222,7 +222,7 @@ async fn update_homebrew() -> Result<()> {
         }
         bail!("brew upgrade failed: {}", stderr);
     }
-    
+
     println!("{}", "Successfully updated via Homebrew!".green());
     Ok(())
 }
@@ -230,20 +230,28 @@ async fn update_homebrew() -> Result<()> {
 /// Update using Cargo (safer version)
 async fn update_cargo() -> Result<()> {
     println!("{}", "Updating via Cargo...".blue());
-    
+
     // Check if cargo exists
-    which::which("cargo")
-        .context("Cargo not found in PATH")?;
-    
+    which::which("cargo").context("Cargo not found in PATH")?;
+
     let output = Command::new("cargo")
-        .args(&["install", "rusty-commit", "--force", "--features", "secure-storage"])
+        .args([
+            "install",
+            "rusty-commit",
+            "--force",
+            "--features",
+            "secure-storage",
+        ])
         .output()
         .context("Failed to run cargo install")?;
-    
+
     if !output.status.success() {
-        bail!("cargo install failed: {}", String::from_utf8_lossy(&output.stderr));
+        bail!(
+            "cargo install failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
-    
+
     println!("{}", "Successfully updated via Cargo!".green());
     Ok(())
 }
@@ -255,57 +263,61 @@ async fn download_with_verification(
     max_size: u64,
 ) -> Result<Vec<u8>> {
     println!("{}", format!("Downloading from: {}", url).blue());
-    
+
     let client = create_http_client()?;
     let response = client
         .get(url)
         .send()
         .await
         .context("Failed to start download")?;
-    
+
     if !response.status().is_success() {
         bail!("Download failed with status: {}", response.status());
     }
-    
+
     // Check content length if available
     if let Some(content_length) = response.content_length() {
         if content_length > max_size {
-            bail!("File too large: {} bytes (max: {} bytes)", content_length, max_size);
+            bail!(
+                "File too large: {} bytes (max: {} bytes)",
+                content_length,
+                max_size
+            );
         }
     }
-    
+
     // Download with size limit
     let mut bytes = Vec::new();
     let mut stream = response.bytes_stream();
     use futures::StreamExt;
-    
+
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("Failed to read chunk")?;
         bytes.extend_from_slice(&chunk);
-        
+
         if bytes.len() as u64 > max_size {
             bail!("Download exceeded maximum size of {} bytes", max_size);
         }
     }
-    
+
     // Verify checksum if provided
     if let Some(expected) = expected_checksum {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
         let actual = format!("{:x}", hasher.finalize());
-        
+
         if actual != expected {
             bail!("Checksum verification failed");
         }
-        
+
         println!("{}", "Checksum verified".green());
     }
-    
+
     // TODO: Add Cosign signature verification in future version
     // This would require integrating with cosign binary or sigstore-rs crate
     // For now, checksums provide integrity verification
-    
+
     Ok(bytes)
 }
 
@@ -316,9 +328,9 @@ async fn get_release_checksum(version: &str, filename: &str) -> Result<Option<St
         "https://github.com/{}/releases/download/v{}/SHA256SUMS.txt",
         GITHUB_REPO, version
     );
-    
+
     let response = client.get(&url).send().await;
-    
+
     match response {
         Ok(resp) if resp.status().is_success() => {
             let text = resp.text().await?;
@@ -339,25 +351,23 @@ async fn get_release_checksum(version: &str, filename: &str) -> Result<Option<St
 async fn atomic_replace_file(source: &Path, target: &Path) -> Result<()> {
     use std::fs::OpenOptions;
     use std::io::copy;
-    
+
     // Create a unique temporary file in the same directory as target
     let temp_path = target.with_extension(format!(".tmp.{}", std::process::id()));
-    
+
     // Copy source to temp location
     {
-        let mut source_file = fs::File::open(source)
-            .context("Failed to open source file")?;
+        let mut source_file = fs::File::open(source).context("Failed to open source file")?;
         let mut temp_file = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(&temp_path)
             .context("Failed to create temp file")?;
-        
-        copy(&mut source_file, &mut temp_file)
-            .context("Failed to copy to temp file")?;
+
+        copy(&mut source_file, &mut temp_file).context("Failed to copy to temp file")?;
     }
-    
+
     // Set executable permissions on Unix
     #[cfg(unix)]
     {
@@ -366,21 +376,20 @@ async fn atomic_replace_file(source: &Path, target: &Path) -> Result<()> {
         perms.set_mode(0o755);
         fs::set_permissions(&temp_path, perms)?;
     }
-    
+
     // Atomic rename
-    fs::rename(&temp_path, target)
-        .context("Failed to perform atomic rename")?;
-    
+    fs::rename(&temp_path, target).context("Failed to perform atomic rename")?;
+
     Ok(())
 }
 
 /// Update Debian package (secure version)
 async fn update_deb(version: &str) -> Result<()> {
     println!("{}", "Updating via apt/dpkg...".blue());
-    
+
     // Validate version
     validate_version(version)?;
-    
+
     let arch = get_system_arch()?;
     let deb_arch = match arch.as_str() {
         "x86_64" => "amd64",
@@ -388,45 +397,49 @@ async fn update_deb(version: &str) -> Result<()> {
         "armv7" => "armhf",
         _ => bail!("Unsupported architecture for .deb: {}", arch),
     };
-    
+
     let filename = format!("rusty-commit_{}_{}.deb", version, deb_arch);
     let url = format!(
         "https://github.com/{}/releases/download/v{}/{}",
         GITHUB_REPO, version, filename
     );
-    
+
     // Get checksum
     let checksum = get_release_checksum(version, &filename).await?;
-    
+
     // Download with verification
-    let package_data = download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
-    
+    let package_data =
+        download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
+
     // Save to secure temp directory
     let temp_dir = tempfile::TempDir::new()?;
     let temp_path = temp_dir.path().join(&filename);
     fs::write(&temp_path, package_data)?;
-    
+
     // Install with dpkg or apt
     let result = if which::which("apt-get").is_ok() {
         Command::new("sudo")
-            .args(&["apt-get", "install", "-y"])
+            .args(["apt-get", "install", "-y"])
             .arg(&temp_path)
             .output()
     } else if which::which("dpkg").is_ok() {
         Command::new("sudo")
-            .args(&["dpkg", "-i"])
+            .args(["dpkg", "-i"])
             .arg(&temp_path)
             .output()
     } else {
         bail!("Neither apt-get nor dpkg found");
     };
-    
+
     match result {
         Ok(output) if output.status.success() => {
             println!("{}", "Successfully updated via package manager!".green());
             Ok(())
         }
-        Ok(output) => bail!("Package installation failed: {}", String::from_utf8_lossy(&output.stderr)),
+        Ok(output) => bail!(
+            "Package installation failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ),
         Err(e) => Err(e.into()),
     }
 }
@@ -434,60 +447,64 @@ async fn update_deb(version: &str) -> Result<()> {
 /// Update RPM package (secure version)
 async fn update_rpm(version: &str) -> Result<()> {
     println!("{}", "Updating via rpm/dnf/yum...".blue());
-    
+
     // Validate version
     validate_version(version)?;
-    
+
     let arch = get_system_arch()?;
     let rpm_arch = match arch.as_str() {
         "x86_64" => "x86_64",
         "aarch64" => "aarch64",
         _ => bail!("Unsupported architecture for .rpm: {}", arch),
     };
-    
+
     let filename = format!("rusty-commit-{}-1.{}.rpm", version, rpm_arch);
     let url = format!(
         "https://github.com/{}/releases/download/v{}/{}",
         GITHUB_REPO, version, filename
     );
-    
+
     // Get checksum
     let checksum = get_release_checksum(version, &filename).await?;
-    
+
     // Download with verification
-    let package_data = download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
-    
+    let package_data =
+        download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
+
     // Save to secure temp directory
     let temp_dir = tempfile::TempDir::new()?;
     let temp_path = temp_dir.path().join(&filename);
     fs::write(&temp_path, package_data)?;
-    
+
     // Install with package manager
     let result = if which::which("dnf").is_ok() {
         Command::new("sudo")
-            .args(&["dnf", "install", "-y"])
+            .args(["dnf", "install", "-y"])
             .arg(&temp_path)
             .output()
     } else if which::which("yum").is_ok() {
         Command::new("sudo")
-            .args(&["yum", "install", "-y"])
+            .args(["yum", "install", "-y"])
             .arg(&temp_path)
             .output()
     } else if which::which("rpm").is_ok() {
         Command::new("sudo")
-            .args(&["rpm", "-Uvh"])
+            .args(["rpm", "-Uvh"])
             .arg(&temp_path)
             .output()
     } else {
         bail!("No suitable package manager found");
     };
-    
+
     match result {
         Ok(output) if output.status.success() => {
             println!("{}", "Successfully updated via package manager!".green());
             Ok(())
         }
-        Ok(output) => bail!("Package installation failed: {}", String::from_utf8_lossy(&output.stderr)),
+        Ok(output) => bail!(
+            "Package installation failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ),
         Err(e) => Err(e.into()),
     }
 }
@@ -495,27 +512,38 @@ async fn update_rpm(version: &str) -> Result<()> {
 /// Update binary installation (secure version)
 async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
     println!("{}", "Updating binary installation...".blue());
-    
+
     // Validate inputs
     validate_version(version)?;
     let exe_path = sanitize_path(exe_path)?;
-    
+
     let os = get_system_os()?;
     let arch = get_system_arch()?;
-    
+
     // Prefer musl tarballs when running on Alpine/musl
     let is_musl = if os == "linux" {
         // Best-effort detection: check /etc/alpine-release or ldd output
         if Path::new("/etc/alpine-release").exists() {
             true
         } else {
-            let output = Command::new("sh").arg("-lc").arg("ldd --version 2>&1 || true").output();
+            let output = Command::new("sh")
+                .arg("-lc")
+                .arg("ldd --version 2>&1 || true")
+                .output();
             if let Ok(out) = output {
-                String::from_utf8_lossy(&out.stdout).to_lowercase().contains("musl") ||
-                String::from_utf8_lossy(&out.stderr).to_lowercase().contains("musl")
-            } else { false }
+                String::from_utf8_lossy(&out.stdout)
+                    .to_lowercase()
+                    .contains("musl")
+                    || String::from_utf8_lossy(&out.stderr)
+                        .to_lowercase()
+                        .contains("musl")
+            } else {
+                false
+            }
         }
-    } else { false };
+    } else {
+        false
+    };
 
     let archive_name = match (os.as_str(), arch.as_str(), is_musl) {
         ("linux", "x86_64", true) => "rustycommit-linux-musl-x86_64.tar.gz",
@@ -529,34 +557,40 @@ async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
         ("macos", "aarch64", _) => "rustycommit-macos-aarch64.tar.gz",
         ("windows", "x86_64", _) => "rustycommit-windows-x86_64.zip",
         ("windows", "i686", _) => "rustycommit-windows-i686.zip",
-        _ => bail!("Unsupported OS/architecture: {}-{} (musl={})", os, arch, is_musl),
+        _ => bail!(
+            "Unsupported OS/architecture: {}-{} (musl={})",
+            os,
+            arch,
+            is_musl
+        ),
     };
-    
+
     let url = format!(
         "https://github.com/{}/releases/download/v{}/{}",
         GITHUB_REPO, version, archive_name
     );
-    
+
     // Get checksum
     let checksum = get_release_checksum(version, archive_name).await?;
-    
+
     // Download with verification
-    let archive_data = download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
-    
+    let archive_data =
+        download_with_verification(&url, checksum.as_deref(), MAX_DOWNLOAD_SIZE).await?;
+
     // Extract to secure temp directory
     let temp_dir = tempfile::TempDir::new()?;
     let archive_path = temp_dir.path().join(archive_name);
     fs::write(&archive_path, archive_data)?;
-    
+
     // Extract archive using built-in libraries when possible
     let binary_name = if cfg!(windows) { "rco.exe" } else { "rco" };
     let extracted_binary = temp_dir.path().join(binary_name);
-    
+
     if archive_name.ends_with(".tar.gz") {
         // Use tar crate for extraction (safer than shell command)
         use flate2::read::GzDecoder;
         use tar::Archive;
-        
+
         let tar_gz = fs::File::open(&archive_path)?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
@@ -564,10 +598,10 @@ async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
     } else if archive_name.ends_with(".zip") {
         // Use zip crate for extraction
         use zip::ZipArchive;
-        
+
         let file = fs::File::open(&archive_path)?;
         let mut archive = ZipArchive::new(file)?;
-        
+
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
             if file.name() == binary_name {
@@ -577,19 +611,18 @@ async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
             }
         }
     }
-    
+
     if !extracted_binary.exists() {
         bail!("Binary not found in archive");
     }
-    
+
     // Create backup of current binary
     let backup_path = exe_path.with_extension(format!("bak.{}", std::process::id()));
-    fs::copy(&exe_path, &backup_path)
-        .context("Failed to create backup")?;
-    
+    fs::copy(&exe_path, &backup_path).context("Failed to create backup")?;
+
     // Try to perform atomic replacement
     let replace_result = atomic_replace_file(&extracted_binary, &exe_path).await;
-    
+
     match replace_result {
         Ok(_) => {
             // Success - remove backup
@@ -600,7 +633,10 @@ async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
         Err(e) => {
             // Try to restore backup
             if let Err(restore_err) = fs::rename(&backup_path, &exe_path) {
-                eprintln!("{}", format!("Critical: Failed to restore backup: {}", restore_err).red());
+                eprintln!(
+                    "{}",
+                    format!("Critical: Failed to restore backup: {}", restore_err).red()
+                );
             }
             Err(e)
         }
@@ -610,15 +646,14 @@ async fn update_binary(version: &str, exe_path: &Path) -> Result<()> {
 /// Update Snap package
 async fn update_snap() -> Result<()> {
     println!("{}", "Updating via Snap...".blue());
-    
-    which::which("snap")
-        .context("Snap not found in PATH")?;
-    
+
+    which::which("snap").context("Snap not found in PATH")?;
+
     let output = Command::new("sudo")
-        .args(&["snap", "refresh", "rusty-commit"])
+        .args(["snap", "refresh", "rusty-commit"])
         .output()
         .context("Failed to run snap refresh")?;
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         if stderr.contains("has no updates available") {
@@ -627,7 +662,7 @@ async fn update_snap() -> Result<()> {
         }
         bail!("snap refresh failed: {}", stderr);
     }
-    
+
     println!("{}", "Successfully updated via Snap!".green());
     Ok(())
 }
@@ -638,15 +673,16 @@ pub async fn perform_update(info: &UpdateInfo) -> Result<()> {
         println!("{}", "Already running the latest version!".green());
         return Ok(());
     }
-    
+
     println!(
         "{}",
         format!(
             "Updating from v{} to v{}...",
             info.current_version, info.latest_version
-        ).blue()
+        )
+        .blue()
     );
-    
+
     match info.install_method {
         InstallMethod::Homebrew => update_homebrew().await,
         InstallMethod::Cargo => update_cargo().await,
@@ -703,7 +739,7 @@ mod tests {
         assert!(validate_version("1.0.0").is_ok());
         assert!(validate_version("v1.0.0").is_ok());
         assert!(validate_version("1.0.0-beta.1").is_ok());
-        
+
         assert!(validate_version("../etc/passwd").is_err());
         assert!(validate_version("1.0.0/../../etc").is_err());
         assert!(validate_version("invalid").is_err());

@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if this is a release event or a successful Release workflow run
     if: |
-      github.event_name == 'release' || 
-      (github.event.workflow_run.conclusion == 'success' && 
+      github.event_name == 'release' ||
+      (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch != 'main')
     steps:
       - name: Get release tag

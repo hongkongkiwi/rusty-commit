@@ -12,7 +12,7 @@ All release artifacts include SHA256 checksums that are automatically verified d
    ```bash
    # Download the checksum file
    curl -LO https://github.com/hongkongkiwi/rusty-commit/releases/latest/download/SHA256SUMS.txt
-   
+
    # Verify your download
    sha256sum -c SHA256SUMS.txt --ignore-missing
    ```

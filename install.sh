@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
 # Rusty Commit Installation Script
-# 
+#
 # This script automatically detects your OS and installs rusty-commit using the best available method.
-# 
+#
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/install.sh | bash
 #   wget -qO- https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/install.sh | bash
@@ -86,7 +86,7 @@ security_check() {
         warn "Set ACCEPT_RISKS=true if you really want to proceed as root."
         die "Aborting installation for security reasons"
     fi
-    
+
     # Check for suspicious environment
     if [[ -n "${LD_PRELOAD:-}" ]] || [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
         warn "Suspicious environment variables detected (LD_PRELOAD/LD_LIBRARY_PATH)"
@@ -191,21 +191,21 @@ run_privileged() {
 get_latest_version() {
     local version
     info "Fetching latest version from GitHub..."
-    
+
     if ! command_exists curl; then
         die "curl is required but not installed"
     fi
-    
+
     version=$(curl -fsSL --retry 3 --retry-delay 2 \
         "https://api.github.com/repos/${REPO}/releases/latest" | \
         grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') || {
         die "Failed to fetch latest version from GitHub"
     }
-    
+
     if [[ -z "${version}" ]]; then
         die "Failed to determine latest version"
     fi
-    
+
     echo "${version}"
 }
 
@@ -214,13 +214,13 @@ download_and_verify() {
     local url="$1"
     local output_file="$2"
     local expected_checksum="${3:-}"
-    
+
     info "Downloading from: ${url}"
-    
+
     # Download with retry logic
     local retry=0
     local max_retries=3
-    
+
     while [[ ${retry} -lt ${max_retries} ]]; do
         if curl -fsSL --retry 3 --retry-delay 2 "${url}" -o "${output_file}"; then
             break
@@ -229,16 +229,16 @@ download_and_verify() {
         warn "Download failed (attempt ${retry}/${max_retries})"
         sleep 2
     done
-    
+
     if [[ ${retry} -eq ${max_retries} ]]; then
         return 1
     fi
-    
+
     # Verify checksum if provided
     if [[ -n "${expected_checksum}" ]] && [[ "${VERIFY_CHECKSUM}" == "true" ]]; then
         info "Verifying SHA256 checksum..."
         local actual_checksum
-        
+
         if command_exists sha256sum; then
             actual_checksum=$(sha256sum "${output_file}" | cut -d' ' -f1)
         elif command_exists shasum; then
@@ -250,17 +250,17 @@ download_and_verify() {
             fi
             return 0
         fi
-        
+
         if [[ "${actual_checksum}" != "${expected_checksum}" ]]; then
             error "Checksum verification failed!"
             error "Expected: ${expected_checksum}"
             error "Actual:   ${actual_checksum}"
             return 1
         fi
-        
+
         success "Checksum verified"
     fi
-    
+
     # Try Cosign signature verification first (preferred for Rust binaries)
     if check_cosign; then
         verify_cosign_signature "${output_file}" || {
@@ -278,7 +278,7 @@ download_and_verify() {
             fi
         }
     fi
-    
+
     return 0
 }
 
@@ -287,12 +287,12 @@ get_checksum_for_file() {
     local version="$1"
     local filename="$2"
     local checksums_url="https://github.com/${REPO}/releases/download/${version}/SHA256SUMS.txt"
-    
+
     if [[ "${VERIFY_CHECKSUM}" != "true" ]]; then
         echo ""
         return
     fi
-    
+
     # Download checksums file
     local checksums
     checksums=$(curl -fsSL --retry 2 "${checksums_url}" 2>/dev/null) || {
@@ -300,7 +300,7 @@ get_checksum_for_file() {
         echo ""
         return
     }
-    
+
     # Extract checksum for specific file
     echo "${checksums}" | grep "${filename}" | cut -d' ' -f1 || echo ""
 }
@@ -317,26 +317,26 @@ check_cosign() {
 verify_cosign_signature() {
     local file="$1"
     local bundle_file="${file}.cosign.bundle"
-    
+
     if [[ "${VERIFY_SIGNATURE:-true}" != "true" ]]; then
         return 0
     fi
-    
+
     if ! check_cosign; then
         # Cosign not installed, fall back to GPG verification
         return 0
     fi
-    
+
     # Check if bundle exists
     local bundle_url="${file/https:\/\/github.com/https:\/\/github.com}.cosign.bundle"
     if [[ "${file}" == *.tar.gz ]] || [[ "${file}" == *.zip ]]; then
         bundle_url="${file}.cosign.bundle"
     fi
-    
+
     info "Checking for Cosign signature bundle..."
     if curl -fsSL "${bundle_url}" -o "${bundle_file}" 2>/dev/null; then
         info "Verifying Cosign signature..."
-        
+
         # Verify using the bundle (includes certificate and signature)
         if cosign verify-blob \
             --bundle "${bundle_file}" \
@@ -365,17 +365,17 @@ import_gpg_key() {
         warn "GPG not installed, skipping GPG signature verification"
         return 1
     fi
-    
+
     info "Importing Rusty Commit GPG public key..."
-    
+
     # Try to import from GitHub repository first
     local key_url="https://raw.githubusercontent.com/${REPO}/main/.github/rusty-commit-public-key.asc"
-    
+
     if curl -fsSL "${key_url}" 2>/dev/null | gpg --import 2>/dev/null; then
         success "GPG public key imported successfully"
         return 0
     fi
-    
+
     # Fallback to keyserver
     info "Trying to fetch GPG key from keyserver..."
     local keyservers=(
@@ -383,14 +383,14 @@ import_gpg_key() {
         "hkps://keyserver.ubuntu.com"
         "hkps://pgp.mit.edu"
     )
-    
+
     for keyserver in "${keyservers[@]}"; do
         if gpg --keyserver "${keyserver}" --recv-keys "${GPG_KEY_ID:-}" 2>/dev/null; then
             success "GPG key imported from ${keyserver}"
             return 0
         fi
     done
-    
+
     warn "Could not import GPG public key"
     return 1
 }
@@ -399,32 +399,32 @@ import_gpg_key() {
 verify_gpg_signature() {
     local file="$1"
     local signature_file="${file}.asc"
-    
+
     if [[ "${VERIFY_SIGNATURE:-true}" != "true" ]]; then
         return 0
     fi
-    
+
     if ! command_exists gpg; then
         warn "GPG not installed, skipping signature verification"
         return 0
     fi
-    
+
     # Download signature file
     local signature_url="${file/https:\/\/github.com/https:\/\/github.com}.asc"
     if [[ "${file}" == *.tar.gz ]] || [[ "${file}" == *.zip ]]; then
         # For direct file downloads, construct signature URL
         signature_url="${file}.asc"
     fi
-    
+
     info "Downloading signature file..."
     if ! curl -fsSL "${signature_url}" -o "${signature_file}" 2>/dev/null; then
         warn "Signature file not available, skipping verification"
         return 0
     fi
-    
+
     # Import key if not already present
     import_gpg_key || return 0
-    
+
     info "Verifying GPG signature..."
     if gpg --verify "${signature_file}" "${file}" 2>/dev/null; then
         success "GPG signature verified successfully"
@@ -446,11 +446,11 @@ verify_gpg_signature() {
 verify_package_signature() {
     local package_file="$1"
     local package_type="${package_file##*.}"
-    
+
     if [[ "${VERIFY_SIGNATURE:-true}" != "true" ]]; then
         return 0
     fi
-    
+
     case "${package_type}" in
         deb)
             if command_exists dpkg-sig; then
@@ -486,12 +486,12 @@ verify_package_signature() {
 # Install using Homebrew (macOS/Linux)
 install_homebrew() {
     info "Attempting Homebrew installation..."
-    
+
     if ! command_exists brew; then
         warn "Homebrew not found"
         return 1
     fi
-    
+
     # Ensure tap exists
     if ! brew tap | grep -q "hongkongkiwi/tap"; then
         info "Adding hongkongkiwi/tap..."
@@ -500,7 +500,7 @@ install_homebrew() {
             return 1
         fi
     fi
-    
+
     # Install package
     if brew install rusty-commit 2>/dev/null; then
         success "Installed via Homebrew"
@@ -516,32 +516,32 @@ install_deb() {
     local version="${INSTALL_VERSION:-$(get_latest_version)}"
     local arch="$(get_arch)"
     local deb_arch
-    
+
     case "${arch}" in
         x86_64)  deb_arch="amd64";;
         aarch64) deb_arch="arm64";;
         armv7)   deb_arch="armhf";;
         riscv64) deb_arch="riscv64";;
-        *)       
+        *)
             warn "Unsupported architecture for .deb: ${arch}"
             return 1
             ;;
     esac
-    
+
     local deb_filename="rusty-commit_${version#v}_${deb_arch}.deb"
     local deb_url="https://github.com/${REPO}/releases/download/${version}/${deb_filename}"
     local temp_file="${TEMP_DIR}/${deb_filename}"
-    
+
     # Get checksum
     local expected_checksum
     expected_checksum=$(get_checksum_for_file "${version}" "${deb_filename}")
-    
+
     info "Downloading .deb package..."
     if ! download_and_verify "${deb_url}" "${temp_file}" "${expected_checksum}"; then
         warn "Failed to download or verify .deb package"
         return 1
     fi
-    
+
     info "Installing .deb package..."
     if command_exists apt-get; then
         if ! run_privileged apt-get install -y "${temp_file}" 2>/dev/null; then
@@ -562,7 +562,7 @@ install_deb() {
         warn "No suitable package manager for .deb files"
         return 1
     fi
-    
+
     success "Installed via .deb package"
     return 0
 }
@@ -572,31 +572,31 @@ install_rpm() {
     local version="${INSTALL_VERSION:-$(get_latest_version)}"
     local arch="$(get_arch)"
     local rpm_arch
-    
+
     case "${arch}" in
         x86_64)  rpm_arch="x86_64";;
         aarch64) rpm_arch="aarch64";;
         riscv64) rpm_arch="riscv64";;
-        *)       
+        *)
             warn "Unsupported architecture for .rpm: ${arch}"
             return 1
             ;;
     esac
-    
+
     local rpm_filename="rusty-commit-${version#v}-1.${rpm_arch}.rpm"
     local rpm_url="https://github.com/${REPO}/releases/download/${version}/${rpm_filename}"
     local temp_file="${TEMP_DIR}/${rpm_filename}"
-    
+
     # Get checksum
     local expected_checksum
     expected_checksum=$(get_checksum_for_file "${version}" "${rpm_filename}")
-    
+
     info "Downloading .rpm package..."
     if ! download_and_verify "${rpm_url}" "${temp_file}" "${expected_checksum}"; then
         warn "Failed to download or verify .rpm package"
         return 1
     fi
-    
+
     info "Installing .rpm package..."
     if command_exists dnf; then
         if ! run_privileged dnf install -y "${temp_file}" 2>/dev/null; then
@@ -617,7 +617,7 @@ install_rpm() {
         warn "No suitable package manager for .rpm files"
         return 1
     fi
-    
+
     success "Installed via .rpm package"
     return 0
 }
@@ -628,7 +628,7 @@ install_binary() {
     local os="$(get_os)"
     local arch="$(get_arch)"
     local archive_name
-    
+
     # Determine archive name based on OS, architecture and libc
     local libc="$(get_libc)"
     case "${os}-${arch}-${libc}" in
@@ -643,26 +643,26 @@ install_binary() {
         macos-aarch64-*)  archive_name="rustycommit-macos-aarch64.tar.gz";;
         windows-x86_64-*) archive_name="rustycommit-windows-x86_64.zip";;
         windows-i686-*)   archive_name="rustycommit-windows-i686.zip";;
-        *)              
+        *)
             die "Unsupported OS/architecture combination: ${os}-${arch}-${libc}"
             ;;
     esac
-    
+
     local download_url="https://github.com/${REPO}/releases/download/${version}/${archive_name}"
     local temp_file="${TEMP_DIR}/${archive_name}"
-    
+
     # Get checksum
     local expected_checksum
     expected_checksum=$(get_checksum_for_file "${version}" "${archive_name}")
-    
+
     info "Downloading binary release..."
     if ! download_and_verify "${download_url}" "${temp_file}" "${expected_checksum}"; then
         die "Failed to download or verify binary release"
     fi
-    
+
     info "Extracting binary..."
     cd "${TEMP_DIR}"
-    
+
     if [[ "${archive_name}" == *.zip ]]; then
         if ! command_exists unzip; then
             die "unzip is required but not installed"
@@ -671,7 +671,7 @@ install_binary() {
     else
         tar xzf "${archive_name}" || die "Failed to extract archive"
     fi
-    
+
     # Find and install binary
     local binary_file
     if [[ -f "${BINARY_NAME}" ]]; then
@@ -681,32 +681,32 @@ install_binary() {
     else
         die "Binary not found in archive"
     fi
-    
+
     info "Installing binary to ${INSTALL_DIR}..."
     chmod +x "${binary_file}"
-    
+
     # Create install directory if needed
     if ! run_privileged mkdir -p "${INSTALL_DIR}" 2>/dev/null; then
         die "Failed to create installation directory: ${INSTALL_DIR}"
     fi
-    
+
     # Install binary
     if ! run_privileged mv "${binary_file}" "${INSTALL_DIR}/" 2>/dev/null; then
         die "Failed to install binary to ${INSTALL_DIR}"
     fi
-    
+
     # Verify installation
     if [[ ! -f "${INSTALL_DIR}/${BINARY_NAME}" ]] && [[ ! -f "${INSTALL_DIR}/${BINARY_NAME}.exe" ]]; then
         die "Binary installation verification failed"
     fi
-    
+
     # Add to PATH if needed
     if ! echo "${PATH}" | grep -q "${INSTALL_DIR}"; then
         warn "Please add ${INSTALL_DIR} to your PATH"
         warn "You can do this by adding the following to your shell profile:"
         warn "  export PATH=\"${INSTALL_DIR}:\$PATH\""
     fi
-    
+
     success "Installed binary to ${INSTALL_DIR}/${BINARY_NAME}"
     return 0
 }
@@ -714,12 +714,12 @@ install_binary() {
 # Install using cargo
 install_cargo() {
     info "Attempting cargo installation..."
-    
+
     if ! command_exists cargo; then
         warn "Cargo not found"
         return 1
     fi
-    
+
     # Check for required build tools
     if [[ "$(get_os)" == "linux" ]]; then
         if ! command_exists gcc && ! command_exists clang; then
@@ -727,7 +727,7 @@ install_cargo() {
             return 1
         fi
     fi
-    
+
     if cargo install "${CRATE_NAME}" --features secure-storage 2>/dev/null; then
         success "Installed via cargo"
         return 0
@@ -742,54 +742,54 @@ install() {
     local os="$(get_os)"
     local arch="$(get_arch)"
     local distro="$(get_distro)"
-    
+
     info "System detected: OS=${os}, Arch=${arch}, Distro=${distro}"
-    
+
     # Check if specific method requested
     if [[ -n "${INSTALL_METHOD:-}" ]]; then
         info "Using requested installation method: ${INSTALL_METHOD}"
         case "${INSTALL_METHOD}" in
-            homebrew) 
+            homebrew)
                 install_homebrew || install_binary
                 ;;
-            deb)      
+            deb)
                 install_deb || install_binary
                 ;;
-            rpm)      
+            rpm)
                 install_rpm || install_binary
                 ;;
-            binary)   
+            binary)
                 install_binary
                 ;;
-            cargo)    
+            cargo)
                 install_cargo || install_binary
                 ;;
-            *)        
+            *)
                 die "Unknown installation method: ${INSTALL_METHOD}"
                 ;;
         esac
         return
     fi
-    
+
     # Auto-detect best installation method
     local success=false
-    
+
     case "${os}" in
         macos)
             # Try: Homebrew → Cargo → Binary
             if command_exists brew; then
                 install_homebrew && success=true
             fi
-            
+
             if [[ "${success}" == "false" ]] && command_exists cargo; then
                 install_cargo && success=true
             fi
-            
+
             if [[ "${success}" == "false" ]]; then
                 install_binary && success=true
             fi
             ;;
-            
+
         linux)
             case "${distro}" in
                 ubuntu|debian|pop|linuxmint|elementary|kali|raspbian)
@@ -797,111 +797,111 @@ install() {
                     if command_exists apt-get || command_exists dpkg; then
                         install_deb && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists brew; then
                         install_homebrew && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists cargo; then
                         install_cargo && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]]; then
                         install_binary && success=true
                     fi
                     ;;
-                    
+
                 fedora|rhel|centos|rocky|almalinux|opensuse*)
                     # Try: .rpm → Homebrew → Cargo → Binary
                     if command_exists dnf || command_exists yum || command_exists rpm; then
                         install_rpm && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists brew; then
                         install_homebrew && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists cargo; then
                         install_cargo && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]]; then
                         install_binary && success=true
                     fi
                     ;;
-                    
+
                 arch|manjaro|endeavouros)
                     # Try: Cargo → Homebrew → Binary
                     if command_exists cargo; then
                         install_cargo && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists brew; then
                         install_homebrew && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]]; then
                         install_binary && success=true
                     fi
                     ;;
-                    
+
                 alpine)
                     # Try: Cargo → Binary
                     if command_exists cargo; then
                         install_cargo && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]]; then
                         install_binary && success=true
                     fi
                     ;;
-                    
+
                 *)
                     # Unknown distro - Try: Homebrew → Cargo → Binary
                     if command_exists brew; then
                         install_homebrew && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]] && command_exists cargo; then
                         install_cargo && success=true
                     fi
-                    
+
                     if [[ "${success}" == "false" ]]; then
                         install_binary && success=true
                     fi
                     ;;
             esac
             ;;
-            
+
         freebsd|openbsd|netbsd)
             # BSD systems - Try: Cargo → Binary
             if command_exists cargo; then
                 install_cargo && success=true
             fi
-            
+
             if [[ "${success}" == "false" ]]; then
                 install_binary && success=true
             fi
             ;;
-            
+
         windows)
             # Try: Cargo → Binary
             if command_exists cargo; then
                 install_cargo && success=true
             fi
-            
+
             if [[ "${success}" == "false" ]]; then
                 install_binary && success=true
             fi
             ;;
-            
+
         *)
             # Unknown OS - try binary as last resort
             warn "Unknown operating system: ${os}"
             install_binary && success=true
             ;;
     esac
-    
+
     if [[ "${success}" == "false" ]]; then
         die "All installation methods failed"
     fi
@@ -1003,31 +1003,31 @@ main() {
                 ;;
         esac
     done
-    
+
     echo "╔══════════════════════════════════════╗"
     echo "║   Rusty Commit Installation Script   ║"
     echo "╚══════════════════════════════════════╝"
     echo
-    
+
     # Perform security checks
     security_check
-    
+
     # Check prerequisites
     if ! command_exists curl; then
         die "curl is required but not installed"
     fi
-    
+
     # Create temp directory
     TEMP_DIR=$(mktemp -d -t rusty-commit-install.XXXXXX) || {
         die "Failed to create temporary directory"
     }
-    
+
     # Run installation
     install
-    
+
     # Verify
     verify_installation
-    
+
     echo
     echo "🎉 Installation complete! Happy committing! 🦀"
 }

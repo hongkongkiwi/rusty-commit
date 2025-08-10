@@ -53,7 +53,7 @@ bash install.sh
 
 ### Security Benefits
 1. **Prevents script tampering** - Ensures the script hasn't been modified maliciously
-2. **Verifies authenticity** - Confirms it comes from the official Rusty Commit project  
+2. **Verifies authenticity** - Confirms it comes from the official Rusty Commit project
 3. **Supply chain protection** - Guards against compromised distribution channels
 4. **Best security practice** - Following the principle of "trust but verify"
 
@@ -105,7 +105,7 @@ brew install gnupg
 # Ubuntu/Debian
 sudo apt install gnupg
 
-# Fedora/RHEL  
+# Fedora/RHEL
 sudo dnf install gnupg2
 ```
 
@@ -132,7 +132,7 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 ## Summary
 
 - **Most secure**: Download, verify with Cosign/GPG, then run
-- **Balanced**: Use verification one-liners above  
+- **Balanced**: Use verification one-liners above
 - **Quick & easy**: Traditional curl-to-bash (still safe with HTTPS)
 - **Maximum control**: Manual installation methods
 

@@ -257,7 +257,6 @@ fn test_config_with_different_providers() {
 
         let loaded_config = Config::load().unwrap();
 
-
         assert_eq!(loaded_config.ai_provider.as_deref(), Some("anthropic"));
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
 

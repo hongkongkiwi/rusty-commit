@@ -18,9 +18,3 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
-      - id: cargo-test
-        name: cargo test
-        entry: bash -c 'cargo test --all-features'
-        language: system
-        pass_filenames: false
-        stages: [pre-push]

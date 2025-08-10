@@ -3,8 +3,8 @@
 [![CI](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml)
 [![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI%20Review-blue)](https://github.com/hongkongkiwi/rusty-commit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Crates.io](https://img.shields.io/crates/v/rustycommit.svg)](https://crates.io/crates/rustycommit)
-[![Documentation](https://docs.rs/rustycommit/badge.svg)](https://docs.rs/rustycommit)
+[![Crates.io](https://img.shields.io/crates/v/rusty-commit.svg)](https://crates.io/crates/rusty-commit)
+[![Documentation](https://docs.rs/rusty-commit/badge.svg)](https://docs.rs/rusty-commit)
 
 🚀 **Blazing-fast commit messages powered by AI and written in Rust** 🦀
 
@@ -54,10 +54,10 @@ cargo install --path . --features secure-storage
 
 ```bash
 # Basic installation
-cargo install rustycommit
+cargo install rusty-commit
 
 # With secure storage support
-cargo install rustycommit --features secure-storage
+cargo install rusty-commit --features secure-storage
 ```
 
 ### Platform Support
@@ -93,7 +93,7 @@ Rusty Commit supports secure credential storage on all major platforms:
 
 1. **Install Rusty Commit:**
    ```bash
-   cargo install rustycommit
+   cargo install rusty-commit
    ```
 
 2. **Set up your API key:**

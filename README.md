@@ -21,20 +21,20 @@ This project is heavily inspired by and maintains compatibility with [OpenCommit
 - 🦀 **Memory safe** - Rust's ownership system prevents crashes and memory leaks
 - 📦 **Single binary** - No runtime dependencies, just drop and run
 
-**AI Provider Support** 
+**AI Provider Support**
 - 🤖 **16+ AI providers**: OpenAI, Anthropic/Claude, OpenRouter, Groq, DeepSeek, Mistral, AWS Bedrock, GitHub Copilot, and more
 - 🔐 **OAuth authentication** - Direct Claude Pro/Max integration (no API key needed)
 - 🛡️ **Secure credential storage** - System keychain integration
 
 **Configuration & Flexibility**
-- 📄 **Multiple config formats** - TOML, JSON, and legacy .env support  
+- 📄 **Multiple config formats** - TOML, JSON, and legacy .env support
 - 🌍 **Per-repo configs** - Different settings for different projects
 - 🔄 **Full OpenCommit compatibility** - Seamless migration from original
 - 🎨 **Format support** - Conventional commits, GitMoji, custom templates
 
 **Developer Experience**
 - 🪝 **Git hooks integration** - Auto-generate on commit
-- 🌐 **Multi-language** - Generate commits in multiple languages  
+- 🌐 **Multi-language** - Generate commits in multiple languages
 - 🎯 **Context-aware** - Smart diff analysis for better messages
 - 📊 **Interactive menus** - Beautiful CLI with provider selection
 
@@ -100,7 +100,7 @@ Rusty Commit supports secure credential storage on all major platforms:
    ```bash
    rco config set RCO_API_KEY=your_api_key_here
    ```
-   
+
    Or use OAuth for Claude:
    ```bash
    rco auth login
@@ -134,7 +134,7 @@ rco config status
 # Set AI provider (supports 16+ providers)
 rco config set RCO_AI_PROVIDER=anthropic
 
-# Set model 
+# Set model
 rco config set RCO_MODEL=claude-3-5-haiku-20241022
 
 # Enable emojis (can be set per-repo)
@@ -303,7 +303,7 @@ jobs:
   with:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     RCO_AI_PROVIDER: 'github-copilot'
-    
+
 - uses: hongkongkiwi/opencommit-rust@main
   if: steps.copilot.outcome == 'failure'
   with:
@@ -338,7 +338,7 @@ Rusty Commit supports **16+ AI providers** with easy authentication setup:
 - **OpenAI** - GPT-4o, GPT-4o-mini, and other OpenAI models
 - **OpenRouter** - Access 200+ models from multiple providers in one API
 
-### ⚡ **High-Performance Providers**  
+### ⚡ **High-Performance Providers**
 - **Groq** - Ultra-fast inference with Llama models
 - **DeepSeek** - Cost-effective reasoning and coding models
 - **Together AI** - Optimized open-source model hosting
@@ -420,7 +420,7 @@ cargo audit
 Rusty Commit has comprehensive test coverage:
 
 - **Unit Tests**: Core functionality and configuration
-- **Integration Tests**: CLI commands and provider configurations  
+- **Integration Tests**: CLI commands and provider configurations
 - **Authentication Tests**: OAuth flows and token management
 - **Provider Tests**: All 16+ AI providers with specific configurations
 - **Cross-platform**: Tests run on Linux, macOS, and Windows
@@ -428,7 +428,7 @@ Rusty Commit has comprehensive test coverage:
 ```bash
 # Run specific test suites
 cargo test --test auth_test
-cargo test --test providers_comprehensive_test  
+cargo test --test providers_comprehensive_test
 cargo test --test oauth_test
 cargo test --test cli_integration_test
 ```

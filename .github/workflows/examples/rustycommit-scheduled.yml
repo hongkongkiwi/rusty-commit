@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
           # - Update dependency lists
           # - Process data files
           echo "$(date): Automated update" >> AUTOMATED_UPDATES.log
-          
+
           # Create a simple report
           echo "# Daily Report - $(date +%Y-%m-%d)" > daily-report.md
           echo "" >> daily-report.md
@@ -59,15 +59,15 @@ jobs:
         with:
           script: |
             const summary = `## 🤖 Automated Daily Update
-            
+
             Rusty Commit has processed the scheduled updates:
             - ✅ Documentation updated
-            - ✅ Reports generated  
+            - ✅ Reports generated
             - ✅ AI-powered commit created
-            
+
             **Provider:** OpenRouter (Claude 3.5 Haiku)
             **Timestamp:** ${new Date().toISOString()}`
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

@@ -20,7 +20,7 @@ reviews:
   poem: false
   review_status: true
   collapse_walkthrough: false
-  
+
   # Path filters - review these file types
   path_filters:
     - "**/*.rs"
@@ -29,7 +29,7 @@ reviews:
     - "**/*.yml"
     - "**/*.yaml"
     - ".github/**"
-  
+
   # Ignore patterns
   path_exclusions:
     - "target/**"
@@ -49,11 +49,11 @@ language_settings:
     check_unsafe_code: true
     check_unwrap_usage: true
     security_audit: true
-    
+
     # Performance checks
     check_performance: true
     check_memory_safety: true
-    
+
     # Documentation
     check_missing_docs: true
     check_doc_examples: true
@@ -68,19 +68,19 @@ tools:
   # Code quality tools
   rustfmt:
     enabled: true
-    
+
   clippy:
     enabled: true
     level: "warn"  # Options: allow, warn, deny, forbid
-    
+
   cargo_audit:
     enabled: true
-    
+
   # Security scanning
   security:
     enabled: true
     check_dependencies: true
-    
+
   # Test coverage
   coverage:
     enabled: false  # Enable if you have coverage reports
@@ -105,7 +105,7 @@ instructions:
 tone:
   # Options: assertive, friendly, professional, encouraging
   style: "professional"
-  
+
 # Summary Settings
 summary:
   # Generate summaries for large PRs
@@ -118,7 +118,7 @@ issue_validation:
   enabled: true
   # Check if PR is linked to an issue
   require_issue_link: false
-  
+
 # Documentation
 documentation:
   # Check for documentation updates when code changes
@@ -161,7 +161,7 @@ rules:
   pr_title_pattern: "^(feat|fix|docs|style|refactor|test|chore)(\\(.+\\))?: .+"
   # Max PR size (lines of code)
   max_pr_size: 500
-  
+
 # Feedback Settings
 feedback:
   # Ask for feedback after review

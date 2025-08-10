@@ -226,7 +226,7 @@ async fn handle_openai_auth() -> Result<()> {
     handle_manual_api_key("openai").await
 }
 
-/// Handle Ollama authentication  
+/// Handle Ollama authentication
 async fn handle_ollama_auth() -> Result<()> {
     println!("\n{}", "🦙 Ollama Configuration".cyan().bold());
 

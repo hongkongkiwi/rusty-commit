@@ -101,7 +101,7 @@ runs:
 
         # Determine OS
         case "$(uname -s)" in
-          Linux*) 
+          Linux*)
             OS="linux"
             if ldd --version 2>&1 | grep -q musl; then
               OS_VARIANT="linux-${ARCH}-musl"
@@ -110,12 +110,12 @@ runs:
             fi
             ARCHIVE_EXT="tar.gz"
             ;;
-          Darwin*) 
+          Darwin*)
             OS="macos"
             OS_VARIANT="macos-${ARCH}"
             ARCHIVE_EXT="tar.gz"
             ;;
-          CYGWIN*|MINGW*|MSYS*) 
+          CYGWIN*|MINGW*|MSYS*)
             OS="windows"
             OS_VARIANT="windows-${ARCH}"
             ARCHIVE_EXT="zip"
@@ -131,10 +131,10 @@ runs:
         fi
 
         echo "Installing Rusty Commit ${LATEST_RELEASE} for ${OS_VARIANT}"
-        
+
         # Download and extract
         DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_RELEASE}/rustycommit-${OS_VARIANT}.${ARCHIVE_EXT}"
-        
+
         if [ "$ARCHIVE_EXT" = "tar.gz" ]; then
           curl -L "$DOWNLOAD_URL" | tar xz
         else
@@ -142,7 +142,7 @@ runs:
           unzip -q rustycommit.zip
           rm rustycommit.zip
         fi
-        
+
         # Make executable and move to PATH
         chmod +x rco*
         sudo mv rco* /usr/local/bin/rco 2>/dev/null || mv rco* /usr/bin/rco 2>/dev/null || {
@@ -150,7 +150,7 @@ runs:
           mv rco* ~/.local/bin/rco
           echo "$HOME/.local/bin" >> $GITHUB_PATH
         }
-        
+
         # Verify installation
         rco --version
 
@@ -194,7 +194,7 @@ runs:
         [ -n "$TOKENS_MAX_INPUT" ] && rco config set RCO_TOKENS_MAX_INPUT="$TOKENS_MAX_INPUT"
         [ -n "$TOKENS_MAX_OUTPUT" ] && rco config set RCO_TOKENS_MAX_OUTPUT="$TOKENS_MAX_OUTPUT"
         [ -n "$API_URL" ] && rco config set RCO_API_URL="$API_URL"
-        
+
         # Show configuration status
         echo "🚀 Rusty Commit Configuration:"
         rco config status
@@ -230,7 +230,7 @@ runs:
 
         # Build command with options
         CMD="rco"
-        
+
         [ "${{ inputs.full-gitmoji }}" = "true" ] && CMD="$CMD --fgm"
         [ -n "${{ inputs.context }}" ] && CMD="$CMD --context '${{ inputs.context }}'"
         [ -n "${{ inputs.exclude }}" ] && CMD="$CMD --exclude '${{ inputs.exclude }}'"
@@ -241,14 +241,14 @@ runs:
         # Generate and commit
         echo "Running: $CMD"
         eval $CMD
-        
+
         # Get commit info
         COMMIT_HASH=$(git rev-parse HEAD)
         COMMIT_MESSAGE=$(git log -1 --pretty=%s)
-        
+
         echo "commit-hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
         echo "commit-message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
-        
+
         echo "✅ Created commit: $COMMIT_HASH"
         echo "📝 Message: $COMMIT_MESSAGE"
 

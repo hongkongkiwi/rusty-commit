@@ -16,7 +16,7 @@ on:
         options:
           - auto
           - openai
-          - anthropic  
+          - anthropic
           - openrouter
           - groq
           - deepseek
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
       - name: Generate commit with Groq
         id: groq-commit
         if: (steps.copilot-commit.outcome == 'failure' || github.event.inputs.provider == 'groq') && github.event.inputs.provider != 'github-copilot'
-        uses: hongkongkiwi/rustycommit@main  
+        uses: hongkongkiwi/rustycommit@main
         continue-on-error: true
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +71,7 @@ jobs:
       - name: Generate commit with OpenAI
         id: openai-commit
         if: |
-          (steps.copilot-commit.outcome == 'failure' && steps.groq-commit.outcome == 'failure') || 
+          (steps.copilot-commit.outcome == 'failure' && steps.groq-commit.outcome == 'failure') ||
           github.event.inputs.provider == 'openai'
         uses: hongkongkiwi/rustycommit@main
         continue-on-error: true
@@ -86,10 +86,10 @@ jobs:
 
       # Final fallback: DeepSeek (cost-effective)
       - name: Generate commit with DeepSeek
-        id: deepseek-commit  
+        id: deepseek-commit
         if: |
-          (steps.copilot-commit.outcome == 'failure' && 
-           steps.groq-commit.outcome == 'failure' && 
+          (steps.copilot-commit.outcome == 'failure' &&
+           steps.groq-commit.outcome == 'failure' &&
            steps.openai-commit.outcome == 'failure') ||
           github.event.inputs.provider == 'deepseek'
         uses: hongkongkiwi/rustycommit@main
@@ -109,7 +109,7 @@ jobs:
             echo "✅ Used GitHub Copilot for commit generation"
             echo "provider=github-copilot" >> $GITHUB_OUTPUT
           elif [ "${{ steps.groq-commit.outcome }}" = "success" ]; then
-            echo "✅ Used Groq for commit generation"  
+            echo "✅ Used Groq for commit generation"
             echo "provider=groq" >> $GITHUB_OUTPUT
           elif [ "${{ steps.openai-commit.outcome }}" = "success" ]; then
             echo "✅ Used OpenAI for commit generation"

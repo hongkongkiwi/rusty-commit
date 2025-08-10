@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required for creating commits
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

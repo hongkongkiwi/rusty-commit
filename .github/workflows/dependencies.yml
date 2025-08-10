@@ -12,50 +12,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Install cargo-outdated
         run: |
           cargo install cargo-outdated || true
-      
+
       - name: Check outdated dependencies
         id: outdated
         run: |
           echo "## Outdated Dependencies" >> outdated.md
           echo "" >> outdated.md
           cargo outdated --markdown >> outdated.md || true
-          
+
           # Also check in plain text for the summary
           OUTDATED=$(cargo outdated --format json | jq -r '.dependencies[] | "\(.name): \(.project) -> \(.latest)"' || echo "No outdated dependencies")
-          
+
           echo "outdated<<EOF" >> $GITHUB_OUTPUT
           echo "$OUTDATED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           # Count outdated deps
           COUNT=$(cargo outdated --format json | jq '.dependencies | length' || echo "0")
           echo "count=$COUNT" >> $GITHUB_OUTPUT
-      
+
       - name: Security audit
         id: audit
         run: |
           cargo install cargo-audit || true
-          
+
           echo "## Security Audit" >> audit.md
           echo "" >> audit.md
           cargo audit --markdown >> audit.md 2>&1 || true
-          
+
           # Check for vulnerabilities
           VULNS=$(cargo audit --json 2>/dev/null | jq '.vulnerabilities.count' || echo "0")
           echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
-      
+
       - name: Check unused dependencies
         run: |
           cargo install cargo-udeps || true
           cargo +nightly udeps --all-features || true
-      
+
       - name: Create issue if updates needed
         if: steps.outdated.outputs.count > 0 || steps.audit.outputs.vulnerabilities > 0
         uses: peter-evans/create-issue-from-file@v5
@@ -65,12 +65,12 @@ jobs:
           labels: |
             dependencies
             automated
-      
+
       - name: Summary
         run: |
           echo "## Dependency Check Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ steps.outdated.outputs.count }}" -gt "0" ]; then
             echo "### Outdated Dependencies: ${{ steps.outdated.outputs.count }}" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
@@ -79,9 +79,9 @@ jobs:
           else
             echo "✅ All dependencies are up to date!" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ steps.audit.outputs.vulnerabilities }}" -gt "0" ]; then
             echo "⚠️ **Security vulnerabilities found: ${{ steps.audit.outputs.vulnerabilities }}**" >> $GITHUB_STEP_SUMMARY
             echo "Check the security audit for details." >> $GITHUB_STEP_SUMMARY
@@ -95,19 +95,19 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Update dependencies
         run: |
           # Update all dependencies to latest compatible versions
           cargo update
-          
+
           # Test that everything still works
           cargo test --all-features
           cargo clippy -- -D warnings
-      
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
@@ -117,17 +117,17 @@ jobs:
           commit-message: "chore: update dependencies to latest versions"
           body: |
             ## Automated Dependency Update
-            
+
             This PR updates all dependencies to their latest compatible versions.
-            
+
             ### Changes
             - Updated Cargo.lock with latest dependency versions
-            
+
             ### Testing
             - [x] Tests pass
             - [x] Clippy passes
             - [ ] Manual testing completed
-            
+
             Please review and test before merging.
           labels: |
             dependencies

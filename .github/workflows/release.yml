@@ -346,31 +346,37 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          if [ -n "${GPG_PRIVATE_KEY:-}" ] && [ -n "${GPG_PASSPHRASE:-}" ]; then
-            # Import GPG key
-            echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-
-            # Configure GPG
-            mkdir -p ~/.gnupg
-            chmod 700 ~/.gnupg
-            {
-              echo "allow-loopback-pinentry"
-            } >> ~/.gnupg/gpg-agent.conf
-            {
-              echo "use-agent"
-            } >> ~/.gnupg/gpg.conf
-            gpg-connect-agent reloadagent /bye
-
-            # Test signing
-            echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-                --pinentry-mode loopback --armor --detach-sign > /dev/null
-
-            echo "GPG signing configured successfully"
-            echo "GPG_CONFIGURED=true" >> "$GITHUB_ENV"
-          else
-            echo "GPG key not configured, skipping GPG signing"
-            echo "GPG_CONFIGURED=false" >> "$GITHUB_ENV"
+          if [ -z "${GPG_PRIVATE_KEY:-}" ]; then
+            echo "ERROR: GPG_PRIVATE_KEY secret is not configured"
+            echo "Please set up the GPG_PRIVATE_KEY secret in repository settings"
+            exit 1
           fi
+          
+          if [ -z "${GPG_PASSPHRASE:-}" ]; then
+            echo "ERROR: GPG_PASSPHRASE secret is not configured"
+            echo "Please set up the GPG_PASSPHRASE secret in repository settings"
+            exit 1
+          fi
+          
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+
+          # Configure GPG
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          {
+            echo "allow-loopback-pinentry"
+          } >> ~/.gnupg/gpg-agent.conf
+          {
+            echo "use-agent"
+          } >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+
+          # Test signing
+          echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback --armor --detach-sign > /dev/null
+
+          echo "GPG signing configured successfully"
 
       - name: Sign all artifacts with Cosign (keyless or key-based)
         run: |
@@ -421,17 +427,13 @@ jobs:
             sort checksums.txt >> SHA256SUMS.txt
           fi
 
-          # Sign checksum file with GPG if configured
-          if [ "$GPG_CONFIGURED" = "true" ]; then
-            gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-                --pinentry-mode loopback \
-                --armor --detach-sign \
-                --output SHA256SUMS.txt.asc \
-                SHA256SUMS.txt
-            echo "Checksum file signed with GPG"
-          else
-            echo "GPG not configured, skipping checksum GPG signature"
-          fi
+          # Sign checksum file with GPG
+          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+              --pinentry-mode loopback \
+              --armor --detach-sign \
+              --output SHA256SUMS.txt.asc \
+              SHA256SUMS.txt
+          echo "Checksum file signed with GPG"
 
           # Also sign checksums with Cosign
           echo "Signing checksums with Cosign..."
@@ -448,17 +450,13 @@ jobs:
           # Copy install script to release artifacts
           cp install.sh install.sh.release
 
-          # Sign install script with GPG if configured
-          if [ "$GPG_CONFIGURED" = "true" ]; then
-            gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-                --pinentry-mode loopback \
-                --armor --detach-sign \
-                --output install.sh.asc \
-                install.sh.release
-            echo "Install script signed with GPG"
-          else
-            echo "GPG not configured, skipping install script GPG signature"
-          fi
+          # Sign install script with GPG
+          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+              --pinentry-mode loopback \
+              --armor --detach-sign \
+              --output install.sh.asc \
+              install.sh.release
+          echo "Install script signed with GPG"
 
           # Sign install script with Cosign
           echo "Signing install script with Cosign..."
@@ -474,21 +472,17 @@ jobs:
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          if [ "$GPG_CONFIGURED" = "true" ]; then
-            cd artifacts
-            # Sign each tar.gz and zip file with detached signature
-            find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
-              echo "Signing $file with GPG..."
-              gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-                  --pinentry-mode loopback \
-                  --armor --detach-sign \
-                  --output "${file}.asc" \
-                  "$file"
-            done
-            cd ..
-          else
-            echo "GPG not configured, skipping binary GPG signatures"
-          fi
+          cd artifacts
+          # Sign each tar.gz and zip file with detached signature
+          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
+            echo "Signing $file with GPG..."
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback \
+                --armor --detach-sign \
+                --output "${file}.asc" \
+                "$file"
+          done
+          cd ..
 
       - name: Upload checksums
         uses: softprops/action-gh-release@v2
@@ -497,7 +491,6 @@ jobs:
           tag_name: ${{ github.ref }}
 
       - name: Upload signed checksums
-        if: env.GPG_CONFIGURED == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: ./SHA256SUMS.txt.asc

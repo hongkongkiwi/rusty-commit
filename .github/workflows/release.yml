@@ -19,10 +19,133 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history and tags for release notes generation
 
       - name: Get version
         id: get_version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes from commits
+        id: generate_notes
+        run: |
+          # Get the current tag
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+          
+          # Get the previous tag
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^$CURRENT_TAG$" | head -1)
+          
+          # Generate release notes from commits
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Generating release notes between $PREVIOUS_TAG and $CURRENT_TAG"
+            
+            # Get commits between tags, excluding version bump commits
+            COMMITS=$(git log "$PREVIOUS_TAG..$CURRENT_TAG" --oneline --pretty=format:"- %s" | grep -v "^- chore: bump version" | grep -v "^- Bump version")
+            
+            if [ -n "$COMMITS" ]; then
+              cat << EOF > release_notes.md
+          # Rusty Commit $CURRENT_TAG 🚀
+          
+          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
+          
+          ## What's Changed
+          
+          $COMMITS
+          
+          ## About Rusty Commit
+          
+          Rusty Commit is a blazing-fast commit message generator that supports 16+ AI providers including:
+          - 🧠 **Anthropic Claude** (Claude 3.5 Sonnet, Haiku)
+          - 🤖 **OpenAI** (GPT-4, GPT-3.5 Turbo) 
+          - 🔥 **Groq** (Llama 3, Mixtral)
+          - ⚡ **DeepSeek** (DeepSeek Coder)
+          - 🌟 **OpenRouter** (Access to 100+ models)
+          - And many more!
+          
+          ## Key Features
+          - 🔐 **Secure Storage**: System keychain integration for API keys
+          - 🎯 **Smart Analysis**: Analyzes staged changes for context-aware commits
+          - 🚀 **Cross-Platform**: Works on macOS, Linux, and Windows
+          - 🔄 **OpenCommit Compatible**: Drop-in replacement with enhanced performance
+          - 🎨 **Interactive UI**: Beautiful provider selection and authentication flow
+          
+          ## Installation
+          
+          ### Quick Install (Recommended)
+          \`\`\`bash
+          # macOS/Linux
+          curl -fsSL https://github.com/${{ github.repository }}/releases/download/$CURRENT_TAG/install.sh | bash
+          
+          # Or download directly
+          curl -L https://github.com/${{ github.repository }}/releases/download/$CURRENT_TAG/rustycommit-\$(uname -s)-\$(uname -m).tar.gz | tar xz
+          sudo mv rco /usr/local/bin/
+          \`\`\`
+          
+          ### Using Cargo
+          \`\`\`bash
+          cargo install rusty-commit
+          # With secure storage
+          cargo install rusty-commit --features secure-storage
+          \`\`\`
+          
+          ### Package Managers
+          - **Homebrew**: \`brew install hongkongkiwi/tap/rusty-commit\`
+          - **Alpine Linux**: Available in our custom repository
+          - **Arch Linux**: \`yay -S rusty-commit\` (AUR)
+          
+          ## Getting Started
+          
+          \`\`\`bash
+          # Interactive setup with provider selection
+          rco auth
+          
+          # Generate a commit message
+          git add .
+          rco
+          
+          # Or use specific provider
+          rco --provider anthropic
+          \`\`\`
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG
+          EOF
+            else
+              cat << EOF > release_notes.md
+          # Rusty Commit $CURRENT_TAG 🚀
+          
+          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
+          
+          ## What's Changed
+          
+          - Maintenance release with internal improvements
+          
+          ## Installation & Usage
+          
+          See our [README](https://github.com/${{ github.repository }}#installation) for installation instructions.
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG
+          EOF
+            fi
+          else
+            cat << EOF > release_notes.md
+          # Rusty Commit $CURRENT_TAG 🚀
+          
+          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
+          
+          Initial release with full feature set.
+          EOF
+          fi
+          
+          # Set output for use in release creation
+          {
+            echo "notes<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         id: create_release
@@ -32,38 +155,8 @@ jobs:
           name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
-          body: |
-            # Rusty Commit ${{ steps.get_version.outputs.version }}
-
-            🚀 **Blazing-fast commit messages powered by AI and written in Rust** 🦀
-
-            ## What's New
-            - 16+ AI providers supported (Anthropic, OpenAI, OpenRouter, Groq, DeepSeek, and more)
-            - Interactive authentication with beautiful provider selection
-            - Secure credential storage with system keychain integration
-            - Full OpenCommit compatibility with enhanced Rust performance
-
-            ## Installation
-
-            ### macOS / Linux
-            ```bash
-            # Download and extract (replace URL with your platform)
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/rustycommit-<platform>.tar.gz | tar xz
-
-            # Move to PATH
-            sudo mv rco /usr/local/bin/
-            ```
-
-            ### Windows
-            Download the Windows zip file and add `rco.exe` to your PATH.
-
-            ### Using Cargo
-            ```bash
-            cargo install rusty-commit
-            # With secure storage
-            cargo install rusty-commit --features secure-storage
-            ```
+          generate_release_notes: false
+          body: ${{ steps.generate_notes.outputs.notes }}
 
   build-release:
     name: Build Release (${{ matrix.target }})
@@ -112,7 +205,7 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             archive-name: rustycommit-macos-x86_64.tar.gz
-            use-cross: true
+            use-cross: false
 
           - os: macos-latest
             target: aarch64-apple-darwin
@@ -234,8 +327,15 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
+          if [ -z "${COSIGN_PRIVATE_KEY:-}" ]; then
+            echo "ERROR: COSIGN_PRIVATE_KEY secret is not configured"
+            echo "Please set up the COSIGN_PRIVATE_KEY secret in repository settings"
+            exit 1
+          fi
+          
           echo "$COSIGN_PRIVATE_KEY" | base64 -d > cosign.key
           chmod 600 cosign.key
+          
           if [ -n "${COSIGN_PASSWORD:-}" ]; then
             echo "COSIGN_PASSWORD=$COSIGN_PASSWORD" >> "$GITHUB_ENV"
           fi
@@ -246,23 +346,31 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          # Import GPG key
-          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
+          if [ -n "${GPG_PRIVATE_KEY:-}" ] && [ -n "${GPG_PASSPHRASE:-}" ]; then
+            # Import GPG key
+            echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
 
-          # Configure GPG
-          {
-            echo "allow-loopback-pinentry"
-          } >> ~/.gnupg/gpg-agent.conf
-          {
-            echo "use-agent"
-          } >> ~/.gnupg/gpg.conf
-          gpg-connect-agent reloadagent /bye
+            # Configure GPG
+            mkdir -p ~/.gnupg
+            chmod 700 ~/.gnupg
+            {
+              echo "allow-loopback-pinentry"
+            } >> ~/.gnupg/gpg-agent.conf
+            {
+              echo "use-agent"
+            } >> ~/.gnupg/gpg.conf
+            gpg-connect-agent reloadagent /bye
 
-          # Test signing
-          echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-              --pinentry-mode loopback --armor --detach-sign > /dev/null
+            # Test signing
+            echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                --pinentry-mode loopback --armor --detach-sign > /dev/null
 
-          echo "GPG signing configured successfully"
+            echo "GPG signing configured successfully"
+            echo "GPG_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "GPG key not configured, skipping GPG signing"
+            echo "GPG_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Sign all artifacts with Cosign (keyless or key-based)
         run: |
@@ -313,13 +421,17 @@ jobs:
             sort checksums.txt >> SHA256SUMS.txt
           fi
 
-          # Sign checksum file with GPG
+          # Sign checksum file with GPG if configured
+          if [ "$GPG_CONFIGURED" = "true" ]; then
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                 --pinentry-mode loopback \
                 --armor --detach-sign \
                 --output SHA256SUMS.txt.asc \
                 SHA256SUMS.txt
-          echo "Checksum file signed with GPG"
+            echo "Checksum file signed with GPG"
+          else
+            echo "GPG not configured, skipping checksum GPG signature"
+          fi
 
           # Also sign checksums with Cosign
           echo "Signing checksums with Cosign..."
@@ -336,13 +448,17 @@ jobs:
           # Copy install script to release artifacts
           cp install.sh install.sh.release
 
-          # Sign install script with GPG
+          # Sign install script with GPG if configured
+          if [ "$GPG_CONFIGURED" = "true" ]; then
             gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                 --pinentry-mode loopback \
                 --armor --detach-sign \
                 --output install.sh.asc \
                 install.sh.release
-          echo "Install script signed with GPG"
+            echo "Install script signed with GPG"
+          else
+            echo "GPG not configured, skipping install script GPG signature"
+          fi
 
           # Sign install script with Cosign
           echo "Signing install script with Cosign..."
@@ -358,17 +474,21 @@ jobs:
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          cd artifacts
-          # Sign each tar.gz and zip file with detached signature
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
-            echo "Signing $file..."
-            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-                --pinentry-mode loopback \
-                --armor --detach-sign \
-                --output "${file}.asc" \
-                "$file"
-          done
-          cd ..
+          if [ "$GPG_CONFIGURED" = "true" ]; then
+            cd artifacts
+            # Sign each tar.gz and zip file with detached signature
+            find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
+              echo "Signing $file with GPG..."
+              gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+                  --pinentry-mode loopback \
+                  --armor --detach-sign \
+                  --output "${file}.asc" \
+                  "$file"
+            done
+            cd ..
+          else
+            echo "GPG not configured, skipping binary GPG signatures"
+          fi
 
       - name: Upload checksums
         uses: softprops/action-gh-release@v2
@@ -377,6 +497,7 @@ jobs:
           tag_name: ${{ github.ref }}
 
       - name: Upload signed checksums
+        if: env.GPG_CONFIGURED == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: ./SHA256SUMS.txt.asc

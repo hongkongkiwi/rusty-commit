@@ -18,7 +18,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Fetch all history and tags for release notes generation
 
@@ -223,7 +223,7 @@ jobs:
             archive-name: rustycommit-windows-i686.zip
             use-cross: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
@@ -310,15 +310,15 @@ jobs:
       attestations: write  # Required for GitHub attestations
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
+        uses: sigstore/cosign-installer@v3.9.2
         with:
           cosign-release: 'v2.2.2'
 
@@ -400,7 +400,7 @@ jobs:
           cd ..
 
       - name: Generate GitHub Attestations
-        uses: actions/attest-build-provenance@v1.5.0
+        uses: actions/attest-build-provenance@v2.4.0
         with:
           subject-path: |
             artifacts/**/*.tar.gz

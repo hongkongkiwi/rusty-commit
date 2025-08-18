@@ -57,7 +57,7 @@ jobs:
           echo "GPG_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
 
       - name: Download .deb packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: deb-*
           path: ./debs
@@ -121,7 +121,7 @@ jobs:
           EOF
 
       - name: Download .rpm packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: rpm-*
           path: ./rpms
@@ -173,7 +173,7 @@ jobs:
           gpg-connect-agent reloadagent /bye
 
       - name: Download binary archives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: tarball-*
           path: ./archives
@@ -203,7 +203,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Download macOS binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: rco-macos-*
           path: ./macos
@@ -273,7 +273,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Download Windows binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: rco-windows-*
           path: ./windows
@@ -354,7 +354,7 @@ jobs:
           sudo chmod 644 /home/builder/.abuild/rusty-commit.rsa.pub
 
       - name: Download .apk packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: apk-*
           path: ./apks

@@ -71,7 +71,7 @@ tar = "0.4"
 zip = "2.2"
 
 # MCP (Model Context Protocol) support
-rmcp = { version = "0.5.0", features = ["server"] }
+rmcp = { version = "0.8.1", features = ["server"] }
 serde_urlencoded = "0.7"
 rand = "0.9"
 

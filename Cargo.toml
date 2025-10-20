@@ -32,7 +32,7 @@ async-trait = "0.1"
 
 # HTTP and API clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
-async-openai = "0.29"
+async-openai = "0.30"
 backoff = { version = "0.4", features = ["tokio"] }
 
 # Serialization

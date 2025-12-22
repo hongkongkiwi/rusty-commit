@@ -57,7 +57,7 @@ jobs:
           echo "GPG_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
 
       - name: Download .deb packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: deb-*
           path: ./debs
@@ -85,7 +85,7 @@ jobs:
           done
 
       - name: Upload signed .deb packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signed-debs
           path: |
@@ -121,7 +121,7 @@ jobs:
           EOF
 
       - name: Download .rpm packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: rpm-*
           path: ./rpms
@@ -148,7 +148,7 @@ jobs:
           done
 
       - name: Upload signed .rpm packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signed-rpms
           path: |
@@ -173,7 +173,7 @@ jobs:
           gpg-connect-agent reloadagent /bye
 
       - name: Download binary archives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: tarball-*
           path: ./archives
@@ -193,7 +193,7 @@ jobs:
           done
 
       - name: Upload signatures
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-signatures
           path: ./archives/**/*.asc
@@ -203,7 +203,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Download macOS binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: rco-macos-*
           path: ./macos
@@ -263,7 +263,7 @@ jobs:
           done
 
       - name: Upload signed macOS binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signed-macos
           path: ./macos/**/*
@@ -273,7 +273,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Download Windows binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: rco-windows-*
           path: ./windows
@@ -308,7 +308,7 @@ jobs:
           }
 
       - name: Upload signed Windows binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signed-windows
           path: ./windows/**/*
@@ -354,7 +354,7 @@ jobs:
           sudo chmod 644 /home/builder/.abuild/rusty-commit.rsa.pub
 
       - name: Download .apk packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: apk-*
           path: ./apks
@@ -376,7 +376,7 @@ jobs:
           done
 
       - name: Upload signed .apk packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signed-apk
           path: |

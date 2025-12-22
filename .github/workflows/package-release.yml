@@ -89,7 +89,7 @@ jobs:
             use_cross: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
@@ -109,7 +109,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.asset_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
@@ -126,7 +126,7 @@ jobs:
           - { rust: armv7-unknown-linux-gnueabihf, deb: armhf, artifact: rco-linux-armv7 }
           - { rust: riscv64gc-unknown-linux-gnu, deb: riscv64, artifact: rco-linux-riscv64 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -140,7 +140,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ matrix.arch.artifact }}
           path: ./binary
@@ -202,7 +202,7 @@ jobs:
           dpkg-deb --build "${PKGNAME}"
 
       - name: Upload .deb package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deb-${{ matrix.arch.deb }}
           path: rusty-commit_*.deb
@@ -224,7 +224,7 @@ jobs:
           - { rust: aarch64-unknown-linux-gnu, rpm: aarch64, artifact: rco-linux-aarch64 }
           - { rust: riscv64gc-unknown-linux-gnu, rpm: riscv64, artifact: rco-linux-riscv64 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -238,7 +238,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ matrix.arch.artifact }}
           path: ./binary
@@ -312,7 +312,7 @@ jobs:
                    --target "${{ matrix.arch.rpm }}"
 
       - name: Upload RPM package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rpm-${{ matrix.arch.rpm }}
           path: rpmbuild/RPMS/${{ matrix.arch.rpm }}/*.rpm
@@ -341,7 +341,7 @@ jobs:
           - { rust: aarch64-unknown-linux-musl, alpine: aarch64, artifact: rco-linux-musl-aarch64 }
           - { rust: riscv64gc-unknown-linux-musl, alpine: riscv64, artifact: rco-linux-musl-riscv64 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -355,7 +355,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ matrix.arch.artifact }}
           path: ./binary
@@ -416,7 +416,7 @@ jobs:
           "
 
       - name: Upload APK package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: apk-${{ matrix.arch.alpine }}
           path: rusty-commit*.apk
@@ -452,7 +452,7 @@ jobs:
           - { artifact: rco-macos-x86_64, archive: rusty-commit-macos-x86_64.tar.gz }
           - { artifact: rco-macos-aarch64, archive: rusty-commit-macos-aarch64.tar.gz }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -466,7 +466,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ./binary
@@ -549,7 +549,7 @@ jobs:
           tar czf "${{ matrix.archive }}" "${DIRNAME}"
 
       - name: Upload tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tarball-${{ matrix.artifact }}
           path: ${{ matrix.archive }}
@@ -565,7 +565,7 @@ jobs:
     needs: build-binaries
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -580,7 +580,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: rco-windows-x86_64
           path: ./binary
@@ -636,7 +636,7 @@ jobs:
           Compress-Archive -Path "$dirname\*" -DestinationPath "rusty-commit-windows-x86_64.zip"
 
       - name: Upload ZIP package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-zip
           path: rusty-commit-windows-x86_64.zip
@@ -651,7 +651,7 @@ jobs:
     name: Package Snap (.snap)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get version
         id: version
@@ -708,7 +708,7 @@ jobs:
           sg lxd -c 'snapcraft --use-lxd'
 
       - name: Upload snap package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: snap-package
           path: rusty-commit_*.snap

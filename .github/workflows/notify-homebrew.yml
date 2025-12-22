@@ -31,7 +31,7 @@ jobs:
           fi
 
       - name: Trigger Homebrew formula update
-        uses: peter-evans/repository-dispatch@v3.0.0
+        uses: peter-evans/repository-dispatch@v4.0.1
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: hongkongkiwi/homebrew-rusty-commit

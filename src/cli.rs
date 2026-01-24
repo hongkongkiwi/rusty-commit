@@ -135,6 +135,32 @@ pub enum ConfigAction {
     Status,
     /// Describe all configuration options with examples and descriptions
     Describe,
+    /// Add a new provider account
+    AddProvider {
+        /// Provider to add (openai, anthropic, claude-code, qwen, ollama, xai, gemini, perplexity, azure)
+        #[arg(short, long)]
+        provider: Option<String>,
+        /// Account alias (e.g., "work", "personal")
+        #[arg(short, long)]
+        alias: Option<String>,
+    },
+    /// List all configured accounts
+    ListAccounts,
+    /// Switch to a different account
+    UseAccount {
+        /// Account alias to use
+        alias: String,
+    },
+    /// Remove an account
+    RemoveAccount {
+        /// Account alias to remove
+        alias: String,
+    },
+    /// Show account details
+    ShowAccount {
+        /// Account alias (defaults to "default")
+        alias: Option<String>,
+    },
 }
 
 #[derive(Parser)]

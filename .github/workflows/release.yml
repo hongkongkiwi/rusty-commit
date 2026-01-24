@@ -80,6 +80,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install OpenSSL (macOS)
+        if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
+        run: |
+          brew install openssl
+          echo "OPENSSL_LIB_DIR=$(brew --prefix openssl)/lib" >> "$GITHUB_ENV"
+          echo "OPENSSL_INCLUDE_DIR=$(brew --prefix openssl)/include" >> "$GITHUB_ENV"
+
+      - name: Install OpenSSL (Windows)
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          choco install openssl -y
+          echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> "$GITHUB_ENV"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -361,13 +374,13 @@ jobs:
         with:
           shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
 
-      - name: Install musl tools
+      - name: Install musl tools and OpenSSL
         run: |
           sudo apt-get update
           if [ "${{ matrix.arch }}" = "amd64" ]; then
-            sudo apt-get install -y musl-tools gcc-multilib
+            sudo apt-get install -y musl-tools gcc-multilib libssl-dev
           else
-            sudo apt-get install -y musl-tools
+            sudo apt-get install -y musl-tools libssl-dev
           fi
 
       - name: Build static binary

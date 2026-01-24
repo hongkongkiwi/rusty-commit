@@ -378,12 +378,14 @@ jobs:
         run: |
           sudo apt-get update
           if [ "${{ matrix.arch }}" = "amd64" ]; then
-            sudo apt-get install -y musl-tools gcc-multilib libssl-dev
+            sudo apt-get install -y musl-tools gcc-multilib
           else
-            sudo apt-get install -y musl-tools libssl-dev
+            sudo apt-get install -y musl-tools
           fi
 
       - name: Build static binary
+        env:
+          OPENSSL_VENDORED: 1
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Create Alpine package structure

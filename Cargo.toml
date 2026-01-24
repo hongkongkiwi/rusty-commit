@@ -93,6 +93,9 @@ rmcp = { version = "0.13.0", features = ["server"] }
 serde_urlencoded = "0.7"
 rand = "0.9"
 
+# OpenSSL for static musl/Alpine builds
+openssl = { version = "0.10", features = ["vendored"] }
+
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

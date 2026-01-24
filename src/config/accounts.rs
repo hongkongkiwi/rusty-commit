@@ -153,13 +153,14 @@ pub fn account_storage_key(account_alias: &str, key_type: &str) -> String {
 }
 
 /// Delete all storage keys for an account
-pub fn delete_account_storage(account_alias: &str) {
+#[allow(dead_code)]
+pub fn delete_account_storage(_account_alias: &str) {
     #[cfg(feature = "secure-storage")]
     {
         use crate::config::secure_storage;
 
         for key_type in ["access_token", "refresh_token", "api_key", "bearer_token"] {
-            let key = account_storage_key(account_alias, key_type);
+            let key = account_storage_key(_account_alias, key_type);
             let _ = secure_storage::delete_secret(&key);
         }
     }

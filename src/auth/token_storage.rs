@@ -257,8 +257,9 @@ fn account_storage_key(account_id: &str, key_type: &str) -> String {
 }
 
 /// Store OAuth tokens for a specific account
+#[allow(dead_code)]
 pub fn store_tokens_for_account(
-    account_id: &str,
+    _account_id: &str,
     access_token: &str,
     refresh_token: Option<&str>,
     expires_in: Option<u64>,
@@ -267,7 +268,7 @@ pub fn store_tokens_for_account(
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let access_key = account_storage_key(account_id, "access_token");
+            let access_key = account_storage_key(_account_id, "access_token");
             if let Err(e) = crate::config::secure_storage::store_secret(&access_key, access_token) {
                 eprintln!(
                     "Note: Could not store access token in secure storage: {}",
@@ -276,7 +277,7 @@ pub fn store_tokens_for_account(
             } else {
                 // Store refresh token
                 if let Some(refresh) = refresh_token {
-                    let refresh_key = account_storage_key(account_id, "refresh_token");
+                    let refresh_key = account_storage_key(_account_id, "refresh_token");
                     let _ = crate::config::secure_storage::store_secret(&refresh_key, refresh);
                 }
 
@@ -287,7 +288,7 @@ pub fn store_tokens_for_account(
                         .unwrap()
                         .as_secs()
                         + expires_in;
-                    let expiry_key = account_storage_key(account_id, "token_expires_at");
+                    let expiry_key = account_storage_key(_account_id, "token_expires_at");
                     let _ = crate::config::secure_storage::store_secret(
                         &expiry_key,
                         &expires_at.to_string(),
@@ -305,18 +306,19 @@ pub fn store_tokens_for_account(
 }
 
 /// Get OAuth tokens for a specific account
-pub fn get_tokens_for_account(account_id: &str) -> Result<Option<TokenStorage>> {
+#[allow(dead_code)]
+pub fn get_tokens_for_account(_account_id: &str) -> Result<Option<TokenStorage>> {
     // Try secure storage first
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let access_key = account_storage_key(account_id, "access_token");
+            let access_key = account_storage_key(_account_id, "access_token");
             if let Ok(Some(access_token)) = crate::config::secure_storage::get_secret(&access_key) {
-                let refresh_key = account_storage_key(account_id, "refresh_token");
+                let refresh_key = account_storage_key(_account_id, "refresh_token");
                 let refresh_token =
                     crate::config::secure_storage::get_secret(&refresh_key).ok().flatten();
 
-                let expiry_key = account_storage_key(account_id, "token_expires_at");
+                let expiry_key = account_storage_key(_account_id, "token_expires_at");
                 let expires_at = crate::config::secure_storage::get_secret(&expiry_key)
                     .ok()
                     .flatten()
@@ -338,12 +340,13 @@ pub fn get_tokens_for_account(account_id: &str) -> Result<Option<TokenStorage>> 
 }
 
 /// Delete OAuth tokens for a specific account
-pub fn delete_tokens_for_account(account_id: &str) -> Result<()> {
+#[allow(dead_code)]
+pub fn delete_tokens_for_account(_account_id: &str) -> Result<()> {
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
             for key_type in ["access_token", "refresh_token", "token_expires_at"] {
-                let key = account_storage_key(account_id, key_type);
+                let key = account_storage_key(_account_id, key_type);
                 let _ = crate::config::secure_storage::delete_secret(&key);
             }
         }
@@ -353,12 +356,13 @@ pub fn delete_tokens_for_account(account_id: &str) -> Result<()> {
 }
 
 /// Store API key for a specific account
-pub fn store_api_key_for_account(account_id: &str, api_key: &str) -> Result<()> {
+#[allow(dead_code)]
+pub fn store_api_key_for_account(_account_id: &str, _api_key: &str) -> Result<()> {
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let key = account_storage_key(account_id, "api_key");
-            crate::config::secure_storage::store_secret(&key, api_key)?;
+            let key = account_storage_key(_account_id, "api_key");
+            crate::config::secure_storage::store_secret(&key, _api_key)?;
             return Ok(());
         }
     }
@@ -366,16 +370,17 @@ pub fn store_api_key_for_account(account_id: &str, api_key: &str) -> Result<()> 
     // Fall back: can't store in file securely, warn user
     anyhow::bail!(
         "Secure storage not available. Cannot store API key for account '{}'.",
-        account_id
+        _account_id
     )
 }
 
 /// Get API key for a specific account
-pub fn get_api_key_for_account(account_id: &str) -> Result<Option<String>> {
+#[allow(dead_code)]
+pub fn get_api_key_for_account(_account_id: &str) -> Result<Option<String>> {
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let key = account_storage_key(account_id, "api_key");
+            let key = account_storage_key(_account_id, "api_key");
             return Ok(crate::config::secure_storage::get_secret(&key)?);
         }
     }
@@ -384,28 +389,30 @@ pub fn get_api_key_for_account(account_id: &str) -> Result<Option<String>> {
 }
 
 /// Store bearer token for a specific account
-pub fn store_bearer_token_for_account(account_id: &str, token: &str) -> Result<()> {
+#[allow(dead_code)]
+pub fn store_bearer_token_for_account(_account_id: &str, _token: &str) -> Result<()> {
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let key = account_storage_key(account_id, "bearer_token");
-            crate::config::secure_storage::store_secret(&key, token)?;
+            let key = account_storage_key(_account_id, "bearer_token");
+            crate::config::secure_storage::store_secret(&key, _token)?;
             return Ok(());
         }
     }
 
     anyhow::bail!(
         "Secure storage not available. Cannot store bearer token for account '{}'.",
-        account_id
+        _account_id
     )
 }
 
 /// Get bearer token for a specific account
-pub fn get_bearer_token_for_account(account_id: &str) -> Result<Option<String>> {
+#[allow(dead_code)]
+pub fn get_bearer_token_for_account(_account_id: &str) -> Result<Option<String>> {
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
-            let key = account_storage_key(account_id, "bearer_token");
+            let key = account_storage_key(_account_id, "bearer_token");
             return Ok(crate::config::secure_storage::get_secret(&key)?);
         }
     }
@@ -414,14 +421,15 @@ pub fn get_bearer_token_for_account(account_id: &str) -> Result<Option<String>> 
 }
 
 /// Delete all stored credentials for an account
-pub fn delete_all_for_account(account_id: &str) -> Result<()> {
-    delete_tokens_for_account(account_id)?;
+#[allow(dead_code)]
+pub fn delete_all_for_account(_account_id: &str) -> Result<()> {
+    delete_tokens_for_account(_account_id)?;
 
     #[cfg(feature = "secure-storage")]
     {
         if crate::config::secure_storage::is_available() {
             for key_type in ["api_key", "bearer_token"] {
-                let key = account_storage_key(account_id, key_type);
+                let key = account_storage_key(_account_id, key_type);
                 let _ = crate::config::secure_storage::delete_secret(&key);
             }
         }

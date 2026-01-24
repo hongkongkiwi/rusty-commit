@@ -10,6 +10,7 @@ use async_openai::{
 use async_trait::async_trait;
 
 use super::{build_prompt, AIProvider};
+use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 use crate::utils::retry::retry_async;
 
@@ -36,6 +37,28 @@ impl OpenAIProvider {
         let model = config
             .model
             .as_deref()
+            .unwrap_or("gpt-3.5-turbo")
+            .to_string();
+
+        Ok(Self { client, model })
+    }
+
+    /// Create provider from account configuration
+    #[allow(dead_code)]
+    pub fn from_account(account: &AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
+        let openai_config = OpenAIConfig::new().with_api_key(api_key).with_api_base(
+            account
+                .api_url
+                .as_deref()
+                .or(config.api_url.as_deref())
+                .unwrap_or("https://api.openai.com/v1"),
+        );
+
+        let client = Client::with_config(openai_config);
+        let model = account
+            .model
+            .as_deref()
+            .or(config.model.as_deref())
             .unwrap_or("gpt-3.5-turbo")
             .to_string();
 

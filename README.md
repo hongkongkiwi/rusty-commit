@@ -83,6 +83,8 @@ sudo mv rco /usr/local/bin/
 ```
 
 ## Quick start
+
+### Single Provider (Traditional)
 ```bash
 # 1) Authenticate (Claude OAuth) or set an API key
 rco auth login
@@ -90,6 +92,26 @@ rco auth login
 rco config set RCO_API_KEY=sk-...
 
 # 2) Generate a commit
+git add .
+rco
+```
+
+### Multi-Account (Recommended for Multiple Providers)
+```bash
+# 1) Add your first account (interactive wizard)
+rco config add-provider
+
+# 2) Add more accounts for different providers/roles
+rco config add-provider  # Add "work-openai", "personal-anthropic", etc.
+
+# 3) List all accounts
+rco config list-accounts
+
+# 4) Switch between accounts
+rco config use-account work-openai
+rco config use-account personal-anthropic
+
+# 5) Generate commits (uses active account automatically)
 git add .
 rco
 ```
@@ -149,10 +171,165 @@ Tip: You can set multiple values at once:
 rco config set RCO_AI_PROVIDER=anthropic RCO_MODEL=claude-3-5-haiku-20241022 RCO_EMOJI=true
 ```
 
+## Multi-Account Support
+
+Rusty Commit supports multiple AI provider accounts, making it easy to switch between different providers, models, or configurations (e.g., work vs personal, different API keys).
+
+### Account Management Commands
+
+```bash
+# Add a new account (interactive wizard)
+rco config add-provider
+
+# Add a specific provider with alias
+rco config add-provider --provider openai --alias work-openai
+
+# List all configured accounts
+rco config list-accounts
+
+# Switch to a different account
+rco config use-account work-openai
+rco config use-account personal-anthropic
+
+# Show details of an account
+rco config show-account work-openai
+rco config show-account  # shows "default" account
+
+# Remove an account
+rco config remove-account work-openai
+```
+
+### Interactive Add-Provider Wizard
+
+Running `rco config add-provider` launches an interactive wizard that guides you through:
+
+1. **Provider Selection** - Choose from:
+   - OpenAI (GPT-4, GPT-3.5)
+   - Anthropic Claude
+   - Claude Code (OAuth)
+   - Google Gemini
+   - xAI Grok
+   - Ollama (local models)
+   - Perplexity
+   - Azure OpenAI
+   - Qwen AI
+
+2. **Account Alias** - A memorable name for this account (e.g., "work", "personal", "gpt-4")
+
+3. **Model Name** - Optional, defaults to provider's recommended model
+
+4. **API URL** - Optional, for custom endpoints or self-hosted providers
+
+5. **API Key** - Stored securely in your system keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+
+### Account Configuration File
+
+Accounts are stored in `~/.config/rustycommit/accounts.toml`:
+
+```toml
+[accounts.work-openai]
+provider = "openai"
+model = "gpt-4o-mini"
+api_url = "https://api.openai.com/v1"
+
+[accounts.work-openai.auth]
+type = "api_key"
+key_id = "rco_work_openai"
+
+[accounts.personal-anthropic]
+provider = "anthropic"
+model = "claude-3-5-haiku-20241022"
+
+[accounts.personal-anthropic.auth]
+type = "env_var"
+name = "ANTHROPIC_API_KEY"
+
+[active_account]
+alias = "work-openai"
+```
+
+### How Accounts Work
+
+- Each account has a unique **alias** for easy identification
+- Accounts can use different **providers** (OpenAI, Anthropic, etc.)
+- API keys are stored **securely** in your system keychain, not in plain text
+- The **active account** is used automatically when generating commits
+- Per-account settings (model, API URL) override global defaults
+- Supports multiple **authentication methods**:
+  - `api_key` - Stored securely in keychain
+  - `oauth` - OAuth tokens from provider
+  - `env_var` - Read from environment variable
+  - `bearer` - Bearer tokens in keychain
+
+### Using Accounts with Different Providers
+
+```bash
+# Add accounts for different providers
+rco config add-provider  # Select "OpenAI", alias: "gpt4-pro"
+rco config add-provider  # Select "Anthropic", alias: "claude-pro"
+
+# Switch between them
+rco config use-account gpt4-pro
+rco config list-accounts
+# Output:
+# gpt4-pro: openai [ACTIVE]
+# claude-pro: anthropic
+
+# Now generate commits with GPT-4
+git add .
+rco
+
+# Switch to Claude
+rco config use-account claude-pro
+
+# Now commits use Claude
+git add .
+rco
+```
+
+### Per-Provider Account Examples
+
+OpenAI Account:
+```bash
+rco config add-provider
+# Select: OpenAI (GPT-4, GPT-3.5)
+# Alias: openai-work
+# Model: gpt-4o (optional)
+# API Key: sk-...
+```
+
+Anthropic Account:
+```bash
+rco config add-provider
+# Select: Anthropic Claude
+# Alias: claude-personal
+# Model: claude-3-5-haiku-20241022 (optional)
+# API Key: sk-ant-...
+```
+
+Ollama Account (local):
+```bash
+rco config add-provider
+# Select: Ollama (local)
+# Alias: local-llama
+# Model: llama3.2 (optional)
+# API URL: http://localhost:11434 (optional)
+# API Key: (none required for local)
+```
+
+### Account Security
+
+- API keys are stored in your **system keychain**, not in config files
+- Each account has a unique key identifier for secure storage
+- Keys are encrypted by your OS (Keychain, Secret Service, Credential Manager)
+- Supports the `secure-storage` feature for enhanced protection
+
 ## Providers
-Works with 16+ providers. Examples:
+Works with 18+ providers. Examples:
 - **Claude (OAuth)**: `rco auth login`
 - **OpenAI / OpenRouter / Groq / DeepSeek / GitHub Copilot**: `rco auth login` or `rco config set RCO_API_KEY=...`
+- **xAI Grok**: `rco config set RCO_AI_PROVIDER=xai`
+- **Qwen AI / DashScope**: `rco config set RCO_AI_PROVIDER=qwen`
 - **Ollama (local)**:
   ```bash
   rco config set RCO_AI_PROVIDER=ollama
@@ -233,6 +410,16 @@ rco config set RCO_API_KEY=...
 rco config set RCO_API_URL=https://api.deepinfra.com/v1/openai
 rco config set RCO_MODEL=meta-llama/Meta-Llama-3-70B-Instruct
 # Keys: https://deepinfra.com/dash/api_keys
+```
+
+xAI Grok:
+```bash
+rco config set RCO_AI_PROVIDER=xai
+rco config set RCO_API_KEY=...
+rco config set RCO_MODEL=grok-beta
+# Optional custom endpoint:
+# rco config set RCO_API_URL=https://api.x.ai/v1
+# Keys: https://x.ai/api
 ```
 
 Mistral AI:
@@ -387,12 +574,19 @@ jobs:
 
 ## CLI overview
 Subcommands:
-- `config` — set/get/reset values and check secure storage status
+- `config` — set/get/reset values, check secure storage status, and manage accounts
+- `config add-provider` — interactive wizard to add AI provider accounts
+- `config list-accounts` — list all configured accounts
+- `config use-account <alias>` — switch the active account
+- `config show-account [alias]` — show account details
+- `config remove-account <alias>` — remove an account
 - `hook` — install/uninstall git hooks
 - `commitlint` — generate commitlint configuration
 - `auth` — login/logout/status for OAuth (e.g., Claude)
 - `mcp` — run MCP server over TCP or stdio
 - `update` — check and install updates (supports Homebrew, Cargo, .deb/.rpm, binary, Snap)
+- `setup` — interactive setup wizard for initial configuration
+- `model` — interactive model selection
 
 Global flags you can use with the default `rco` command:
 ```text
@@ -403,9 +597,11 @@ Global flags you can use with the default `rco` command:
 ```
 
 ## Troubleshooting
-- **401 / Invalid API key**: Re‑authenticate (`rco auth login`) or set a valid `RCO_API_KEY`.
-- **Rate‑limited (429)**: Wait briefly; try a lighter model or another provider.
+- **401 / Invalid API key**: Re‑authenticate (`rco auth login`) or set a valid `RCO_API_KEY`. For accounts, check `rco config show-account` and verify the API key is stored correctly.
+- **Rate‑limited (429)**: Wait briefly; try a lighter model or switch accounts (`rco config use-account <alias>`).
 - **Secure storage unavailable**: We automatically fall back to file storage; check `rco config status`.
+- **Account not found**: Verify accounts exist with `rco config list-accounts`. Use exact alias name when switching.
+- **Wrong account used**: Check active account with `rco config show-account`. Switch with `rco config use-account <alias>`.
 - **Hooks not running**: Ensure `.git/hooks/prepare-commit-msg` exists and is executable. Re‑install via `rco hook set`.
 - **Windows PATH issues**: Add the install dir (e.g., `%USERPROFILE%\\.cargo\\bin`) to PATH.
 - **Corporate proxy**: Set `HTTP_PROXY`/`HTTPS_PROXY` environment variables.
@@ -416,7 +612,8 @@ Global flags you can use with the default `rco` command:
 - Remove config: delete `~/.config/rustycommit/`
 
 ## Compatibility
-- Works with per‑repo overrides and multiple providers.
+- Works with per‑repo overrides, multiple providers, and multi-account configurations.
+- Accounts are stored in `~/.config/rustycommit/accounts.toml` (separate from main config).
 
 ## Development
 ```bash

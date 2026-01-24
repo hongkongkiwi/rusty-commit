@@ -1,8 +1,9 @@
 use anyhow::Result;
 use colored::Colorize;
+use dialoguer::{Input, Select};
 
 use crate::cli::{ConfigAction, ConfigCommand};
-use crate::config::{self, Config};
+use crate::config::{self, accounts, Config};
 
 pub async fn execute(cmd: ConfigCommand) -> Result<()> {
     let mut config = Config::load()?;
@@ -174,31 +175,139 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
 
             println!("\n{}", "═".repeat(60).dimmed());
         }
-        ConfigAction::AddProvider { provider, alias } => {
+        ConfigAction::AddProvider { provider: _, alias } => {
             println!("\n{}", "🔧 Add Provider Wizard".bold().green());
             println!("{}", "═".repeat(50).dimmed());
 
-            let provider = provider.unwrap_or_else(|| {
-                println!("\nAvailable providers:");
-                println!("  - openai      (OpenAI API, Codex OAuth)");
-                println!("  - anthropic   (Anthropic Claude)");
-                println!("  - claude-code (Anthropic Claude Code OAuth)");
-                println!("  - qwen        (Qwen AI)");
-                println!("  - ollama      (Ollama local models)");
-                println!("  - xai         (xAI Grok)");
-                println!("  - gemini      (Google Gemini)");
-                println!("  - perplexity  (Perplexity)");
-                println!("  - azure       (Azure OpenAI)");
-                println!("\nEnter provider name: ");
-                "openai".to_string()
+            // Select provider
+            let provider_names = vec![
+                "OpenAI (GPT-4, GPT-3.5)",
+                "Anthropic Claude",
+                "Claude Code (OAuth)",
+                "Google Gemini",
+                "xAI Grok",
+                "Ollama (local)",
+                "Perplexity",
+                "Azure OpenAI",
+                "Qwen AI",
+            ];
+
+            let provider_selection = Select::new()
+                .with_prompt("Select AI provider")
+                .items(&provider_names)
+                .default(0)
+                .interact()?;
+
+            let (provider_name, provider_key) = match provider_selection {
+                0 => ("openai", Some("OPENAI_API_KEY")),
+                1 => ("anthropic", Some("ANTHROPIC_API_KEY")),
+                2 => ("claude-code", Some("CLAUDE_CODE_TOKEN")),
+                3 => ("gemini", Some("GEMINI_API_KEY")),
+                4 => ("xai", Some("XAI_API_KEY")),
+                5 => ("ollama", None),
+                6 => ("perplexity", Some("PERPLEXITY_API_KEY")),
+                7 => ("azure", Some("AZURE_API_KEY")),
+                8 => ("qwen", Some("QWEN_API_KEY")),
+                _ => ("openai", Some("OPENAI_API_KEY")),
+            };
+
+            // Get alias
+            let alias = alias.unwrap_or_else(|| {
+                Input::new()
+                    .with_prompt("Enter account alias (e.g., 'work', 'personal')")
+                    .with_initial_text(&format!("{}-default", provider_name))
+                    .interact()
+                    .unwrap_or_else(|_| format!("{}-default", provider_name))
             });
 
-            let alias = alias.unwrap_or_else(|| format!("{}-default", provider));
+            // Get optional model
+            let model_input: String = Input::new()
+                .with_prompt("Enter model name (optional, press Enter to use default)")
+                .allow_empty(true)
+                .interact()?;
 
-            println!("\nTo add provider '{alias}' with provider '{provider}':");
-            println!("  1. API Key: rco config set RCO_API_KEY=<your_key>");
-            println!("  2. Set as default: rco config use-account {alias}");
-            println!("\nNote: Full interactive setup coming in a future update");
+            let model = if model_input.trim().is_empty() { None } else { Some(model_input.trim().to_string()) };
+
+            // Get optional API URL
+            let api_url_input: String = Input::new()
+                .with_prompt("Enter API URL (optional, press Enter to use default)")
+                .allow_empty(true)
+                .interact()?;
+
+            let api_url = if api_url_input.trim().is_empty() { None } else { Some(api_url_input.trim().to_string()) };
+
+            // Get API key (skip for Ollama)
+            let api_key = if provider_selection == 5 {
+                None
+            } else {
+                let key_input: String = Input::new()
+                    .with_prompt(&format!("Enter your {} API key", provider_name))
+                    .interact()?;
+
+                if key_input.trim().is_empty() {
+                    eprintln!("{}", "⚠ No API key entered. You'll need to set it later.".yellow());
+                    None
+                } else {
+                    Some(key_input.trim().to_string())
+                }
+            };
+
+            // Create the account config
+            let auth = if api_key.is_some() {
+                // Generate a key_id for this account
+                let key_id = format!("rco_{}", alias.to_lowercase().replace(' ', "_"));
+                accounts::AuthMethod::ApiKey { key_id: key_id.clone() }
+            } else {
+                // For Ollama or no key, use env var
+                if let Some(env_var) = provider_key {
+                    accounts::AuthMethod::EnvVar { name: env_var.to_string() }
+                } else {
+                    // Fallback - no auth
+                    accounts::AuthMethod::EnvVar { name: "OLLAMA_HOST".to_string() }
+                }
+            };
+
+            let account = accounts::AccountConfig {
+                alias: alias.to_lowercase().replace(' ', "_"),
+                provider: provider_name.to_string(),
+                api_url,
+                model,
+                auth,
+                tokens_max_input: None,
+                tokens_max_output: None,
+                is_default: false,
+            };
+
+            // Save the account
+            let mut accounts_config = accounts::AccountsConfig::load()?
+                .unwrap_or_else(|| accounts::AccountsConfig {
+                    active_account: None,
+                    accounts: std::collections::HashMap::new(),
+                });
+
+            // Check if alias already exists
+            if accounts_config.get_account(&account.alias).is_some() {
+                eprintln!("{}", format!("❌ Account '{}' already exists", account.alias).red());
+            } else {
+                accounts_config.add_account(account.clone());
+
+                // Store API key in secure storage if provided
+                if let Some(key) = api_key {
+                    let key_id = match &account.auth {
+                        accounts::AuthMethod::ApiKey { key_id } => key_id.clone(),
+                        _ => unreachable!(),
+                    };
+                    if let Err(e) = crate::auth::token_storage::store_api_key_for_account(&key_id, &key) {
+                        eprintln!("{}", format!("⚠ Failed to store API key securely: {e}").yellow());
+                    }
+                }
+
+                accounts_config.save()?;
+                println!("");
+                println!("{}", format!("✅ Account '{}' added successfully!", account.alias).green());
+                println!("");
+                println!("{} To use this account: {}", "→".cyan(), format!("rco config use-account {}", account.alias).bold().white());
+            }
         }
         ConfigAction::ListAccounts => {
             println!("\n{}", "📋 Configured Accounts".bold().green());

@@ -402,7 +402,15 @@ async fn generate_commit_messages(
     pb.set_message(format!("Generating {} commit message{}...", count, if count > 1 { "s" } else { "" }));
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
-    let provider = providers::create_provider(config)?;
+    // Try to use an active account first
+    let provider: Box<dyn providers::AIProvider> = if let Some(account) = config.get_active_account()? {
+        tracing::info!("Using account: {}", account.alias);
+        println!("{} Using account: {}", "🔐".dimmed(), account.alias.yellow());
+        providers::create_provider_for_account(&account, config)?
+    } else {
+        providers::create_provider(config)?
+    };
+
     let messages = provider
         .generate_commit_messages(diff, context, full_gitmoji, config, count)
         .await?;

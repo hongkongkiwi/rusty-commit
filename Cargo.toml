@@ -39,7 +39,7 @@ xai = ["async-openai"]
 # CLI and UI
 clap = { version = "4.5", features = ["derive", "env"] }
 colored = "3.0"
-dialoguer = { version = "0.11", features = ["fuzzy-select"] }
+dialoguer = { version = "0.12", features = ["fuzzy-select"] }
 indicatif = "0.18"
 console = "0.16"
 
@@ -49,7 +49,7 @@ async-trait = "0.1"
 
 # HTTP and API clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
-async-openai = { version = "0.29", optional = true }
+async-openai = { version = "0.32", optional = true }
 backoff = { version = "0.4", features = ["tokio"] }
 
 # Serialization
@@ -74,7 +74,7 @@ once_cell = "1.19"
 url = "2.5"
 base64 = "0.22"
 sha2 = "0.10"
-tiktoken-rs = "0.7"
+tiktoken-rs = "0.9"
 keyring = { version = "3.6", optional = true }
 uuid = { version = "1.10", features = ["v4"] }
 webbrowser = "1.0"
@@ -85,11 +85,11 @@ tempfile = "3.9"
 futures = "0.3"
 flate2 = "1.0"
 tar = "0.4"
-zip = "2.2"
+zip = "7.1"
 clipboard = "0.5"
 
 # MCP (Model Context Protocol) support
-rmcp = { version = "0.11.0", features = ["server"] }
+rmcp = { version = "0.13.0", features = ["server"] }
 serde_urlencoded = "0.7"
 rand = "0.9"
 

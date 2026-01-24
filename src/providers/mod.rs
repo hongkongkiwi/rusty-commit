@@ -15,6 +15,7 @@ pub mod perplexity;
 pub mod xai;
 
 use crate::config::Config;
+use crate::config::accounts::AccountConfig;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
@@ -253,4 +254,103 @@ pub fn build_prompt(
     );
 
     prompt
+}
+
+/// Create an AI provider from an account configuration
+#[allow(dead_code)]
+pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> Result<Box<dyn AIProvider>> {
+    use crate::auth::token_storage;
+    use crate::config::secure_storage;
+
+    let provider = account.provider.to_lowercase();
+
+    // Extract credentials from the account's auth method
+    let credentials = match &account.auth {
+        crate::config::accounts::AuthMethod::ApiKey { key_id } => {
+            // Get API key from secure storage using the account's key_id
+            token_storage::get_api_key_for_account(key_id)?
+                .or_else(|| secure_storage::get_secret(key_id).ok().flatten())
+        }
+        crate::config::accounts::AuthMethod::OAuth { provider: _oauth_provider, account_id } => {
+            // Get OAuth access token from secure storage
+            token_storage::get_tokens_for_account(account_id)?
+                .map(|t| t.access_token)
+        }
+        crate::config::accounts::AuthMethod::EnvVar { name } => {
+            std::env::var(name).ok()
+        }
+        crate::config::accounts::AuthMethod::Bearer { token_id } => {
+            // Get bearer token from secure storage
+            token_storage::get_bearer_token_for_account(token_id)?
+                .or_else(|| secure_storage::get_secret(token_id).ok().flatten())
+        }
+    };
+
+    match provider.as_str() {
+        #[cfg(feature = "openai")]
+        "openai" | "codex" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(openai::OpenAIProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(openai::OpenAIProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "anthropic")]
+        "anthropic" | "claude" | "claude-code" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(anthropic::AnthropicProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(anthropic::AnthropicProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "ollama")]
+        "ollama" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(ollama::OllamaProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(ollama::OllamaProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "gemini")]
+        "gemini" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(gemini::GeminiProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(gemini::GeminiProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "azure")]
+        "azure" | "azure-openai" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(azure::AzureProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(azure::AzureProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "perplexity")]
+        "perplexity" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(perplexity::PerplexityProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(perplexity::PerplexityProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "xai")]
+        "xai" | "grok" | "x-ai" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(xai::XAIProvider::from_account(account, key, config)?))
+            } else {
+                Ok(Box::new(xai::XAIProvider::new(config)?))
+            }
+        }
+        _ => {
+            anyhow::bail!(
+                "Unsupported AI provider for account: {}\n\n\
+                 Account provider: {}\n\
+                 Supported providers: openai, anthropic, ollama, gemini, azure, perplexity, xai",
+                account.alias,
+                provider
+            );
+        }
+    }
 }

@@ -4,6 +4,7 @@ use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 
 use super::{build_prompt, AIProvider};
+use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 use crate::utils::retry::retry_async;
 
@@ -58,6 +59,28 @@ impl AnthropicProvider {
             .as_deref()
             .unwrap_or("claude-3-sonnet-20240229")
             .to_string();
+
+        Ok(Self {
+            client,
+            api_key,
+            model,
+        })
+    }
+
+    /// Create provider from account configuration
+    #[allow(dead_code)]
+    pub fn from_account(account: &AccountConfig, _api_key: &str, config: &Config) -> Result<Self> {
+        let client = Client::new();
+        let model = account
+            .model
+            .as_deref()
+            .or(config.model.as_deref())
+            .unwrap_or("claude-3-sonnet-20240229")
+            .to_string();
+
+        // For accounts, we'll use the api_key from the function parameter
+        // In a full implementation, this would extract from the account's auth method
+        let api_key = _api_key.to_string();
 
         Ok(Self {
             client,

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Select};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -158,30 +158,53 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
-        let mut process = std::process::Command::new("pbcopy")
-            .stdin(std::process::Stdio::piped())
-            .spawn()?;
-        if let Some(ref mut stdin) = process.stdin {
+        use std::process::{Command, Stdio};
+
+        let mut process = Command::new("pbcopy")
+            .stdin(Stdio::piped())
+            .spawn()
+            .context("Failed to spawn pbcopy process")?;
+
+        {
+            let stdin = process.stdin.as_mut().context("pbcopy stdin not available")?;
             stdin.write_all(text.as_bytes())?;
-        } else {
-            anyhow::bail!("Failed to get stdin for pbcopy");
         }
-        process.wait()?;
+
+        let status = process.wait().context("Failed to wait for pbcopy process")?;
+        if !status.success() {
+            anyhow::bail!("pbcopy exited with error: {:?}", status);
+        }
     }
 
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
-        let mut process = std::process::Command::new("xclip")
-            .args(["-selection", "clipboard"])
-            .stdin(std::process::Stdio::piped())
-            .spawn()?;
-        if let Some(ref mut stdin) = process.stdin {
-            stdin.write_all(text.as_bytes())?;
+        use std::process::{Command, Stdio};
+
+        // Check if xclip is available, otherwise try xsel as fallback
+        let use_xclip = !Command::new("which").arg("xclip").output()?.stdout.is_empty();
+
+        let (cmd_name, args) = if use_xclip {
+            ("xclip", vec!["-selection", "clipboard"])
         } else {
-            anyhow::bail!("Failed to get stdin for xclip");
+            ("xsel", vec!["--clipboard", "--input"])
+        };
+
+        let mut process = Command::new(cmd_name)
+            .args(&args)
+            .stdin(Stdio::piped())
+            .spawn()
+            .context(format!("Failed to spawn {} process", cmd_name))?;
+
+        {
+            let stdin = process.stdin.as_mut().context(format!("{} stdin not available", cmd_name))?;
+            stdin.write_all(text.as_bytes())?;
         }
-        process.wait()?;
+
+        let status = process.wait().context(format!("Failed to wait for {} process", cmd_name))?;
+        if !status.success() {
+            anyhow::bail!("{} exited with error: {:?}", cmd_name, status);
+        }
     }
 
     #[cfg(target_os = "windows")]

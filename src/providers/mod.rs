@@ -118,7 +118,20 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
         | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai"
         | "moonshot" | "moonshot-ai" | "dashscope" | "alibaba" | "qwen" | "qwen-coder"
         | "vertex" | "vertex-ai" | "google-vertex" => Ok(Box::new(openai::OpenAIProvider::new(config)?)),
-        _ => anyhow::bail!("Unsupported AI provider: {}", provider),
+        _ => anyhow::bail!(
+            "Unsupported AI provider: {}\n\n\
+             Available providers:\n\
+             - openai (GPT-4, GPT-3.5)\n\
+             - anthropic / claude (Claude models)\n\
+             - ollama (local models)\n\
+             - gemini (Google models)\n\
+             - azure (Azure OpenAI)\n\
+             - perplexity (Perplexity models)\n\
+             - xai / grok (xAI models)\n\
+             - openrouter, groq, together, deepseek (OpenAI-compatible)\n\n\
+             Set with: rco config set RCO_AI_PROVIDER=<provider_name>",
+            provider
+        ),
     }
 }
 

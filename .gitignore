@@ -1,18 +1,31 @@
 # Rust
-/target/
+target/
 Cargo.lock
 
-# IDE files
+# IDE and Editor files
 .vscode/
 .idea/
 *.iml
 *.ipr
 *.iws
+.idea/
+*.swp
+*.swo
+*~
+.#*
+.emacs.desktop
+.emacs.desktop.lock
+.trash/
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Windows
 Thumbs.db
@@ -23,6 +36,15 @@ $RECYCLE.BIN/
 # Linux
 *~
 .nfs*
+.fuse_hidden*
+.fuser
+
+# FUSE
+.MacOSX
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
 
 # Logs
 *.log
@@ -35,29 +57,41 @@ ci_logs/
 .env.development.local
 .env.test.local
 .env.production.local
+secrets/
 
 # Configuration backups
 *.bak
 *.backup
 *.orig
+*.rej
+*.patch
 
 # Temporary files
 *.tmp
 *.temp
+.tmp/
+.temp/
 .cache/
+tmp/
+temp/
 
-# Node.js (for any web components or tools)
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Python (for any scripts)
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+venv/
+env/
+.venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -73,14 +107,20 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+.unittest.cfg
+.coveragerc
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+.pytest_cache/
 
-# Coverage reports
+# Coverage and profiling
 tarpaulin-report.html
 coverage/
 lcov.info
+*.profraw
+profile/
 
 # Benchmark results
 criterion/
@@ -90,19 +130,269 @@ criterion/
 *.key
 *.crt
 *.p12
+*.pfx
 auth_tokens.json
 credentials.json
 *.rsa
 *.rsa.pub
 cosign.key
 cosign.pub
+.jwt/
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.a
+*.lib
+*.dylib
+*.bin
+*.obj
+*.o
+*.pdb
+*.exp
+*.lib
+*.dll.a
+*.device
+
+# Release builds
+release/
+debug/
+*-release/
+*-debug/
+
+# Signing
+signing/
+signing.*.sh
+
+# Package distributions
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.zip
+*.appimage
+*.dmg
+*.pkg
+
+# macOS app bundles
+*.app/
+*.app/*
+*.app.dSYM.zip
 
 # Temporary build/signing artifacts
 temp/
+*.partial
+
+# Project-specific directories
+ci_logs/
+logs/
+completions/
+man/
+packaging/
+scripts/
+test_output/
+test_results/
+
+# GitHub Actions
+.act/
+.aws.yml
+
+# Testing
+/test
+/tests/
+test_reports/
+.junit.xml
+test-results/
+
+# Editor autocomplete/cache directories
+.tern-port
+.tern-project
+*.sublime-*
+
+# Docker
+.docker/
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.plan
+*.tfvars
+*.tfvars.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.sql.gz
+
+# Secrets
+*.secret
+*.vault
+
+# macOS Finder
+.apdisk
+
+# Vim
+.netrwhist
+
+# Ctags
+tags
+
+# Global gitignore (user-level, should not be committed)
+.gitconfig
+.gitattributes
+
+# Rust-specific
+.rustc_info.json
+CargoHome/
+registry/index
+registry/cache
+.git/checkouts
+
+# Justfile artifacts
+.justfile
+!.justfile
+
+# OS-specific
+.DS_Store?
+.Spotlight-V100
+.Trashes
+._*
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.idea
+*.iws
+.out
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Various
+*.pid
+*.seed
+*.pid.lock
+
+# Cargo.lock is NOT included for library crates - only binaries
+# If this is a library crate, uncomment the following line:
+# Cargo.lock
+
+# Backup files
+*~
+
+# Local history files
+.bash_history
+.zsh_history
+.sh_history
+.psql_history
+.mysql_history
+
+# Editor autosaves
+\#*#
+.#*
+
+# GPG
+secring.*
+
+# asdf
+.tool-versions
+
+# direnv
+.envrc
+
+# haskell
+.stack-work/
+
+# go
+*.test
+*.out
+
+# latex
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+
+# markdown
+*.markdownlintcache
+
+# mercurial
+.hg/
+
+# quilt
+.quiltrc
+
+# svn
+.svn/
+
+# Fossil
+.fossil
+.fossil-settings/
+
+# RCS
+*,v
+
+# CVS
+CVS/
+*,v
+.picasa.ini
+
+# Audio
+*.aac
+*.flac
+*.m4a
+*.mp3
+*.ogg
+*.wav
+
+# Video
+*.avi
+*.flv
+*.m4v
+*.mkv
+*.mov
+*.mp4
+*.mpeg
+*.mpg
+*.webm
+*.wmv
+
+# Images
+*.bmp
+*.gif
+*.ico
+*.jpeg
+*.jpg
+*.png
+*.svg
+*.webp
+*.xpm
+
+# Fonts
+*.eot
+*.otf
+*.ttf
+*.woff
+*.woff2
+
+# Archives
+*.7z
+*.gz
+*.rar
+*.tar
+*.xz
+*.zip
 
 # Claude Code specific
 .claude/
-
-# Test artifacts
-test_output/
-test_results/

@@ -17,9 +17,11 @@ use crate::git;
 pub async fn execute(cmd: McpCommand) -> Result<()> {
     match cmd.action {
         crate::cli::McpAction::Server { port: _ } => {
-            println!("⚠️  TCP server mode not implemented yet. Use 'rco mcp stdio' for now.");
-            println!("💡 For Cursor integration, use: rco mcp stdio");
-            Ok(())
+            anyhow::bail!(
+                "TCP server mode is not yet implemented.\n\
+                 Use 'rco mcp stdio' for MCP connections (Cursor, Claude Desktop, etc.).\n\
+                 TCP server support is planned for a future release."
+            );
         }
         crate::cli::McpAction::Stdio => start_stdio_server().await,
     }
@@ -182,9 +184,13 @@ async fn generate_commit_message_mcp(
         }
     };
 
-    // Apply commitlint rules
-    config.load_with_commitlint().ok();
-    config.apply_commitlint_rules().ok();
+    // Apply commitlint rules (log warnings but don't fail)
+    if let Err(e) = config.load_with_commitlint() {
+        tracing::warn!("Failed to load commitlint config: {}", e);
+    }
+    if let Err(e) = config.apply_commitlint_rules() {
+        tracing::warn!("Failed to apply commitlint rules: {}", e);
+    }
 
     // Get staged diff
     let diff = match git::get_staged_diff() {
@@ -260,9 +266,13 @@ async fn show_commit_prompt_mcp(
         }
     };
 
-    // Apply commitlint rules
-    config.load_with_commitlint().ok();
-    config.apply_commitlint_rules().ok();
+    // Apply commitlint rules (log warnings but don't fail)
+    if let Err(e) = config.load_with_commitlint() {
+        tracing::warn!("Failed to load commitlint config: {}", e);
+    }
+    if let Err(e) = config.apply_commitlint_rules() {
+        tracing::warn!("Failed to apply commitlint rules: {}", e);
+    }
 
     // Get staged diff
     let diff = match git::get_staged_diff() {

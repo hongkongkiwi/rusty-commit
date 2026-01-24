@@ -23,12 +23,11 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     config.load_with_commitlint()?;
     config.apply_commitlint_rules()?;
 
-    // Determine effective generate count (CLI > config > default)
-    let generate_count = if options.generate_count > 1 {
-        options.generate_count
-    } else {
-        config.generate_count.unwrap_or(1).clamp(1, 5)
-    };
+    // Determine effective generate count (CLI > config > default), clamped to 1-5
+    let generate_count = options
+        .generate_count
+        .max(config.generate_count.unwrap_or(1))
+        .clamp(1, 5);
 
     // Check for staged files or changes
     let staged_files = git::get_staged_files()?;
@@ -65,6 +64,12 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     // Apply .rcoignore if it exists
     let diff = filter_diff_by_rcoignore(&diff)?;
 
+    // Check if diff became empty after filtering
+    if diff.trim().is_empty() {
+        println!("{}", "No changes to commit after applying .rcoignore filters.".yellow());
+        return Ok(());
+    }
+
     // Check if diff is too large - implement chunking if needed
     let max_tokens = config.tokens_max_input.unwrap_or(4096);
     let token_count = utils::token::estimate_tokens(&diff)?;
@@ -83,6 +88,13 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     } else {
         diff
     };
+
+    // Check if diff is empty after chunking
+    if final_diff.trim().is_empty() {
+        anyhow::bail!(
+            "Diff is empty after processing. This may indicate all files were excluded by .rcoignore."
+        );
+    }
 
     // If --show-prompt flag is set, just show the prompt and exit
     if options.show_prompt {
@@ -506,42 +518,67 @@ fn chunk_diff(diff: &str, max_tokens: usize) -> Result<String> {
     }
 }
 
-/// Copy text to clipboard
+/// Copy text to clipboard with proper error handling
 fn copy_to_clipboard(text: &str) -> Result<()> {
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
-        use std::process::Command;
-        Command::new("pbcopy").stdin(std::process::Stdio::from(
-            std::fs::File::create("/dev/null")?,
-        )).output()?;
-        let mut process = Command::new("pbcopy").stdin(std::process::Stdio::piped()).spawn()?;
-        if let Some(ref mut stdin) = process.stdin {
-            stdin.write_all(text.as_bytes())?;
-        } else {
-            anyhow::bail!("Failed to get stdin for pbcopy");
+        use std::process::{Command, Stdio};
+
+        // Use pbcopy with properly piped stdin
+        let mut process = Command::new("pbcopy")
+            .stdin(Stdio::piped())
+            .spawn()
+            .context("Failed to spawn pbcopy process")?;
+
+        // Write to stdin, handling the Result properly
+        {
+            let stdin = process.stdin.as_mut().context("pbcopy stdin not available")?;
+            stdin.write_all(text.as_bytes()).context("Failed to write to clipboard")?;
         }
-        process.wait()?;
+
+        let status = process
+            .wait()
+            .context("Failed to wait for pbcopy process")?;
+
+        if !status.success() {
+            anyhow::bail!("pbcopy exited with error: {:?}", status);
+        }
     }
 
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
-        use std::process::Command;
-        Command::new("xclip")
-            .args(["-selection", "clipboard"])
-            .stdin(std::process::Stdio::piped())
-            .output()?;
-        let mut process = Command::new("xclip")
-            .args(["-selection", "clipboard"])
-            .stdin(std::process::Stdio::piped())
-            .spawn()?;
-        if let Some(ref mut stdin) = process.stdin {
-            stdin.write_all(text.as_bytes())?;
+        use std::process::{Command, Stdio};
+
+        // Check if xclip is available, otherwise try xsel as fallback
+        let use_xclip = !Command::new("which").arg("xclip").output()?.stdout.is_empty();
+
+        let (cmd_name, args) = if use_xclip {
+            ("xclip", vec!["-selection", "clipboard"])
         } else {
-            anyhow::bail!("Failed to get stdin for xclip");
+            ("xsel", vec!["--clipboard", "--input"])
+        };
+
+        let mut process = Command::new(cmd_name)
+            .args(&args)
+            .stdin(Stdio::piped())
+            .spawn()
+            .context(format!("Failed to spawn {} process", cmd_name))?;
+
+        {
+            let stdin = process.stdin.as_mut().context(format!("{} stdin not available", cmd_name))?;
+            stdin.write_all(text.as_bytes())
+                .context("Failed to write to clipboard")?;
         }
-        process.wait()?;
+
+        let status = process
+            .wait()
+            .context(format!("Failed to wait for {} process", cmd_name))?;
+
+        if !status.success() {
+            anyhow::bail!("{} exited with error: {:?}", cmd_name, status);
+        }
     }
 
     #[cfg(target_os = "windows")]

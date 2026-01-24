@@ -6,4 +6,5 @@ pub mod githook;
 pub mod mcp;
 pub mod model;
 pub mod pr;
+pub mod setup;
 pub mod update;

@@ -52,6 +52,21 @@ pub struct GlobalOptions {
     /// Exclude specific files from the diff sent to AI
     #[arg(short = 'x', long = "exclude")]
     pub exclude_files: Option<Vec<String>>,
+
+    /// Show detailed timing information
+    #[arg(long = "timing", default_value = "false")]
+    pub timing: bool,
+
+    /// Strip <thinking> tags from AI responses (for reasoning models)
+    #[arg(long = "strip-thinking", default_value = "false")]
+    pub strip_thinking: bool,
+}
+
+#[derive(Parser)]
+pub struct SetupCommand {
+    /// Skip interactive prompts and use defaults
+    #[arg(long, default_value = "false")]
+    pub defaults: bool,
 }
 
 #[derive(Subcommand)]
@@ -80,6 +95,9 @@ pub enum Commands {
 
     /// Interactive model selection
     Model(ModelCommand),
+
+    /// Interactive setup wizard
+    Setup(SetupCommand),
 }
 
 #[derive(Parser)]

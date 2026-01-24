@@ -46,6 +46,7 @@ async fn main() -> Result<()> {
         Some(cli::Commands::Update(cmd)) => commands::update::execute(cmd).await,
         Some(cli::Commands::Pr(cmd)) => commands::pr::execute(cmd).await,
         Some(cli::Commands::Model(cmd)) => commands::model::execute(cmd).await,
+        Some(cli::Commands::Setup(cmd)) => commands::setup::execute(cmd).await,
         None => {
             // Default to commit command
             commands::commit::execute(cli.global).await

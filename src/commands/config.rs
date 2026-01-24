@@ -174,6 +174,135 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
 
             println!("\n{}", "═".repeat(60).dimmed());
         }
+        ConfigAction::AddProvider { provider, alias } => {
+            println!("\n{}", "🔧 Add Provider Wizard".bold().green());
+            println!("{}", "═".repeat(50).dimmed());
+
+            let provider = provider.unwrap_or_else(|| {
+                println!("\nAvailable providers:");
+                println!("  - openai      (OpenAI API, Codex OAuth)");
+                println!("  - anthropic   (Anthropic Claude)");
+                println!("  - claude-code (Anthropic Claude Code OAuth)");
+                println!("  - qwen        (Qwen AI)");
+                println!("  - ollama      (Ollama local models)");
+                println!("  - xai         (xAI Grok)");
+                println!("  - gemini      (Google Gemini)");
+                println!("  - perplexity  (Perplexity)");
+                println!("  - azure       (Azure OpenAI)");
+                println!("\nEnter provider name: ");
+                "openai".to_string()
+            });
+
+            let alias = alias.unwrap_or_else(|| format!("{}-default", provider));
+
+            println!("\nTo add provider '{alias}' with provider '{provider}':");
+            println!("  1. API Key: rco config set RCO_API_KEY=<your_key>");
+            println!("  2. Set as default: rco config use-account {alias}");
+            println!("\nNote: Full interactive setup coming in a future update");
+        }
+        ConfigAction::ListAccounts => {
+            println!("\n{}", "📋 Configured Accounts".bold().green());
+            println!("{}", "═".repeat(50).dimmed());
+
+            if config.has_accounts() {
+                match config.list_accounts() {
+                    Ok(accounts) => {
+                        for account in accounts {
+                            let default_marker = if account.is_default {
+                                " [DEFAULT]".bold().green()
+                            } else {
+                                "".normal()
+                            };
+                            println!(
+                                "{}: {}{}",
+                                account.alias.yellow(),
+                                account.provider,
+                                default_marker
+                            );
+                            if let Some(model) = &account.model {
+                                println!("   Model: {}", model.dimmed());
+                            }
+                            if let Some(api_url) = &account.api_url {
+                                println!("   URL: {}", api_url.dimmed());
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{}", format!("❌ Failed to list accounts: {e}").red());
+                    }
+                }
+            } else {
+                println!("\n{}", "No accounts configured yet.".dimmed());
+                println!("{}", "Use: rco config add-provider to add an account".dimmed());
+            }
+        }
+        ConfigAction::UseAccount { alias } => {
+            println!("\n{}", format!("🔄 Switching to account: {}", alias).bold().green());
+
+            match config.set_default_account(&alias) {
+                Ok(_) => {
+                    println!("{}", format!("✅ Now using account: {alias}").green());
+                    println!("\n{}", "Note: Account switching requires restart of commands".dimmed());
+                }
+                Err(e) => {
+                    eprintln!("{}", format!("❌ Failed to switch account: {e}").red());
+                }
+            }
+        }
+        ConfigAction::RemoveAccount { alias } => {
+            println!("\n{}", format!("🗑️  Removing account: {}", alias).bold().yellow());
+
+            match config.remove_account(&alias) {
+                Ok(_) => {
+                    println!("{}", format!("✅ Account '{alias}' removed").green());
+                }
+                Err(e) => {
+                    eprintln!("{}", format!("❌ Failed to remove account: {e}").red());
+                }
+            }
+        }
+        ConfigAction::ShowAccount { alias } => {
+            let alias = alias.as_deref().unwrap_or("default");
+
+            println!("\n{}", format!("👤 Account: {}", alias).bold().green());
+            println!("{}", "═".repeat(50).dimmed());
+
+            match config.get_account(alias) {
+                Ok(Some(account)) => {
+                    println!("Alias: {}", account.alias.yellow());
+                    println!("Provider: {}", account.provider);
+                    println!("Default: {}", if account.is_default { "Yes" } else { "No" });
+
+                    if let Some(model) = &account.model {
+                        println!("Model: {}", model);
+                    }
+                    if let Some(api_url) = &account.api_url {
+                        println!("API URL: {}", api_url);
+                    }
+
+                    match &account.auth {
+                        crate::config::accounts::AuthMethod::ApiKey { .. } => {
+                            println!("Auth: API Key 🔑");
+                        }
+                        crate::config::accounts::AuthMethod::OAuth { provider, account_id } => {
+                            println!("Auth: OAuth ({}) - Account: {}", provider, account_id);
+                        }
+                        crate::config::accounts::AuthMethod::EnvVar { name } => {
+                            println!("Auth: Environment Variable ({})", name);
+                        }
+                        crate::config::accounts::AuthMethod::Bearer { .. } => {
+                            println!("Auth: Bearer Token 🔖");
+                        }
+                    }
+                }
+                Ok(None) => {
+                    eprintln!("{}", format!("❌ Account '{alias}' not found").red());
+                }
+                Err(e) => {
+                    eprintln!("{}", format!("❌ Failed to get account: {e}").red());
+                }
+            }
+        }
     }
 
     Ok(())

@@ -46,6 +46,10 @@ async fn login() -> Result<()> {
             "Use Claude Pro/Max subscription or API key",
         ),
         (
+            "OpenAI Codex (ChatGPT)",
+            "Use ChatGPT Pro/Plus subscription via OAuth",
+        ),
+        (
             "GitHub Copilot",
             "Use GitHub Copilot subscription (recommended)",
         ),
@@ -65,6 +69,7 @@ async fn login() -> Result<()> {
         ("DeepInfra", "DeepInfra hosted models"),
         ("Hugging Face", "Hugging Face Inference API"),
         ("GitHub Models", "GitHub hosted AI models"),
+        ("Qwen (Alibaba)", "Qwen AI models via DashScope"),
         ("Ollama", "Local Ollama instance"),
         ("Other", "Custom OpenAI-compatible provider"),
     ];
@@ -82,22 +87,24 @@ async fn login() -> Result<()> {
 
     match selection {
         0 => handle_anthropic_auth().await,
-        1 => handle_github_copilot_auth().await,
-        2 => handle_openai_auth().await,
-        3 => handle_gemini_auth().await,
-        4 => handle_openrouter_auth().await,
-        5 => handle_perplexity_auth().await,
-        6 => handle_groq_auth().await,
-        7 => handle_deepseek_auth().await,
-        8 => handle_mistral_auth().await,
-        9 => handle_aws_bedrock_auth().await,
-        10 => handle_azure_auth().await,
-        11 => handle_together_auth().await,
-        12 => handle_deepinfra_auth().await,
-        13 => handle_huggingface_auth().await,
-        14 => handle_github_models_auth().await,
-        15 => handle_ollama_auth().await,
-        16 => handle_manual_auth().await,
+        1 => handle_codex_auth().await,
+        2 => handle_github_copilot_auth().await,
+        3 => handle_openai_auth().await,
+        4 => handle_gemini_auth().await,
+        5 => handle_openrouter_auth().await,
+        6 => handle_perplexity_auth().await,
+        7 => handle_groq_auth().await,
+        8 => handle_deepseek_auth().await,
+        9 => handle_mistral_auth().await,
+        10 => handle_aws_bedrock_auth().await,
+        11 => handle_azure_auth().await,
+        12 => handle_together_auth().await,
+        13 => handle_deepinfra_auth().await,
+        14 => handle_huggingface_auth().await,
+        15 => handle_github_models_auth().await,
+        16 => handle_qwen_auth().await,
+        17 => handle_ollama_auth().await,
+        18 => handle_manual_auth().await,
         _ => unreachable!(),
     }
 }
@@ -213,6 +220,79 @@ async fn handle_claude_api_key_creation() -> Result<()> {
     );
 
     handle_manual_api_key("anthropic").await
+}
+
+/// Handle OpenAI Codex (ChatGPT) OAuth authentication
+async fn handle_codex_auth() -> Result<()> {
+    use crate::auth::codex_oauth::CodexOAuthClient;
+
+    println!("\n{}", "🔐 OpenAI Codex (ChatGPT) Authentication".cyan().bold());
+    println!(
+        "{}",
+        "This will use your ChatGPT Pro/Plus subscription".dimmed()
+    );
+
+    let oauth_client = CodexOAuthClient::new();
+    let (auth_url, verifier) = oauth_client.get_authorization_url()?;
+
+    println!(
+        "\n{}",
+        "Please visit the following URL to authenticate:".bold()
+    );
+    println!("{}", auth_url.blue().underline());
+
+    // Try to open browser automatically
+    if webbrowser::open(&auth_url).is_ok() {
+        println!("\n{}", "✓ Browser opened automatically".green());
+    } else {
+        println!(
+            "\n{}",
+            "⚠ Could not open browser automatically. Please visit the URL above.".yellow()
+        );
+    }
+
+    // Show progress spinner
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.cyan} {msg}")
+            .unwrap()
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+    );
+    pb.set_message("Waiting for authentication...");
+    pb.enable_steady_tick(Duration::from_millis(100));
+
+    // Wait for callback
+    match oauth_client.start_callback_server(verifier).await {
+        Ok(token_response) => {
+            pb.finish_and_clear();
+
+            // Store tokens
+            let expires_in = token_response.expires_in.unwrap_or(3600);
+            crate::auth::token_storage::store_tokens(
+                &token_response.access_token,
+                Some(&token_response.refresh_token),
+                Some(expires_in),
+            )?;
+
+            println!("{}", "✓ Authentication successful!".green().bold());
+            println!("  You can now use Rusty Commit with your ChatGPT account.");
+
+            // Update config to use codex provider
+            let mut config = Config::load()?;
+            config.ai_provider = Some("codex".to_string());
+            config.model = Some("gpt-5.1-codex".to_string());
+            config.api_url = Some("https://chatgpt.com/backend-api/codex/responses".to_string());
+            config.save()?;
+
+            Ok(())
+        }
+        Err(e) => {
+            pb.finish_and_clear();
+            println!("{}", format!("✗ Authentication failed: {}", e).red().bold());
+            Err(e)
+        }
+    }
 }
 
 /// Handle OpenAI authentication
@@ -501,6 +581,22 @@ async fn handle_mistral_auth() -> Result<()> {
     config.api_url = Some("https://api.mistral.ai/v1".to_string());
 
     handle_manual_api_key("mistral").await
+}
+
+/// Handle Qwen AI (Alibaba DashScope) authentication
+async fn handle_qwen_auth() -> Result<()> {
+    println!("\n{}", "🌟 Qwen AI (Alibaba DashScope) Authentication".cyan().bold());
+    println!(
+        "{}",
+        "Get your API key from: https://dashscope.console.aliyun.com/".cyan()
+    );
+
+    let mut config = Config::load()?;
+    config.ai_provider = Some("qwen".to_string());
+    config.model = Some("qwen3-coder:480b".to_string());
+    config.api_url = Some("https://dashscope.aliyuncs.com/compatible-mode/v1".to_string());
+
+    handle_manual_api_key("qwen").await
 }
 
 /// Handle AWS Bedrock authentication

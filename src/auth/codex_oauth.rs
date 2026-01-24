@@ -4,7 +4,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
@@ -13,7 +13,16 @@ pub const CODEX_AUTHORIZE_URL: &str = "https://auth.openai.com/oauth/authorize";
 pub const CODEX_TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
 pub const CODEX_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 pub const CODEX_REDIRECT_URI: &str = "http://localhost:1455/auth/callback";
-pub const CODEX_API_ENDPOINT: &str = "https://chatgpt.com/backend-api/codex/responses";
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct CodeXTokenResponse {
+    pub id_token: String,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: Option<u64>,
+    pub token_type: String,
+}
 
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
@@ -31,15 +40,6 @@ struct CodeXRefreshTokenRequest {
     grant_type: String,
     refresh_token: String,
     client_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CodeXTokenResponse {
-    pub id_token: String,
-    pub access_token: String,
-    pub refresh_token: String,
-    pub expires_in: Option<u64>,
-    pub token_type: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -246,6 +246,7 @@ impl CodexOAuthClient {
     }
 
     /// Refresh an access token
+    #[allow(dead_code)]
     pub async fn refresh_token(&self, refresh_token: &str) -> Result<CodeXTokenResponse> {
         let params = [
             ("grant_type", "refresh_token"),

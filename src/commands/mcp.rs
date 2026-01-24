@@ -70,6 +70,9 @@ impl ServerHandler for RustyCommitMcpServer {
             server_info: Implementation {
                 name: "rustycommit".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
+                icons: None,
+                title: None,
+                website_url: None,
             },
             instructions: Some("Rusty Commit MCP Server - Generate AI-powered commit messages for your Git repositories.".to_string()),
         }
@@ -110,6 +113,9 @@ impl ServerHandler for RustyCommitMcpServer {
                     ),
                     output_schema: None,
                     annotations: None,
+                    icons: None,
+                    title: None,
+                    meta: None,
                 },
                 Tool {
                     name: "show_commit_prompt".into(),
@@ -133,12 +139,16 @@ impl ServerHandler for RustyCommitMcpServer {
                     ),
                     output_schema: None,
                     annotations: None,
+                    icons: None,
+                    title: None,
+                    meta: None,
                 },
             ];
 
             Ok(ListToolsResult {
                 tools,
                 next_cursor: None,
+                meta: None,
             })
         }
     }

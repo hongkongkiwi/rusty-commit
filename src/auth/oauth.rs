@@ -8,8 +8,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
-use super::token_storage::TokenStorage;
-
 // Claude OAuth endpoints (similar to Claude Code)
 pub const AUTHORIZE_URL: &str = "https://claude.ai/oauth/authorize";
 pub const TOKEN_URL: &str = "https://claude.ai/oauth/token";

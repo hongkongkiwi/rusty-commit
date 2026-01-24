@@ -148,7 +148,7 @@ async fn select_model_interactive(config: &mut Config) -> Result<()> {
 fn get_provider_models(provider: &str) -> Vec<String> {
     match provider {
         "openai" | "deepseek" | "groq" | "openrouter" | "together" | "deepinfra"
-        | "huggingface" | "mistral" | "fireworks" | "moonshot" | "qwen" | "qwen-coder"
+        | "huggingface" | "mistral" | "fireworks" | "moonshot"
         | "amazon-bedrock" | "github-models" => vec![
             "gpt-4o".to_string(),
             "gpt-4o-mini".to_string(),
@@ -161,6 +161,14 @@ fn get_provider_models(provider: &str) -> Vec<String> {
             "claude-opus-4-20250514".to_string(),
             "claude-3-5-sonnet-20241022".to_string(),
             "claude-3-5-haiku-20241022".to_string(),
+        ],
+        "qwen" | "qwen-coder" | "dashscope" | "alibaba" => vec![
+            "qwen3-coder:480b".to_string(),
+            "qwen3-coder:30b-a3b".to_string(),
+            "qwen3-vl-235b-instruct".to_string(),
+            "qwen-turbo".to_string(),
+            "qwen-plus".to_string(),
+            "qwen-max".to_string(),
         ],
         "ollama" => vec![
             "llama3.3".to_string(),
@@ -182,6 +190,11 @@ fn get_provider_models(provider: &str) -> Vec<String> {
             "grok-2".to_string(),
             "grok-beta".to_string(),
             "grok-2-vision-1212".to_string(),
+        ],
+        "codex" => vec![
+            "gpt-5.1-codex".to_string(),
+            "gpt-5.1-codex-mini".to_string(),
+            "gpt-5.1-codex-max".to_string(),
         ],
         "perplexity" => vec![
             "sonar-reasoning".to_string(),

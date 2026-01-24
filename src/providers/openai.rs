@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use async_openai::{
     config::OpenAIConfig,
-    types::{
-        ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
-        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
+    types::chat::{
+        ChatCompletionRequestSystemMessage, ChatCompletionRequestUserMessage,
+        CreateChatCompletionRequestArgs,
     },
     Client,
 };
@@ -78,16 +78,11 @@ impl AIProvider for OpenAIProvider {
         let prompt = build_prompt(diff, context, config, full_gitmoji);
 
         let messages = vec![
-            ChatCompletionRequestMessage::System(
-                ChatCompletionRequestSystemMessageArgs::default()
-                    .content("You are an expert at writing clear, concise git commit messages.")
-                    .build()?,
-            ),
-            ChatCompletionRequestMessage::User(
-                ChatCompletionRequestUserMessageArgs::default()
-                    .content(prompt)
-                    .build()?,
-            ),
+            ChatCompletionRequestSystemMessage::from(
+                "You are an expert at writing clear, concise git commit messages.",
+            )
+            .into(),
+            ChatCompletionRequestUserMessage::from(prompt).into(),
         ];
 
         // Handle model-specific parameters

@@ -63,19 +63,14 @@ pub trait AIProvider: Send + Sync {
         );
 
         let messages = vec![
-            async_openai::types::ChatCompletionRequestMessage::System(
-                async_openai::types::ChatCompletionRequestSystemMessageArgs::default()
-                    .content("You are an expert at writing pull request descriptions.")
-                    .build()?,
-            ),
-            async_openai::types::ChatCompletionRequestMessage::User(
-                async_openai::types::ChatCompletionRequestUserMessageArgs::default()
-                    .content(prompt)
-                    .build()?,
-            ),
+            async_openai::types::chat::ChatCompletionRequestSystemMessage::from(
+                "You are an expert at writing pull request descriptions.",
+            )
+            .into(),
+            async_openai::types::chat::ChatCompletionRequestUserMessage::from(prompt).into(),
         ];
 
-        let request = async_openai::types::CreateChatCompletionRequestArgs::default()
+        let request = async_openai::types::chat::CreateChatCompletionRequestArgs::default()
             .model(&config.model.clone().unwrap_or_else(|| "gpt-3.5-turbo".to_string()))
             .messages(messages)
             .temperature(0.7)

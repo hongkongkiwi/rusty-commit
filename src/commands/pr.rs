@@ -211,8 +211,10 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
     {
         use clipboard::ClipboardContext;
         use clipboard::ClipboardProvider;
-        let mut ctx: ClipboardContext = ClipboardProvider::new()?;
-        ctx.set_contents(text.to_string())?;
+        let mut ctx: ClipboardContext = ClipboardProvider::new()
+            .map_err(|e| anyhow::anyhow!("Failed to access clipboard: {}", e))?;
+        ctx.set_contents(text.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to set clipboard contents: {}", e))?;
     }
 
     Ok(())

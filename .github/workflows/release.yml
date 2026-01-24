@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/rusty-commit
+          path: target/${{ matrix.target }}/release/rco
           retention-days: 5
 
   # Build binaries for non-Linux platforms
@@ -68,7 +68,7 @@ jobs:
       matrix:
         include:
           # macOS Intel
-          - os: macos-14
+          - os: macos-13
             target: x86_64-apple-darwin
           # macOS Apple Silicon
           - os: macos-latest
@@ -110,7 +110,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/rusty-commit${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
+          path: target/${{ matrix.target }}/release/rco${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
           retention-days: 5
 
   # Create GitHub release
@@ -146,14 +146,14 @@ jobs:
             target=$(basename "$dir" | sed 's/binary-//')
             case "$target" in
               x86_64-pc-windows-msvc)
-                if [ -f "$dir/rusty-commit.exe" ]; then
-                  (cd "$dir" && zip -r "$GITHUB_WORKSPACE/release/rusty-commit-v${VERSION}-${target}.zip" rusty-commit.exe)
+                if [ -f "$dir/rco.exe" ]; then
+                  (cd "$dir" && zip -r "$GITHUB_WORKSPACE/release/rusty-commit-v${VERSION}-${target}.zip" rco.exe)
                 fi
                 ;;
               *)
-                if [ -f "$dir/rusty-commit" ]; then
+                if [ -f "$dir/rco" ]; then
                   tmpdir=$(mktemp -d)
-                  cp "$dir/rusty-commit" "$tmpdir/rusty-commit"
+                  cp "$dir/rco" "$tmpdir/rco"
                   tar -C "$tmpdir" -czf "release/rusty-commit-v${VERSION}-${target}.tar.gz" .
                   rm -rf "$tmpdir"
                 fi
@@ -301,7 +301,7 @@ jobs:
 
           # Create tarball with proper directory structure (tarball name without .tar.gz must match extracted dir)
           mkdir -p "tmp-pkg-dir/${pkgname}-${VERSION}"
-          cp target/${{ matrix.target }}/release/rusty-commit "tmp-pkg-dir/${pkgname}-${VERSION}/"
+          cp target/${{ matrix.target }}/release/rco "tmp-pkg-dir/${pkgname}-${VERSION}/"
           tar -C tmp-pkg-dir -czf "rpmbuild/SOURCES/${pkgname}-${VERSION}.tar.gz" "${pkgname}-${VERSION}"
           rm -rf tmp-pkg-dir
 
@@ -347,57 +347,47 @@ jobs:
 
   build-apk:
     name: Build Alpine Package (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
             target: x86_64-unknown-linux-musl
             apk_arch: x86_64
+            docker_image: rust:1-alpine
           - arch: arm64
-            runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             apk_arch: aarch64
+            docker_image: rust:1-alpine
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust and musl-tools
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up QEMU for Docker
+        uses: docker/setup-qemu-action@v3
         with:
-          targets: ${{ matrix.target }}
+          platforms: ${{ matrix.arch == 'amd64' && 'amd64' || 'arm64' }}
 
-      - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
-
-      - name: Install musl tools and OpenSSL
+      - name: Build static binary using Docker
         run: |
-          sudo apt-get update
-          if [ "${{ matrix.arch }}" = "amd64" ]; then
-            sudo apt-get install -y musl-tools gcc-multilib
-          else
-            sudo apt-get install -y musl-tools
-          fi
-
-      - name: Build static binary
-        env:
-          OPENSSL_VENDORED: 1
-        run: cargo build --release --target ${{ matrix.target }}
+          docker run --rm \
+            -v ${{ github.workdir }}:/workdir \
+            -w /workdir \
+            --platform linux/${{ matrix.arch == 'amd64' && 'amd64' || 'arm64' }} \
+            ${{ matrix.docker_image }} \
+            sh -c "apk add musl-dev && cargo build --release --target ${{ matrix.target }}"
 
       - name: Create Alpine package structure
         run: |
           mkdir -p apk-build/bin
-          cp target/${{ matrix.target }}/release/rusty-commit apk-build/bin/
+          cp target/${{ matrix.target }}/release/rco apk-build/bin/
 
       - name: Upload Linux musl binary
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/rusty-commit
+          path: target/${{ matrix.target }}/release/rco
           retention-days: 5
 
       - name: Create APKBUILD
@@ -567,8 +557,8 @@ jobs:
       - name: Prepare Docker binaries
         run: |
           mkdir -p docker-bin
-          mv docker-bin/amd64/rusty-commit docker-bin/rusty-commit-amd64
-          mv docker-bin/arm64/rusty-commit docker-bin/rusty-commit-arm64
+          mv docker-bin/amd64/rco docker-bin/rusty-commit-amd64
+          mv docker-bin/arm64/rco docker-bin/rusty-commit-arm64
           chmod +x docker-bin/rusty-commit-amd64 docker-bin/rusty-commit-arm64
 
       - name: Set up Docker Buildx

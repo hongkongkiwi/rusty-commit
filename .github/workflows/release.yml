@@ -580,12 +580,6 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Prepare OCR tags
-        id: ocr-tags
-        run: |
-          ocr_tags=$(echo "${{ steps.meta.outputs.tags }}" | sed 's/$/-ocr/' | paste -sd, -)
-          echo "tags=${ocr_tags}" >> "$GITHUB_OUTPUT"
-
       - name: Build and push multi-architecture Docker image
         uses: docker/build-push-action@v6
         with:
@@ -594,20 +588,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push multi-architecture Docker image (OCR)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.ocr
-          push: true
-          tags: ${{ steps.ocr-tags.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            OCR_LANGS=eng
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

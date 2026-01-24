@@ -9,8 +9,10 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 // Vercel OAuth endpoints
+#[allow(dead_code)]
 pub const VERCEL_AUTHORIZE_URL: &str = "https://vercel.com/oauth/authorize";
 pub const VERCEL_TOKEN_URL: &str = "https://api.vercel.com/oauth/token";
+#[allow(dead_code)]
 pub const VERCEL_API_URL: &str = "https://api.vercel.com";
 
 #[derive(Debug, Serialize)]
@@ -32,6 +34,7 @@ struct VercelRefreshTokenRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct VercelTokenResponse {
     pub access_token: String,
     pub refresh_token: Option<String>,
@@ -47,9 +50,11 @@ struct VercelErrorResponse {
 }
 
 /// OAuth client for Vercel AI (AI SDK integration)
+#[allow(dead_code)]
 pub struct VercelOAuthClient {
     client: Client,
     client_id: String,
+    #[allow(dead_code)]
     redirect_uri: String,
 }
 
@@ -59,6 +64,7 @@ impl Default for VercelOAuthClient {
     }
 }
 
+#[allow(dead_code)]
 impl VercelOAuthClient {
     pub fn new() -> Self {
         Self {
@@ -202,6 +208,7 @@ impl VercelOAuthClient {
 }
 
 /// Generate random bytes
+#[allow(dead_code)]
 fn generate_random_bytes(dest: &mut [u8]) -> Result<()> {
     use rand::RngCore;
     let mut rng = rand::rng();

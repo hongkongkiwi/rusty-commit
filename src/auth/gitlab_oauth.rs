@@ -9,11 +9,14 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 // GitLab OAuth endpoints
+#[allow(dead_code)]
 pub const GITLAB_AUTHORIZE_URL: &str = "https://gitlab.com/oauth/authorize";
 pub const GITLAB_TOKEN_URL: &str = "https://gitlab.com/oauth/token";
+#[allow(dead_code)]
 pub const GITLAB_API_URL: &str = "https://gitlab.com/api/v4";
 
 // GitLab AI Gateway for Claude models
+#[allow(dead_code)]
 pub const GITLAB_AI_GATEWAY_URL: &str = "https://gitlab.ai/api/v1";
 
 #[derive(Debug, Serialize)]
@@ -35,6 +38,7 @@ struct GitLabRefreshTokenRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct GitLabTokenResponse {
     pub access_token: String,
     pub refresh_token: Option<String>,
@@ -50,9 +54,11 @@ struct GitLabErrorResponse {
 }
 
 /// OAuth client for GitLab AI (Claude models on GitLab)
+#[allow(dead_code)]
 pub struct GitLabOAuthClient {
     client: Client,
     client_id: String,
+    #[allow(dead_code)]
     redirect_uri: String,
 }
 
@@ -62,6 +68,7 @@ impl Default for GitLabOAuthClient {
     }
 }
 
+#[allow(dead_code)]
 impl GitLabOAuthClient {
     pub fn new() -> Self {
         // GitLab CLI OAuth app for rusty-commit
@@ -206,6 +213,7 @@ impl GitLabOAuthClient {
 }
 
 /// Generate random bytes
+#[allow(dead_code)]
 fn generate_random_bytes(dest: &mut [u8]) -> Result<()> {
     use rand::RngCore;
     let mut rng = rand::rng();

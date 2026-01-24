@@ -41,6 +41,7 @@ pub async fn get_auth_header(config: &Config) -> Result<String> {
 // ============================================
 
 /// Check if an account is authenticated
+#[allow(dead_code)]
 pub fn is_account_authenticated(account: &AccountConfig) -> bool {
     match &account.auth {
         AuthMethod::ApiKey { key_id } => {
@@ -70,6 +71,7 @@ pub fn is_account_authenticated(account: &AccountConfig) -> bool {
 }
 
 /// Get authentication header for an account
+#[allow(dead_code)]
 pub fn get_account_auth_header(account: &AccountConfig) -> Result<String> {
     match &account.auth {
         AuthMethod::ApiKey { key_id } => {
@@ -122,6 +124,7 @@ pub fn get_account_auth_header(account: &AccountConfig) -> Result<String> {
 }
 
 /// Get provider-specific auth requirements for an account
+#[allow(dead_code)]
 pub fn get_account_auth_provider(account: &AccountConfig) -> Option<&str> {
     match &account.auth {
         AuthMethod::OAuth { provider, .. } => Some(provider),

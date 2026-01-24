@@ -599,6 +599,7 @@ impl Config {
 // Multi-account support methods
 // ============================================
 
+#[allow(dead_code)]
 impl Config {
     /// Get the active account config, if available
     pub fn get_active_account(&self) -> Result<Option<accounts::AccountConfig>> {
@@ -634,5 +635,22 @@ impl Config {
         } else {
             Ok(Vec::new())
         }
+    }
+
+    /// Set an account as the default (active) account
+    pub fn set_default_account(&mut self, alias: &str) -> Result<()> {
+        let mut accounts_config = accounts::AccountsConfig::load()?.unwrap_or_default();
+        accounts_config.set_active_account(alias)?;
+        accounts_config.save()?;
+        Ok(())
+    }
+
+    /// Remove an account
+    pub fn remove_account(&mut self, alias: &str) -> Result<()> {
+        let mut accounts_config = accounts::AccountsConfig::load()?.unwrap_or_default();
+        if accounts_config.remove_account(alias) {
+            accounts_config.save()?;
+        }
+        Ok(())
     }
 }

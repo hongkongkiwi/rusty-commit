@@ -252,6 +252,7 @@ pub fn has_valid_token() -> bool {
 // ============================================
 
 /// Generate storage key for an account
+#[allow(dead_code)]
 fn account_storage_key(account_id: &str, key_type: &str) -> String {
     format!("rco_account_{}_{}", account_id, key_type)
 }

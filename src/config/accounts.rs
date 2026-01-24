@@ -39,6 +39,7 @@ pub struct AccountsConfig {
     pub accounts: HashMap<String, AccountConfig>,
 }
 
+#[allow(dead_code)]
 impl AccountsConfig {
     /// Get the path to the accounts file
     fn accounts_file_path() -> Result<PathBuf> {
@@ -148,6 +149,7 @@ impl AccountsConfig {
 }
 
 /// Get the secure storage key prefix for an account
+#[allow(dead_code)]
 pub fn account_storage_key(account_alias: &str, key_type: &str) -> String {
     format!("rco_account_{}_{}", account_alias, key_type)
 }

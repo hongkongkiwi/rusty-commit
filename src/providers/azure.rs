@@ -74,6 +74,7 @@ impl AzureProvider {
     }
 
     /// Create provider from account configuration
+    #[allow(dead_code)]
     pub fn from_account(account: &crate::config::accounts::AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
         let endpoint = account
             .api_url

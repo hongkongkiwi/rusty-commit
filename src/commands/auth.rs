@@ -244,6 +244,10 @@ async fn handle_ollama_auth() -> Result<()> {
             "{}",
             "✓ Configured for local Ollama (http://localhost:11434)".green()
         );
+        eprintln!(
+            "{}",
+            "Warning: Using HTTP for local Ollama. This is acceptable for localhost connections.".yellow()
+        );
     } else {
         let url: String = Input::with_theme(&ColorfulTheme::default())
             .with_prompt("Enter Ollama URL")
@@ -251,6 +255,16 @@ async fn handle_ollama_auth() -> Result<()> {
             .interact_text()?;
 
         config.api_url = Some(url.clone());
+
+        // Warn about HTTP usage for non-local URLs
+        if url.starts_with("http://") && !url.contains("localhost") && !url.contains("127.0.0.1") {
+            eprintln!(
+                "{}",
+                "Warning: Using insecure HTTP connection. Your API requests may be intercepted. \
+                Consider using HTTPS for production use.".red()
+            );
+        }
+
         println!(
             "{}",
             format!("✓ Configured for remote Ollama ({})", url).green()
@@ -785,6 +799,7 @@ async fn status() -> Result<()> {
 }
 
 /// Automatically refresh token if needed
+#[allow(dead_code)]
 pub async fn auto_refresh_token() -> Result<()> {
     // Check if we have tokens and they're expiring soon
     if let Some(tokens) = token_storage::get_tokens()? {
@@ -806,9 +821,17 @@ pub async fn auto_refresh_token() -> Result<()> {
                         tracing::debug!("Successfully refreshed OAuth token");
                     }
                     Err(e) => {
+                        // Log both to trace and print a user-visible warning
                         tracing::warn!(
                             "Failed to refresh token: {}. User may need to re-authenticate.",
                             e
+                        );
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "Warning: Failed to refresh OAuth token. You may need to run 'rco auth login' again. Error: {}",
+                                e
+                            ).red()
                         );
                     }
                 }

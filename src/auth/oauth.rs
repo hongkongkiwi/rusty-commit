@@ -12,10 +12,7 @@ use tokio::time::sleep;
 pub const AUTHORIZE_URL: &str = "https://claude.ai/oauth/authorize";
 pub const TOKEN_URL: &str = "https://claude.ai/oauth/token";
 pub const CLIENT_ID: &str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"; // Public client ID for CLI apps
-#[allow(dead_code)]
-pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
-#[allow(dead_code)]
-pub const SCOPES: &str = "user:inference";
+pub const REDIRECT_URI: &str = "http://localhost:8989/callback";
 
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
@@ -25,6 +22,7 @@ struct DeviceCodeRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct DeviceCodeResponse {
     pub device_code: String,
     pub user_code: String,
@@ -43,6 +41,7 @@ struct TokenRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 struct RefreshTokenRequest {
     grant_type: String,
     refresh_token: String,
@@ -50,6 +49,7 @@ struct RefreshTokenRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct TokenResponse {
     pub access_token: String,
     pub token_type: String,
@@ -82,7 +82,7 @@ impl OAuthClient {
         Self {
             client: Client::new(),
             client_id: CLIENT_ID.to_string(),
-            redirect_uri: "http://localhost:8989/callback".to_string(),
+            redirect_uri: REDIRECT_URI.to_string(),
         }
     }
 
@@ -285,10 +285,11 @@ impl OAuthClient {
     }
 
     /// Check if a token is expired
+    #[allow(dead_code)]
     pub fn is_token_expired(expires_at: u64) -> bool {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time before Unix epoch")
             .as_secs();
         now >= expires_at
     }

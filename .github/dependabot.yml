@@ -1,53 +1,28 @@
+# Please see the documentation for all configuration options:
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
 version: 2
 updates:
-  # Rust/Cargo dependencies
-  - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "hongkongkiwi"
-    assignees:
-      - "hongkongkiwi"
-    commit-message:
-      prefix: "deps"
-      include: "scope"
-    # Group all patch updates together
-    groups:
-      rust-patch-updates:
-        patterns:
-          - "*"
-        update-types:
-          - "patch"
-      rust-minor-updates:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-
-  # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "hongkongkiwi"
-    assignees:
-      - "hongkongkiwi"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
+      timezone: "Asia/Hong_Kong"
+    # Group related updates together
     groups:
-      github-actions-updates:
-        patterns:
+      # All GitHub Actions updates
+      - patterns:
           - "*"
         update-types:
-          - "patch"
           - "minor"
-          - "major"
+          - "patch"
+    # Automatically squash merge when all checks pass
+    merge-method: "squash"
+    # Allow these labels on auto-merged PRs
+    labels:
+      - "dependencies"
+      - "github-actions"
+    # Target branch for updates (main by default)
+    target-branch: "main"

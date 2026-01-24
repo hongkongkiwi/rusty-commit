@@ -40,6 +40,18 @@ pub struct GlobalOptions {
     /// Disable running post-hooks
     #[arg(long = "no-post-hooks", default_value = "false")]
     pub no_post_hooks: bool,
+
+    /// Number of commit message variations to generate (1-5)
+    #[arg(short = 'g', long = "generate", default_value = "1")]
+    pub generate_count: u8,
+
+    /// Copy generated message to clipboard instead of committing
+    #[arg(short = 'C', long = "clipboard", default_value = "false")]
+    pub clipboard: bool,
+
+    /// Exclude specific files from the diff sent to AI
+    #[arg(short = 'x', long = "exclude")]
+    pub exclude_files: Option<Vec<String>>,
 }
 
 #[derive(Subcommand)]
@@ -62,6 +74,34 @@ pub enum Commands {
 
     /// Check for updates and update rusty-commit
     Update(UpdateCommand),
+
+    /// Generate PR description
+    Pr(PrCommand),
+
+    /// Interactive model selection
+    Model(ModelCommand),
+}
+
+#[derive(Parser)]
+pub struct PrCommand {
+    #[command(subcommand)]
+    pub action: PrAction,
+}
+
+#[derive(Subcommand)]
+pub enum PrAction {
+    /// Generate a PR description
+    Generate {
+        /// Base branch to compare against (default: main)
+        #[arg(short, long)]
+        base: Option<String>,
+    },
+    /// Open PR creation page in browser
+    Browse {
+        /// Base branch to compare against (default: main)
+        #[arg(short, long)]
+        base: Option<String>,
+    },
 }
 
 #[derive(Parser)]
@@ -93,6 +133,8 @@ pub enum ConfigAction {
     },
     /// Show secure storage status
     Status,
+    /// Describe all configuration options with examples and descriptions
+    Describe,
 }
 
 #[derive(Parser)]
@@ -163,4 +205,14 @@ pub struct UpdateCommand {
     /// Specify version to update to (e.g., "1.0.2")
     #[arg(short, long)]
     pub version: Option<String>,
+}
+
+#[derive(Parser)]
+pub struct ModelCommand {
+    /// List available models for current provider
+    #[arg(long = "list")]
+    pub list: bool,
+    /// Specify provider to list models for
+    #[arg(short, long)]
+    pub provider: Option<String>,
 }

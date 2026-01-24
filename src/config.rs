@@ -3,6 +3,7 @@ pub mod migrations;
 pub mod secure_storage;
 
 use anyhow::{Context, Result};
+use colored::Colorize;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -38,6 +39,8 @@ pub struct Config {
     pub one_line_commit: Option<bool>,
     pub why: Option<bool>,
     pub omit_scope: Option<bool>,
+    pub generate_count: Option<u8>,
+    pub clipboard_on_timeout: Option<bool>,
 
     // GitHub Actions
     pub action_enabled: Option<bool>,
@@ -80,6 +83,8 @@ impl Default for Config {
             one_line_commit: Some(false),
             why: Some(false),
             omit_scope: Some(false),
+            generate_count: Some(1),
+            clipboard_on_timeout: Some(true),
             action_enabled: Some(false),
             test_mock_type: None,
             hook_auto_uncomment: Some(false),
@@ -96,6 +101,7 @@ impl Default for Config {
 
 impl Config {
     /// Get the new global config path
+    #[allow(dead_code)]
     pub fn global_config_path() -> Result<PathBuf> {
         if let Ok(config_home) = env::var("RCO_CONFIG_HOME") {
             Ok(PathBuf::from(config_home).join("config.toml"))
@@ -296,6 +302,18 @@ impl Config {
             "RCO_CUSTOM_PROMPT" => {
                 self.custom_prompt = Some(value.to_string());
             }
+            "RCO_GENERATE_COUNT" => {
+                self.generate_count = Some(
+                    value
+                        .parse()
+                        .context("Invalid number for GENERATE_COUNT (1-5)")?,
+                );
+            }
+            "RCO_CLIPBOARD_ON_TIMEOUT" => {
+                self.clipboard_on_timeout = Some(
+                    value.parse().context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?,
+                );
+            }
             // Ignore unsupported keys
             "RCO_API_CUSTOM_HEADERS" => {
                 // Silently ignore these legacy keys
@@ -337,6 +355,8 @@ impl Config {
             "RCO_ACTION_ENABLED" => self.action_enabled.map(|v| v.to_string()),
             "RCO_COMMITLINT_CONFIG" => self.commitlint_config.as_ref().map(|s| s.to_string()),
             "RCO_CUSTOM_PROMPT" => self.custom_prompt.as_ref().map(|s| s.to_string()),
+            "RCO_GENERATE_COUNT" => self.generate_count.map(|v| v.to_string()),
+            "RCO_CLIPBOARD_ON_TIMEOUT" => self.clipboard_on_timeout.map(|v| v.to_string()),
             _ => None,
         };
 
@@ -384,6 +404,8 @@ impl Config {
                     }
                     "RCO_HOOK_STRICT" => self.hook_strict = default.hook_strict,
                     "RCO_HOOK_TIMEOUT_MS" => self.hook_timeout_ms = default.hook_timeout_ms,
+                    "RCO_GENERATE_COUNT" => self.generate_count = default.generate_count,
+                    "RCO_CLIPBOARD_ON_TIMEOUT" => self.clipboard_on_timeout = default.clipboard_on_timeout,
                     _ => anyhow::bail!("Unknown configuration key: {}", key),
                 }
             }
@@ -454,6 +476,17 @@ impl Config {
         full_gitmoji: bool,
     ) -> String {
         if let Some(ref custom_prompt) = self.custom_prompt {
+            // Security warning: custom prompts receive diff content
+            tracing::warn!(
+                "Using custom prompt template - diff content will be included in the prompt. \
+                Ensure your custom prompt does not exfiltrate or log sensitive code."
+            );
+            eprintln!(
+                "{}",
+                "Warning: Using custom prompt template. Your diff content will be sent to the AI provider."
+                    .yellow()
+            );
+
             // Replace placeholders in custom prompt
             let mut prompt = custom_prompt.clone();
             prompt = prompt.replace("$diff", diff);
@@ -506,6 +539,8 @@ impl Config {
         merge_field!(hook_timeout_ms);
         merge_field!(commitlint_config);
         merge_field!(custom_prompt);
+        merge_field!(generate_count);
+        merge_field!(clipboard_on_timeout);
     }
 
     /// Load configuration values from environment variables
@@ -554,5 +589,7 @@ impl Config {
         load_env_var_parse!(hook_auto_uncomment, "HOOK_AUTO_UNCOMMENT", bool);
         load_env_var!(commitlint_config, "COMMITLINT_CONFIG");
         load_env_var!(custom_prompt, "CUSTOM_PROMPT");
+        load_env_var_parse!(generate_count, "GENERATE_COUNT", u8);
+        load_env_var_parse!(clipboard_on_timeout, "CLIPBOARD_ON_TIMEOUT", bool);
     }
 }

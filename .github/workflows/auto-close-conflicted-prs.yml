@@ -1,0 +1,47 @@
+name: Auto-close conflicted Dependabot PRs
+
+on:
+  schedule:
+    # Run every hour to catch conflicted Dependabot PRs
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  close-conflicted-prs:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'hongkongkiwi/rusty-commit' }}
+    steps:
+      - name: Close conflicted Dependabot PRs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            for (const pr of prs) {
+              // Only process Dependabot PRs
+              if (pr.user?.login !== 'dependabot[bot]') continue;
+
+              // Check if PR has merge conflicts
+              if (pr.mergeable === false) {
+                console.log(`Closing conflicted Dependabot PR #${pr.number}: ${pr.title}`);
+
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed'
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: 'This Dependabot PR has merge conflicts and was automatically closed. Please update the branch and resolve conflicts manually, then re-open if needed.'
+                });
+              }
+            }

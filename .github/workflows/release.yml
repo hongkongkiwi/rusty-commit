@@ -1,559 +1,528 @@
+# Release workflow - builds and publishes binaries/packages
+
 name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.1.1) - required for manual trigger'
+        required: true
+        type: string
 
 permissions:
   contents: write
+  packages: write
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-      version: ${{ steps.get_version.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history and tags for release notes generation
-
-      - name: Get version
-        id: get_version
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-
-      - name: Generate release notes from commits
-        id: generate_notes
-        run: |
-          # Get the current tag
-          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
-          
-          # Get the previous tag
-          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^$CURRENT_TAG$" | head -1)
-          
-          # Generate release notes from commits
-          if [ -n "$PREVIOUS_TAG" ]; then
-            echo "Generating release notes between $PREVIOUS_TAG and $CURRENT_TAG"
-            
-            # Get commits between tags, excluding version bump commits
-            COMMITS=$(git log "$PREVIOUS_TAG..$CURRENT_TAG" --oneline --pretty=format:"- %s" | grep -v "^- chore: bump version" | grep -v "^- Bump version")
-            
-            if [ -n "$COMMITS" ]; then
-              cat << EOF > release_notes.md
-          # Rusty Commit $CURRENT_TAG 🚀
-          
-          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
-          
-          ## What's Changed
-          
-          $COMMITS
-          
-          ## About Rusty Commit
-          
-          Rusty Commit is a blazing-fast commit message generator that supports 16+ AI providers including:
-          - 🧠 **Anthropic Claude** (Claude 3.5 Sonnet, Haiku)
-          - 🤖 **OpenAI** (GPT-4, GPT-3.5 Turbo) 
-          - 🔥 **Groq** (Llama 3, Mixtral)
-          - ⚡ **DeepSeek** (DeepSeek Coder)
-          - 🌟 **OpenRouter** (Access to 100+ models)
-          - And many more!
-          
-          ## Key Features
-          - 🔐 **Secure Storage**: System keychain integration for API keys
-          - 🎯 **Smart Analysis**: Analyzes staged changes for context-aware commits
-          - 🚀 **Cross-Platform**: Works on macOS, Linux, and Windows
-          - 🔄 **OpenCommit Compatible**: Drop-in replacement with enhanced performance
-          - 🎨 **Interactive UI**: Beautiful provider selection and authentication flow
-          
-          ## Installation
-          
-          ### Quick Install (Recommended)
-          \`\`\`bash
-          # macOS/Linux
-          curl -fsSL https://github.com/${{ github.repository }}/releases/download/$CURRENT_TAG/install.sh | bash
-          
-          # Or download directly
-          curl -L https://github.com/${{ github.repository }}/releases/download/$CURRENT_TAG/rustycommit-\$(uname -s)-\$(uname -m).tar.gz | tar xz
-          sudo mv rco /usr/local/bin/
-          \`\`\`
-          
-          ### Using Cargo
-          \`\`\`bash
-          cargo install rusty-commit
-          # With secure storage
-          cargo install rusty-commit --features secure-storage
-          \`\`\`
-          
-          ### Package Managers
-          - **Homebrew**: \`brew install hongkongkiwi/tap/rusty-commit\`
-          - **Alpine Linux**: Available in our custom repository
-          - **Arch Linux**: \`yay -S rusty-commit\` (AUR)
-          
-          ## Getting Started
-          
-          \`\`\`bash
-          # Interactive setup with provider selection
-          rco auth
-          
-          # Generate a commit message
-          git add .
-          rco
-          
-          # Or use specific provider
-          rco --provider anthropic
-          \`\`\`
-          
-          ---
-          
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG
-          EOF
-            else
-              cat << EOF > release_notes.md
-          # Rusty Commit $CURRENT_TAG 🚀
-          
-          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
-          
-          ## What's Changed
-          
-          - Maintenance release with internal improvements
-          
-          ## Installation & Usage
-          
-          See our [README](https://github.com/${{ github.repository }}#installation) for installation instructions.
-          
-          ---
-          
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$CURRENT_TAG
-          EOF
-            fi
-          else
-            cat << EOF > release_notes.md
-          # Rusty Commit $CURRENT_TAG 🚀
-          
-          **Rust-powered AI commit message generator - Write impressive commits in seconds** 🦀🤖
-          
-          Initial release with full feature set.
-          EOF
-          fi
-          
-          # Set output for use in release creation
-          {
-            echo "notes<<EOF"
-            cat release_notes.md
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref }}
-          name: Release ${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: false
-          generate_release_notes: false
-          body: ${{ steps.generate_notes.outputs.notes }}
-
-  build-release:
-    name: Build Release (${{ matrix.target }})
-    needs: create-release
+  # Build Linux binaries (needed by .deb/.rpm packages)
+  build-linux:
+    name: Build Linux (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-          # Linux builds
-          - os: ubuntu-latest
+          # Linux x86_64 (glibc)
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            archive-name: rustycommit-linux-x86_64.tar.gz
-            use-cross: false
-
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            archive-name: rustycommit-linux-x86_64-musl.tar.gz
-            use-cross: true
-
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            archive-name: rustycommit-linux-aarch64-musl.tar.gz
-            use-cross: true
-
-          - os: ubuntu-latest
+          # Linux arm64 (glibc)
+          - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            archive-name: rustycommit-linux-aarch64.tar.gz
-            use-cross: true
-
-          - os: ubuntu-latest
-            target: riscv64gc-unknown-linux-gnu
-            archive-name: rustycommit-linux-riscv64.tar.gz
-            use-cross: true
-
-          - os: ubuntu-latest
-            target: riscv64gc-unknown-linux-musl
-            archive-name: rustycommit-linux-musl-riscv64.tar.gz
-            use-cross: true
-
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            archive-name: rustycommit-linux-armv7.tar.gz
-            use-cross: true
-
-          # macOS builds  
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            archive-name: rustycommit-macos-x86_64.tar.gz
-            use-cross: false
-
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            archive-name: rustycommit-macos-aarch64.tar.gz
-            use-cross: false
-
-          # Windows builds
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive-name: rustycommit-windows-x86_64.zip
-            use-cross: false
-
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-            archive-name: rustycommit-windows-i686.zip
-            use-cross: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross
-        if: matrix.use-cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
 
-      - name: Add target toolchain
-        if: matrix.use-cross == false
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Build with cross
-        if: matrix.use-cross
-        run: cross build --release --target ${{ matrix.target }}
-
-      - name: Build with cargo
-        if: ${{ !matrix.use-cross }}
+      - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Create archive (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          mkdir -p archive
-          cp "target/${{ matrix.target }}/release/rco" archive/ 2>/dev/null || true
-          # Include documentation and scripts
-          cp README.md archive/ 2>/dev/null || true
-          cp README_OAUTH.md archive/ 2>/dev/null || true
-          cp INSTALL.md archive/ 2>/dev/null || true
-          cp LICENSE archive/ 2>/dev/null || true
-          cp install.sh archive/ 2>/dev/null || true
-          # Include shell completions
-          mkdir -p archive/completions
-          cp -r completions/* archive/completions/ 2>/dev/null || true
-          # Include man page
-          mkdir -p archive/man
-          cp -r man/* archive/man/ 2>/dev/null || true
-          # Create a simple version file
-          echo "${{ needs.create-release.outputs.version }}" > archive/VERSION
-          cd archive
-          tar czf "../${{ matrix.archive-name }}" .
-
-      - name: Create archive (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path archive
-          Copy-Item "target\${{ matrix.target }}\release\rco.exe" -Destination "archive\"
-          # Include documentation
-          Copy-Item "README.md" -Destination "archive\" -ErrorAction SilentlyContinue
-          Copy-Item "README_OAUTH.md" -Destination "archive\" -ErrorAction SilentlyContinue
-          Copy-Item "INSTALL.md" -Destination "archive\" -ErrorAction SilentlyContinue
-          Copy-Item "LICENSE" -Destination "archive\" -ErrorAction SilentlyContinue
-          Copy-Item "install.sh" -Destination "archive\" -ErrorAction SilentlyContinue
-          # Include shell completions
-          New-Item -ItemType Directory -Force -Path "archive\completions"
-          Copy-Item "completions\*" -Destination "archive\completions\" -Recurse -ErrorAction SilentlyContinue
-          # Include man page
-          New-Item -ItemType Directory -Force -Path "archive\man"
-          Copy-Item "man\*" -Destination "archive\man\" -Recurse -ErrorAction SilentlyContinue
-          # Create version file
-          "${{ needs.create-release.outputs.version }}" | Out-File -FilePath "archive\VERSION" -Encoding UTF8
-          Compress-Archive -Path "archive\*" -DestinationPath "${{ matrix.archive-name }}"
-
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
         with:
-          files: ./${{ matrix.archive-name }}
-          tag_name: ${{ github.ref }}
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/rusty-commit
+          retention-days: 5
 
-  # Crate publishing is now handled by publish.yml which triggers on release published event
-  # OS package creation is handled by package-release.yml which also triggers on release published event
-
-  # Sign and finalize release artifacts
-  sign-and-finalize:
-    name: Sign Release Artifacts
-    needs: [create-release, build-release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write  # Required for Sigstore keyless signing
-      attestations: write  # Required for GitHub attestations
+  # Build binaries for non-Linux platforms
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Intel
+          - os: macos-14
+            target: x86_64-apple-darwin
+          # macOS Apple Silicon
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          # Windows
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/rusty-commit${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
+          retention-days: 5
+
+  # Create GitHub release
+  release:
+    name: Create Release
+    needs:
+      - build
+      - build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: binaries
+          pattern: binary-*
+          merge-multiple: true
 
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
-        with:
-          cosign-release: 'v2.2.2'
-
-      - name: Configure Cosign key
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      - name: Prepare release assets
         run: |
-          if [ -z "${COSIGN_PRIVATE_KEY:-}" ]; then
-            echo "ERROR: COSIGN_PRIVATE_KEY secret is not configured"
-            echo "Please set up the COSIGN_PRIVATE_KEY secret in repository settings"
-            exit 1
-          fi
-          
-          echo "$COSIGN_PRIVATE_KEY" | base64 -d > cosign.key
-          chmod 600 cosign.key
-          
-          if [ -n "${COSIGN_PASSWORD:-}" ]; then
-            echo "COSIGN_PASSWORD=$COSIGN_PASSWORD" >> "$GITHUB_ENV"
-          fi
-          echo "COSIGN_KEY_ARGS=--key cosign.key" >> "$GITHUB_ENV"
-
-      - name: Setup GPG
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: |
-          if [ -z "${GPG_PRIVATE_KEY:-}" ]; then
-            echo "ERROR: GPG_PRIVATE_KEY secret is not configured"
-            echo "Please set up the GPG_PRIVATE_KEY secret in repository settings"
-            exit 1
-          fi
-          
-          if [ -z "${GPG_PASSPHRASE:-}" ]; then
-            echo "ERROR: GPG_PASSPHRASE secret is not configured"
-            echo "Please set up the GPG_PASSPHRASE secret in repository settings"
-            exit 1
-          fi
-          
-          # Import GPG key
-          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-
-          # Configure GPG
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          {
-            echo "allow-loopback-pinentry"
-          } >> ~/.gnupg/gpg-agent.conf
-          {
-            echo "use-agent"
-          } >> ~/.gnupg/gpg.conf
-          gpg-connect-agent reloadagent /bye
-
-          # Test signing
-          echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-              --pinentry-mode loopback --armor --detach-sign > /dev/null
-
-          echo "GPG signing configured successfully"
-
-      - name: Sign all artifacts with Cosign (keyless or key-based)
-        run: |
-          cd artifacts
-          # Sign all package types with Cosign keyless signing
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) -print0 | while IFS= read -r -d '' file; do
-            filename=$(basename "$file")
-            echo "Signing $filename with Cosign..."
-
-            # Keyless signing with GitHub OIDC
-            cosign sign-blob "$file" \
-              --yes \
-              --oidc-issuer https://token.actions.githubusercontent.com \
-              "${COSIGN_KEY_ARGS:-}" \
-              --bundle "${file}.cosign.bundle" \
-              --output-certificate "${file}.cosign.cert" \
-              --output-signature "${file}.cosign.sig"
-
-            echo "Created Cosign bundle for $filename"
+          mkdir -p release
+          for dir in binaries/binary-*; do
+            target=$(basename "$dir" | sed 's/binary-//')
+            cp "$dir"/* "release/rusty-commit-${target}" 2>/dev/null || true
           done
-          cd ..
 
-      - name: Generate GitHub Attestations
-        uses: actions/attest-build-provenance@v1.5.0
-        with:
-          subject-path: |
-            artifacts/**/*.tar.gz
-            artifacts/**/*.zip
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
+          # Create tarballs for Linux/macOS
+          cd release
+          for f in rusty-commit-*; do
+            case "$f" in
+              *.gz|*.zip) continue ;;
+              *linux*|*darwin*)
+                if [ -f "$f" ] && [ ! -f "${f}.gz" ]; then
+                  gzip -c "$f" > "${f}.gz" && rm "$f"
+                fi
+                ;;
+            esac
+          done
 
-      - name: Generate and sign checksums
-        run: |
-          cd artifacts
-          # Find all release files and generate checksums
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.apk" \) -print0 | while IFS= read -r -d '' file; do
-            sha256sum "$file" | sed 's|^\./||'
-          done >> ../checksums.txt
-          cd ..
-
-          # Create formatted checksum file
-          {
-            echo "# SHA256 Checksums for Rusty Commit ${{ needs.create-release.outputs.version }}"
-            echo "# Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-            echo ""
-          } > SHA256SUMS.txt
-          if [ -f checksums.txt ]; then
-            sort checksums.txt >> SHA256SUMS.txt
+          # Create zip for Windows
+          if [ -f "rusty-commit-x86_64-pc-windows-msvc" ]; then
+            zip -r rusty-commit-windows.zip rusty-commit-x86_64-pc-windows-msvc
+            rm rusty-commit-x86_64-pc-windows-msvc
           fi
 
-          # Sign checksum file with GPG
-          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-              --pinentry-mode loopback \
-              --armor --detach-sign \
-              --output SHA256SUMS.txt.asc \
-              SHA256SUMS.txt
-          echo "Checksum file signed with GPG"
+          ls -la
 
-          # Also sign checksums with Cosign
-          echo "Signing checksums with Cosign..."
-          cosign sign-blob SHA256SUMS.txt \
-            --yes \
-            --oidc-issuer https://token.actions.githubusercontent.com \
-            "${COSIGN_KEY_ARGS:-}" \
-            --bundle SHA256SUMS.txt.cosign.bundle \
-            --output-certificate SHA256SUMS.txt.cosign.cert \
-            --output-signature SHA256SUMS.txt.cosign.sig
-
-      - name: Sign install script
-        run: |
-          # Copy install script to release artifacts
-          cp install.sh install.sh.release
-
-          # Sign install script with GPG
-          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-              --pinentry-mode loopback \
-              --armor --detach-sign \
-              --output install.sh.asc \
-              install.sh.release
-          echo "Install script signed with GPG"
-
-          # Sign install script with Cosign
-          echo "Signing install script with Cosign..."
-          cosign sign-blob install.sh.release \
-            --yes \
-            --oidc-issuer https://token.actions.githubusercontent.com \
-            "${COSIGN_KEY_ARGS:-}" \
-            --bundle install.sh.cosign.bundle \
-            --output-certificate install.sh.cosign.cert \
-            --output-signature install.sh.cosign.sig
-
-      - name: Create detached signatures for binaries
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release/*
         env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: |
-          cd artifacts
-          # Sign each tar.gz and zip file with detached signature
-          find . -type f \( -name "*.tar.gz" -o -name "*.zip" \) -print0 | while IFS= read -r -d '' file; do
-            echo "Signing $file with GPG..."
-            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
-                --pinentry-mode loopback \
-                --armor --detach-sign \
-                --output "${file}.asc" \
-                "$file"
-          done
-          cd ..
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload checksums
-        uses: softprops/action-gh-release@v2
+      - name: Upload release binaries for finalize job
+        uses: actions/upload-artifact@v4
         with:
-          files: ./SHA256SUMS.txt
-          tag_name: ${{ github.ref }}
+          name: release
+          path: release/
+          retention-days: 5
 
-      - name: Upload signed checksums
-        uses: softprops/action-gh-release@v2
+  # Publish to crates.io
+  publish-crates:
+    name: Publish to crates.io
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
         with:
-          files: ./SHA256SUMS.txt.asc
-          tag_name: ${{ github.ref }}
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
 
-      - name: Upload install script and signatures
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          # Upload install script
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/x-sh" \
-            --data-binary "@install.sh.release" \
-            "${{ needs.create-release.outputs.upload_url }}?name=install.sh&label=install.sh"
+          if [ -n "$CARGO_REGISTRY_TOKEN" ]; then
+            cargo publish --registry crates-io --allow-dirty
+          else
+            echo "CARGO_REGISTRY_TOKEN not set, skipping crates.io publish"
+          fi
 
-          # Upload install script signatures
-          for file in install.sh.asc install.sh.cosign.*; do
-            if [ -f "$file" ]; then
-              echo "Uploading install script signature: $file"
-              curl -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \
-                --data-binary "@$file" \
-                "${{ needs.create-release.outputs.upload_url }}?name=$file&label=$file"
+  # Build platform-specific packages
+  build-deb:
+    name: Build Debian Package (${{ matrix.arch }})
+    needs: build-linux
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            deb_arch: amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            deb_arch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
+
+      - name: Install cargo-deb
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb
+
+      - name: Download release binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release
+
+      - name: Build .deb package
+        run: cargo deb --target ${{ matrix.target }} --no-build
+
+      - name: Upload .deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-commit.deb-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/debian/*_${{ matrix.deb_arch }}.deb
+
+  build-rpm:
+    name: Build RedHat Package (${{ matrix.arch }})
+    needs: build-linux
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            rpm_arch: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            rpm_arch: aarch64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download release binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release
+
+      - name: Install rpm build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Create RPM structure
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          pkgname="rusty-commit"
+
+          mkdir -p rpmbuild/BUILD rpmbuild/BUILDROOT rpmbuild/RPMS rpmbuild/SOURCES rpmbuild/SPECS rpmbuild/SRPMS
+
+          # Create tarball with proper directory structure (tarball name without .tar.gz must match extracted dir)
+          mkdir -p "tmp-pkg-dir/${pkgname}-${VERSION}"
+          cp target/${{ matrix.target }}/release/rusty-commit "tmp-pkg-dir/${pkgname}-${VERSION}/"
+          tar -C tmp-pkg-dir -czf "rpmbuild/SOURCES/${pkgname}-${VERSION}.tar.gz" "${pkgname}-${VERSION}"
+          rm -rf tmp-pkg-dir
+
+          # Create spec file
+          cat > rpmbuild/SPECS/rusty-commit.spec << EOF
+          Name:           ${pkgname}
+          Version:        ${VERSION}
+          Release:        0%{?dist}
+          Summary:        A modern, AI-powered git commit message generator
+          License:        MIT
+          URL:            https://github.com/hongkongkiwi/rusty-commit
+          Source0:        %{name}-%{version}.tar.gz
+          BuildArch:      ${{ matrix.rpm_arch }}
+          %description
+          Rusty-commit is a modern, AI-powered git commit message generator that helps
+          you create meaningful, standardized commit messages following Conventional Commits.
+
+          %prep
+          %setup -q
+
+          %install
+          mkdir -p %{buildroot}/usr/bin
+          install -m 755 %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/usr/bin/%{name}
+
+          %files
+          /usr/bin/%{name}
+          %changelog
+          * Sat Jan 24 2026 Rusty Commit <rusty-commit@users.noreply.github.com> - ${VERSION}-0
+          - Initial RPM package
+          EOF
+
+      - name: Build .rpm package
+        run: |
+          rpmbuild --define "_topdir $PWD/rpmbuild" \
+            -bb rpmbuild/SPECS/rusty-commit.spec \
+            --target ${{ matrix.rpm_arch }}
+
+      - name: Upload .rpm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-commit.rpm-${{ matrix.arch }}
+          path: rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm
+
+  build-apk:
+    name: Build Alpine Package (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            apk_arch: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            apk_arch: aarch64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust and musl-tools
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
+
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            sudo apt-get install -y musl-tools gcc-multilib
+          else
+            sudo apt-get install -y musl-tools
+          fi
+
+      - name: Build static binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Create Alpine package structure
+        run: |
+          mkdir -p apk-build/bin
+          cp target/${{ matrix.target }}/release/rusty-commit apk-build/bin/
+
+      - name: Upload Linux musl binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/rusty-commit
+          retention-days: 5
+
+      - name: Create APKBUILD
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          cat > apk-build/APKBUILD << 'EOF'
+          # Contributor: Rusty Commit <rusty-commit@users.noreply.github.com>
+          # Maintainer: Rusty Commit <rusty-commit@users.noreply.github.com>
+          pkgname=rusty-commit
+          pkgver=VERSION_PLACEHOLDER
+          pkgrel=0
+          pkgdesc="A modern, AI-powered git commit message generator"
+          url="https://github.com/hongkongkiwi/rusty-commit"
+          arch="${{ matrix.apk_arch }}"
+          license="MIT"
+          depends=""
+          subpackages=""
+          source=""
+          options="!check"
+
+          build() {
+            return 0
+          }
+
+          package() {
+            mkdir -p "$pkgdir"/usr/bin
+            install -m 755 "$startdir"/bin/rusty-commit "$pkgdir"/usr/bin/rusty-commit
+          }
+          EOF
+          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/" apk-build/APKBUILD
+
+      - name: Build .apk package
+        run: |
+          mkdir -p apk-packages
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work/apk-build \
+            alpine:3.19 \
+            sh -c 'apk add --no-cache alpine-sdk && \
+              adduser -D builder && addgroup builder abuild && \
+              chown -R builder:builder /work/apk-build /work/apk-packages && \
+              su builder -c "export REPODEST=/work/apk-packages PACKAGER= && abuild-keygen -a -n" && \
+              cp /home/builder/.abuild/*.rsa.pub /etc/apk/keys/ && \
+              su builder -c "export REPODEST=/work/apk-packages PACKAGER= && abuild -r"'
+
+      - name: Upload Alpine package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-commit.apk-${{ matrix.arch }}
+          path: apk-packages/**/*.apk
+
+  # Create release with all platform packages
+  finalize-release:
+    name: Finalize Release
+    needs:
+      - release
+      - build-deb
+      - build-rpm
+      - build-apk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all binaries for checksums
+        uses: actions/download-artifact@v4
+        with:
+          path: release-binaries
+
+      - name: List downloaded binaries
+        run: |
+          echo "=== release-binaries contents ==="
+          find release-binaries -type f -exec ls -la {} \;
+
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: packages
+          pattern: rusty-commit.*
+          merge-multiple: true
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-packages
+
+          # Copy and flatten release binaries (artifacts are files, not directories)
+          for artifact in release-binaries/*; do
+            if [ -f "$artifact" ]; then
+              cp "$artifact" release-packages/
+            elif [ -d "$artifact" ]; then
+              cp -r "$artifact"/* release-packages/ 2>/dev/null || true
             fi
           done
 
-      - name: Upload binary signatures
-        run: |
-          cd artifacts
-          # Upload all .asc signature files
-          find . -name "*.asc" -print0 | while IFS= read -r -d '' sig; do
-            filename=$(basename "$sig")
-            echo "Uploading GPG signature: $filename"
-            curl -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary "@$sig" \
-              "${{ needs.create-release.outputs.upload_url }}?name=$filename&label=${filename}"
-          done
-
-      - name: Upload Cosign signatures and bundles
-        run: |
-          cd artifacts
-          # Upload Cosign signature files (.sig, .cert, .bundle) for all packages
-          find . \( -name "*.cosign.sig" -o -name "*.cosign.cert" -o -name "*.cosign.bundle" \) -print0 | while IFS= read -r -d '' sig; do
-            filename=$(basename "$sig")
-            echo "Uploading Cosign artifact: $filename"
-            curl -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary "@$sig" \
-              "${{ needs.create-release.outputs.upload_url }}?name=$filename&label=${filename}"
-          done
-
-          # Upload main checksum Cosign files
-          cd ..
-          for file in SHA256SUMS.txt.cosign.*; do
-            if [ -f "$file" ]; then
-              echo "Uploading: $file"
-              curl -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \
-                --data-binary "@$file" \
-                "${{ needs.create-release.outputs.upload_url }}?name=$file&label=$file"
+          # Copy platform packages
+          for dir in packages/*; do
+            if [ -d "$dir" ]; then
+              cp -r "$dir"/* release-packages/ 2>/dev/null || true
             fi
           done
+
+          ls -la release-packages/
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd release-packages
+          find . -maxdepth 1 -type f -exec sha256sum {} \; > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Setup GPG for signing
+        if: env.GPG_PRIVATE_KEY != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.gnupg
+          key: gpg-key-${{ env.GPG_PRIVATE_KEY }}
+
+      - name: Import GPG key
+        if: env.GPG_PRIVATE_KEY != ''
+        run: |
+          echo '${{ env.GPG_PRIVATE_KEY }}' | gpg --batch --import --
+          gpg --list-secret-keys --keyid-format LONG
+
+      - name: Sign checksums
+        if: env.GPG_PRIVATE_KEY != ''
+        run: |
+          cd release-packages
+          gpg --batch --yes --armor --detach-sign SHA256SUMS.txt
+          cat SHA256SUMS.txt.asc
+
+      - name: Upload SHA256 checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256sums
+          path: release-packages/SHA256SUMS.txt
+          retention-days: 5
+
+      - name: Upload GPG signature
+        if: env.GPG_PRIVATE_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256sums-asc
+          path: release-packages/SHA256SUMS.txt.asc
+          retention-days: 5
+
+      - name: Update GitHub Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          draft: false
+          prerelease: false
+          files: release-packages/*

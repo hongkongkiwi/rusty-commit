@@ -4,4 +4,6 @@ pub mod commitlint;
 pub mod config;
 pub mod githook;
 pub mod mcp;
+pub mod model;
+pub mod pr;
 pub mod update;

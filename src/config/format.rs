@@ -183,5 +183,6 @@ impl ConfigLocations {
 #[derive(Debug, Clone, Copy)]
 pub enum ConfigLocation {
     Global,
+    #[allow(dead_code)]
     Repo,
 }

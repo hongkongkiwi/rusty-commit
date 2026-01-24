@@ -86,7 +86,7 @@ impl TokenStorage {
         if let Some(expires_at) = self.expires_at {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("System time is before Unix epoch - this should not happen")
                 .as_secs();
             now >= expires_at
         } else {
@@ -95,13 +95,14 @@ impl TokenStorage {
     }
 
     /// Check if token will expire soon (within 5 minutes)
+    #[allow(dead_code)]
     pub fn expires_soon(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("System time is before Unix epoch - this should not happen")
                 .as_secs();
-            now >= expires_at - 300 // 5 minutes buffer
+            now >= expires_at.saturating_sub(300) // 5 minutes buffer, saturating to avoid underflow
         } else {
             false
         }

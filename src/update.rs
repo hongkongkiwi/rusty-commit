@@ -48,8 +48,25 @@ fn validate_version(version: &str) -> Result<()> {
 
 /// Validate and sanitize file paths
 fn sanitize_path(path: &Path) -> Result<PathBuf> {
-    // Resolve to absolute path and check for path traversal
-    let canonical = path.canonicalize().context("Failed to resolve path")?;
+    // Try to resolve to absolute path
+    let canonical = match path.canonicalize() {
+        Ok(p) => p,
+        Err(e) => {
+            // Fallback: use absolute path from current directory
+            tracing::warn!(
+                "Failed to canonicalize path {}: {}. Using absolute path fallback.",
+                path.display(),
+                e
+            );
+            if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                std::env::current_dir()
+                    .context("Failed to get current directory")?
+                    .join(path)
+            }
+        }
+    };
 
     // Ensure path doesn't escape expected directories
     let path_str = canonical.to_string_lossy();

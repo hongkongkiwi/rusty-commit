@@ -1,8 +1,3 @@
-#![allow(clippy::uninlined_format_args)]
-#![allow(clippy::bind_instead_of_map)]
-#![allow(clippy::manual_async_fn)]
-#![allow(dead_code)]
-
 mod auth;
 mod cli;
 mod commands;
@@ -49,6 +44,8 @@ async fn main() -> Result<()> {
         Some(cli::Commands::Auth(cmd)) => commands::auth::execute(cmd).await,
         Some(cli::Commands::Mcp(cmd)) => commands::mcp::execute(cmd).await,
         Some(cli::Commands::Update(cmd)) => commands::update::execute(cmd).await,
+        Some(cli::Commands::Pr(cmd)) => commands::pr::execute(cmd).await,
+        Some(cli::Commands::Model(cmd)) => commands::model::execute(cmd).await,
         None => {
             // Default to commit command
             commands::commit::execute(cli.global).await

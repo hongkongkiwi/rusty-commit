@@ -243,7 +243,10 @@ fn test_config_with_different_providers() {
         // without complex race condition issues
         let _temp_dir = setup_clean_env("test_config_provider");
 
-        // Environment variables are now cleared by setup_clean_env
+        // Ensure environment variables are cleared right before the test
+        // to prevent race conditions with parallel tests
+        std::env::remove_var("RCO_AI_PROVIDER");
+        std::env::remove_var("RCO_API_KEY");
 
         let mut config = Config::default();
         config.ai_provider = Some("anthropic".to_string());
@@ -254,6 +257,10 @@ fn test_config_with_different_providers() {
 
         // Test saving and loading
         assert!(config.save().is_ok());
+
+        // Ensure environment is still clean before loading
+        std::env::remove_var("RCO_AI_PROVIDER");
+        std::env::remove_var("RCO_API_KEY");
 
         let loaded_config = Config::load().unwrap();
 

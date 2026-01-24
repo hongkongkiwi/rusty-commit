@@ -204,3 +204,73 @@ pub fn get_repo_root() -> Result<String> {
         .context("Could not find repository working directory")?;
     Ok(workdir.to_string_lossy().to_string())
 }
+
+/// Returns the current branch name
+pub fn get_current_branch() -> Result<String> {
+    let repo = Repository::open_from_env()?;
+    let head = repo.head()?;
+    let branch_name = head
+        .shorthand()
+        .context("Could not get current branch name")?
+        .to_string();
+    Ok(branch_name)
+}
+
+/// Returns commits between two branches
+pub fn get_commits_between(base: &str, head: &str) -> Result<Vec<String>> {
+    let repo = Repository::open_from_env()?;
+
+    let base_commit = repo.revparse_single(base)?;
+    let head_commit = repo.revparse_single(head)?;
+
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push(head_commit.id())?;
+    revwalk.hide(base_commit.id())?;
+
+    let mut commits = Vec::new();
+    for oid in revwalk {
+        let oid = oid?;
+        if let Ok(commit) = repo.find_commit(oid) {
+            commits.push(format!(
+                "{} - {}",
+                commit.id().to_string().chars().take(7).collect::<String>(),
+                commit.message().unwrap_or("").to_string()
+            ));
+        }
+    }
+
+    Ok(commits)
+}
+
+/// Returns the diff between two branches
+pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
+    let repo = Repository::open_from_env()?;
+
+    let base_commit = repo.revparse_single(base)?;
+    let head_commit = repo.revparse_single(head)?;
+
+    let base_tree = base_commit.as_tree().ok_or(anyhow::anyhow!("Failed to get base commit tree"))?;
+    let head_tree = head_commit.as_tree().ok_or(anyhow::anyhow!("Failed to get head commit tree"))?;
+
+    let mut diff_opts = DiffOptions::new();
+    let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Some(&mut diff_opts))?;
+
+    let mut diff_text = String::new();
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        let content = std::str::from_utf8(line.content()).unwrap_or("");
+        diff_text.push_str(content);
+        true
+    })?;
+
+    Ok(diff_text)
+}
+
+/// Returns the remote URL for the origin
+pub fn get_remote_url() -> Result<String> {
+    let repo = Repository::open_from_env()?;
+
+    let remote = repo.find_remote("origin")?;
+    let url = remote.url().context("Could not get remote URL")?.to_string();
+
+    Ok(url)
+}

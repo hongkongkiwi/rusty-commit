@@ -137,6 +137,43 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                 println!("🤖 AI Provider: {}", provider);
             }
         }
+        ConfigAction::Describe => {
+            println!("\n{}", "📖 Configuration Options".bold());
+            println!("{}", "═".repeat(60).dimmed());
+
+            println!("\n{}", "Core Settings:".bold().green());
+            println!("  RCO_AI_PROVIDER    AI provider to use (openai, anthropic, ollama, etc.)");
+            println!("  RCO_MODEL          Model name for the provider");
+            println!("  RCO_API_KEY        API key for the provider");
+            println!("  RCO_API_URL        Custom API endpoint URL");
+
+            println!("\n{}", "Commit Style:".bold().green());
+            println!("  RCO_COMMIT_TYPE    Format: 'conventional' or 'gitmoji'");
+            println!("  RCO_EMOJI          Include emojis: true/false");
+            println!("  RCO_LANGUAGE       Output language (en, es, fr, etc.)");
+            println!("  RCO_DESCRIPTION    Include description: true/false");
+
+            println!("\n{}", "Behavior:".bold().green());
+            println!("  RCO_TOKENS_MAX_INPUT   Max input tokens (default: 4096)");
+            println!("  RCO_TOKENS_MAX_OUTPUT  Max output tokens (default: 500)");
+            println!("  RCO_GITPUSH      Auto-push after commit: true/false");
+            println!("  RCO_ONE_LINE_COMMIT    One-line format: true/false");
+
+            println!("\n{}", "Hooks:".bold().green());
+            println!("  RCO_PRE_GEN_HOOK       Command to run before generation");
+            println!("  RCO_PRE_COMMIT_HOOK    Command to run after generation");
+            println!("  RCO_POST_COMMIT_HOOK   Command to run after commit");
+            println!("  RCO_HOOK_STRICT        Fail on hook error: true/false");
+            println!("  RCO_HOOK_TIMEOUT_MS    Hook timeout in milliseconds");
+
+            println!("\n{}", "Examples:".bold().green());
+            println!("  rco config set RCO_AI_PROVIDER=anthropic");
+            println!("  rco config set RCO_MODEL=claude-3-5-haiku-20241022");
+            println!("  rco config set RCO_EMOJI=true RCO_LANGUAGE=es");
+            println!("  rco config set RCO_PRE_GEN_HOOK='just lint'");
+
+            println!("\n{}", "═".repeat(60).dimmed());
+        }
     }
 
     Ok(())

@@ -48,6 +48,29 @@ impl OllamaProvider {
             model,
         })
     }
+
+    /// Create provider from account configuration
+    pub fn from_account(account: &crate::config::accounts::AccountConfig, _api_key: &str, config: &Config) -> Result<Self> {
+        let client = Client::new();
+        let api_url = account
+            .api_url
+            .as_deref()
+            .or(config.api_url.as_deref())
+            .unwrap_or("http://localhost:11434")
+            .to_string();
+        let model = account
+            .model
+            .as_deref()
+            .or(config.model.as_deref())
+            .unwrap_or("mistral")
+            .to_string();
+
+        Ok(Self {
+            client,
+            api_url,
+            model,
+        })
+    }
 }
 
 #[async_trait]

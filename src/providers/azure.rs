@@ -72,6 +72,31 @@ impl AzureProvider {
             deployment,
         })
     }
+
+    /// Create provider from account configuration
+    pub fn from_account(account: &crate::config::accounts::AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
+        let endpoint = account
+            .api_url
+            .as_ref()
+            .context("Azure endpoint required. Set with: rco config set RCO_API_URL=<your_endpoint>")?
+            .clone();
+
+        let deployment = account
+            .model
+            .as_deref()
+            .or(config.model.as_deref())
+            .unwrap_or("gpt-35-turbo")
+            .to_string();
+
+        let client = Client::new();
+
+        Ok(Self {
+            client,
+            api_key: api_key.to_string(),
+            endpoint,
+            deployment,
+        })
+    }
 }
 
 #[async_trait]

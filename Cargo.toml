@@ -20,11 +20,20 @@ name = "rco"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["openai", "anthropic", "ollama", "gemini", "azure", "perplexity", "xai"]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
 # Include extra documentation (for docs.rs)
 docs = []
+
+# AI Provider features
+openai = ["async-openai"]
+anthropic = []
+ollama = []
+gemini = []
+azure = []
+perplexity = []
+xai = ["async-openai"]
 
 [dependencies]
 # CLI and UI
@@ -40,7 +49,7 @@ async-trait = "0.1"
 
 # HTTP and API clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
-async-openai = "0.29"
+async-openai = { version = "0.29", optional = true }
 backoff = { version = "0.4", features = ["tokio"] }
 
 # Serialization

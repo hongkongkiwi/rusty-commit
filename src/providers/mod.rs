@@ -1,9 +1,17 @@
-pub mod anthropic;
-pub mod azure;
-pub mod gemini;
-pub mod ollama;
+// AI Provider modules - conditionally compiled based on features
+#[cfg(feature = "openai")]
 pub mod openai;
+#[cfg(feature = "anthropic")]
+pub mod anthropic;
+#[cfg(feature = "ollama")]
+pub mod ollama;
+#[cfg(feature = "gemini")]
+pub mod gemini;
+#[cfg(feature = "azure")]
+pub mod azure;
+#[cfg(feature = "perplexity")]
 pub mod perplexity;
+#[cfg(feature = "xai")]
 pub mod xai;
 
 use crate::config::Config;
@@ -40,6 +48,7 @@ pub trait AIProvider: Send + Sync {
     }
 
     /// Generate a PR description from commits
+    #[cfg(any(feature = "openai", feature = "xai"))]
     async fn generate_pr_description(
         &self,
         commits: &[String],
@@ -100,40 +109,80 @@ pub trait AIProvider: Send + Sync {
 
         Ok(message)
     }
+
+    /// Generate a PR description - stub when OpenAI/xAI features are disabled
+    #[cfg(not(any(feature = "openai", feature = "xai")))]
+    async fn generate_pr_description(
+        &self,
+        _commits: &[String],
+        _diff: &str,
+        _config: &Config,
+    ) -> Result<String> {
+        anyhow::bail!(
+            "PR description generation requires the 'openai' or 'xai' feature to be enabled"
+        );
+    }
 }
 
 pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
     let provider = config.ai_provider.as_deref().unwrap_or("openai");
 
     match provider.to_lowercase().as_str() {
+        #[cfg(feature = "openai")]
         "openai" => Ok(Box::new(openai::OpenAIProvider::new(config)?)),
+        #[cfg(feature = "anthropic")]
         "anthropic" | "claude" => Ok(Box::new(anthropic::AnthropicProvider::new(config)?)),
+        #[cfg(feature = "ollama")]
         "ollama" => Ok(Box::new(ollama::OllamaProvider::new(config)?)),
+        #[cfg(feature = "gemini")]
         "gemini" => Ok(Box::new(gemini::GeminiProvider::new(config)?)),
+        #[cfg(feature = "azure")]
         "azure" | "azure-openai" => Ok(Box::new(azure::AzureProvider::new(config)?)),
+        #[cfg(feature = "perplexity")]
         "perplexity" => Ok(Box::new(perplexity::PerplexityProvider::new(config)?)),
+        #[cfg(feature = "xai")]
         "xai" | "grok" | "x-ai" => Ok(Box::new(xai::XAIProvider::new(config)?)),
-        // OpenAI-compatible providers
+        // OpenAI-compatible providers (use openai module)
+        #[cfg(feature = "openai")]
         "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | "huggingface"
         | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai"
         | "moonshot" | "moonshot-ai" | "dashscope" | "alibaba" | "qwen" | "qwen-coder"
         | "vertex" | "vertex-ai" | "google-vertex" | "codex" => Ok(Box::new(openai::OpenAIProvider::new(config)?)),
-        _ => anyhow::bail!(
-            "Unsupported AI provider: {}\n\n\
-             Available providers:\n\
-             - openai (GPT-4, GPT-3.5)\n\
-             - anthropic / claude (Claude models)\n\
-             - ollama (local models)\n\
-             - gemini (Google models)\n\
-             - azure (Azure OpenAI)\n\
-             - perplexity (Perplexity models)\n\
-             - xai / grok (xAI models)\n\
-             - qwen (Alibaba DashScope)\n\
-             - codex (ChatGPT Codex)\n\
-             - openrouter, groq, together, deepseek (OpenAI-compatible)\n\n\
-             Set with: rco config set RCO_AI_PROVIDER=<provider_name>",
-            provider
-        ),
+        _ => {
+            // Build available providers list based on enabled features
+            let mut available = Vec::new();
+            #[cfg(feature = "openai")]
+            available.push("openai");
+            #[cfg(feature = "anthropic")]
+            available.push("anthropic / claude");
+            #[cfg(feature = "ollama")]
+            available.push("ollama");
+            #[cfg(feature = "gemini")]
+            available.push("gemini");
+            #[cfg(feature = "azure")]
+            available.push("azure");
+            #[cfg(feature = "perplexity")]
+            available.push("perplexity");
+            #[cfg(feature = "xai")]
+            available.push("xai / grok");
+            #[cfg(feature = "openai")]
+            available.push("deepseek, groq, openrouter, together, deepseek (OpenAI-compatible)");
+
+            if available.is_empty() {
+                anyhow::bail!(
+                    "No AI provider features enabled. Please enable at least one provider feature: \
+                     --features openai,anthropic,ollama,gemini,azure,perplexity,xai"
+                );
+            }
+
+            anyhow::bail!(
+                "Unsupported or disabled AI provider: {}\n\n\
+                 Available providers (based on enabled features):\n{}\n\n\
+                 Set with: rco config set RCO_AI_PROVIDER=<provider_name>",
+                provider,
+                available.iter().map(|p| format!("- {}", p)).collect::<Vec<_>>().join("\n")
+            )
+        }
     }
 }
 

@@ -71,6 +71,23 @@ impl GeminiProvider {
             model,
         })
     }
+
+    /// Create provider from account configuration
+    pub fn from_account(_account: &crate::config::accounts::AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
+        let client = Client::new();
+        let model = _account
+            .model
+            .as_deref()
+            .or(config.model.as_deref())
+            .unwrap_or("gemini-pro")
+            .to_string();
+
+        Ok(Self {
+            client,
+            api_key: api_key.to_string(),
+            model,
+        })
+    }
 }
 
 #[async_trait]

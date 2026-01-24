@@ -1,3 +1,4 @@
+pub mod accounts;
 pub mod format;
 pub mod migrations;
 pub mod secure_storage;
@@ -591,5 +592,47 @@ impl Config {
         load_env_var!(custom_prompt, "CUSTOM_PROMPT");
         load_env_var_parse!(generate_count, "GENERATE_COUNT", u8);
         load_env_var_parse!(clipboard_on_timeout, "CLIPBOARD_ON_TIMEOUT", bool);
+    }
+}
+
+// ============================================
+// Multi-account support methods
+// ============================================
+
+impl Config {
+    /// Get the active account config, if available
+    pub fn get_active_account(&self) -> Result<Option<accounts::AccountConfig>> {
+        if let Some(accounts_config) = accounts::AccountsConfig::load()? {
+            if let Some(account) = accounts_config.get_active_account() {
+                return Ok(Some(account.clone()));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Check if we have any accounts configured
+    pub fn has_accounts(&self) -> bool {
+        accounts::AccountsConfig::load()
+            .map(|c| c.map(|ac| !ac.accounts.is_empty()).unwrap_or(false))
+            .unwrap_or(false)
+    }
+
+    /// Get a specific account by alias
+    pub fn get_account(&self, alias: &str) -> Result<Option<accounts::AccountConfig>> {
+        if let Some(accounts_config) = accounts::AccountsConfig::load()? {
+            if let Some(account) = accounts_config.get_account(alias) {
+                return Ok(Some(account.clone()));
+            }
+        }
+        Ok(None)
+    }
+
+    /// List all accounts
+    pub fn list_accounts(&self) -> Result<Vec<accounts::AccountConfig>> {
+        if let Some(accounts_config) = accounts::AccountsConfig::load()? {
+            Ok(accounts_config.list_accounts().into_iter().cloned().collect())
+        } else {
+            Ok(Vec::new())
+        }
     }
 }

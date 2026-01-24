@@ -3,11 +3,17 @@ name = "rusty-commit"
 version = "1.0.6"
 edition = "2021"
 authors = ["Rusty Commit Contributors"]
-description = "Rust-powered AI commit message generator - Write impressive commits in seconds 🚀🤖"
+description = "Rust-powered AI commit message generator - Write impressive commits in seconds"
 license = "MIT"
 repository = "https://github.com/hongkongkiwi/rusty-commit"
 keywords = ["git", "ai", "commit", "rust", "cli"]
 categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+homepage = "https://github.com/hongkongkiwi/rusty-commit"
+documentation = "https://docs.rs/rusty-commit"
+
+# Publish to crates.io
+publish = ["crates-io"]
 
 [[bin]]
 name = "rco"
@@ -17,6 +23,8 @@ path = "src/main.rs"
 default = []
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
+# Include extra documentation (for docs.rs)
+docs = []
 
 [dependencies]
 # CLI and UI

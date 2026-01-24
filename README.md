@@ -1,15 +1,13 @@
 # Rusty Commit (rco)
 
 [![CI](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml)
-<!-- Uncomment these badges once published to crates.io:
 [![Crates.io](https://img.shields.io/crates/v/rusty-commit.svg)](https://crates.io/crates/rusty-commit)
 [![Documentation](https://docs.rs/rusty-commit/badge.svg)](https://docs.rs/rusty-commit)
--->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-🚀 Write great commit messages in seconds — fast, local, and secure. 🦀
+AI-powered commit message generator written in Rust. Generate conventional commits, GitMoji messages, and more using 16+ AI providers.
 
-`rco` is a Rust-native, AI‑powered commit assistant.
+**Fast. Local-first options. Secure. Editor integrations via MCP.**
 
 ### 🌟 Why Rusty Commit
 - **Speed**: Native Rust binary with instant startup

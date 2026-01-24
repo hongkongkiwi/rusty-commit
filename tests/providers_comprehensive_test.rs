@@ -413,8 +413,7 @@ fn test_ollama_provider_config() {
 fn test_custom_provider_config() {
     with_test_lock(|| {
         clear_rco_env();
-        let temp_dir = tempdir().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _temp_dir = setup_env();
 
         let mut config = Config::default();
         config.ai_provider = Some("custom-provider".to_string());

@@ -68,7 +68,7 @@ jobs:
       matrix:
         include:
           # macOS Intel
-          - os: macos-13
+          - os: macos-14
             target: x86_64-apple-darwin
           # macOS Apple Silicon
           - os: macos-latest
@@ -324,10 +324,10 @@ jobs:
 
           %install
           mkdir -p %{buildroot}/usr/bin
-          install -m 755 %{_builddir}/%{name}-%{version}/%{name} %{buildroot}/usr/bin/%{name}
+          install -m 755 %{_builddir}/%{name}-%{version}/rco %{buildroot}/usr/bin/rco
 
           %files
-          /usr/bin/%{name}
+          /usr/bin/rco
           %changelog
           * Sat Jan 24 2026 Rusty Commit <rusty-commit@users.noreply.github.com> - ${VERSION}-0
           - Initial RPM package
@@ -355,11 +355,9 @@ jobs:
           - arch: amd64
             target: x86_64-unknown-linux-musl
             apk_arch: x86_64
-            docker_image: rust:1-alpine
           - arch: arm64
             target: aarch64-unknown-linux-musl
             apk_arch: aarch64
-            docker_image: rust:1-alpine
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -369,14 +367,27 @@ jobs:
         with:
           platforms: ${{ matrix.arch == 'amd64' && 'amd64' || 'arm64' }}
 
-      - name: Build static binary using Docker
+      - name: Install Rust and musl-tools
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-toolchain*') }}
+
+      - name: Install musl tools
         run: |
-          docker run --rm \
-            -v ${{ github.workdir }}:/workdir \
-            -w /workdir \
-            --platform linux/${{ matrix.arch == 'amd64' && 'amd64' || 'arm64' }} \
-            ${{ matrix.docker_image }} \
-            sh -c "apk add musl-dev && cargo build --release --target ${{ matrix.target }}"
+          sudo apt-get update
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            sudo apt-get install -y musl-tools gcc-multilib
+          else
+            sudo apt-get install -y musl-tools
+          fi
+
+      - name: Build static binary
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Create Alpine package structure
         run: |
@@ -415,7 +426,7 @@ jobs:
 
           package() {
             mkdir -p "$pkgdir"/usr/bin
-            install -m 755 "$startdir"/bin/rusty-commit "$pkgdir"/usr/bin/rusty-commit
+            install -m 755 "$startdir"/bin/rco "$pkgdir"/usr/bin/rco
           }
           EOF
           sed -i "s/VERSION_PLACEHOLDER/${VERSION}/" apk-build/APKBUILD

@@ -1,6 +1,6 @@
 [package]
 name = "rusty-commit"
-version = "1.0.18"
+version = "1.0.19"
 edition = "2021"
 authors = ["Rusty Commit Contributors"]
 description = "Rust-powered AI commit message generator - Write impressive commits in seconds"

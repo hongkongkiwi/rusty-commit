@@ -11,7 +11,10 @@ pub enum AuthMethod {
     #[serde(rename = "api_key")]
     ApiKey { key_id: String },
     #[serde(rename = "oauth")]
-    OAuth { provider: String, account_id: String },
+    OAuth {
+        provider: String,
+        account_id: String,
+    },
     #[serde(rename = "env_var")]
     EnvVar { name: String },
     #[serde(rename = "bearer")]

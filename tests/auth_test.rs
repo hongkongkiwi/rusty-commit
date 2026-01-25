@@ -1,3 +1,10 @@
+#![allow(
+    clippy::field_reassign_with_default,
+    clippy::assertions_on_constants,
+    clippy::overly_complex_bool_expr,
+    clippy::useless_vec
+)]
+
 use rusty_commit::auth::token_storage::{
     delete_tokens, get_tokens, has_valid_token, store_tokens, TokenStorage,
 };

@@ -7,7 +7,11 @@ use crate::config::Config;
 
 pub async fn execute(_cmd: SetupCommand) -> Result<()> {
     println!();
-    println!("{} {}", "🚀".green(), "Rusty Commit Setup Wizard".bold().white());
+    println!(
+        "{} {}",
+        "🚀".green(),
+        "Rusty Commit Setup Wizard".bold().white()
+    );
     println!();
 
     // Step 1: Select AI Provider
@@ -20,7 +24,7 @@ pub async fn execute(_cmd: SetupCommand) -> Result<()> {
 
     let provider_selection = Select::new()
         .with_prompt("1. Select your AI provider")
-        .items(&providers)
+        .items(providers)
         .default(0)
         .interact()?;
 
@@ -38,7 +42,10 @@ pub async fn execute(_cmd: SetupCommand) -> Result<()> {
     // Step 2: Enter API Key (skip for Ollama)
     let api_key = if provider_selection == 3 {
         println!();
-        println!("{} Local Ollama detected - API key not required", "ℹ".blue());
+        println!(
+            "{} Local Ollama detected - API key not required",
+            "ℹ".blue()
+        );
         None
     } else {
         println!();
@@ -46,7 +53,10 @@ pub async fn execute(_cmd: SetupCommand) -> Result<()> {
             .with_prompt(format!("2. Enter your {} API key", provider))
             .interact()?;
         if input.trim().is_empty() {
-            println!("{} No API key entered - you'll need to set it later", "⚠".yellow());
+            println!(
+                "{} No API key entered - you'll need to set it later",
+                "⚠".yellow()
+            );
         }
         Some(input)
     };
@@ -55,7 +65,7 @@ pub async fn execute(_cmd: SetupCommand) -> Result<()> {
     let commit_formats = ["Conventional (feat, fix, etc.)", "GitMoji (🎉, 🐛, ✨)"];
     let format_selection = Select::new()
         .with_prompt("3. Select commit message format")
-        .items(&commit_formats)
+        .items(commit_formats)
         .default(0)
         .interact()?;
 
@@ -87,16 +97,29 @@ pub async fn execute(_cmd: SetupCommand) -> Result<()> {
 
     // Completion message
     println!();
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
+    );
     println!();
     println!("{} Setup complete!", "✓".green().bold());
     println!();
     println!("{} You can now run: {}", "→".cyan(), "rco".bold().white());
     println!();
-    println!("{} To change settings later, use: {}", "→".cyan(), "rco config set <key>=<value>".bold().white());
-    println!("{} Or run this setup again: {}", "   ", "rco setup".bold().white());
+    println!(
+        "{} To change settings later, use: {}",
+        "→".cyan(),
+        "rco config set <key>=<value>".bold().white()
+    );
+    println!(
+        "    Or run this setup again: {}",
+        "rco setup".bold().white()
+    );
     println!();
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
+    );
 
     Ok(())
 }

@@ -66,7 +66,10 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // Check if diff became empty after filtering
     if diff.trim().is_empty() {
-        println!("{}", "No changes to commit after applying .rcoignore filters.".yellow());
+        println!(
+            "{}",
+            "No changes to commit after applying .rcoignore filters.".yellow()
+        );
         return Ok(());
     }
 
@@ -98,8 +101,11 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // If --show-prompt flag is set, just show the prompt and exit
     if options.show_prompt {
-        let prompt =
-            config.get_effective_prompt(&final_diff, options.context.as_deref(), options.full_gitmoji);
+        let prompt = config.get_effective_prompt(
+            &final_diff,
+            options.context.as_deref(),
+            options.full_gitmoji,
+        );
         println!("\n{}", "Prompt that would be sent to AI:".green().bold());
         println!("{}", "═".repeat(60).dimmed());
         println!("{}", prompt);
@@ -198,7 +204,10 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         println!("{}", messages[0]);
         println!("{}", "─".repeat(50).dimmed());
     } else {
-        println!("\n{}", "Generated commit message variations:".green().bold());
+        println!(
+            "\n{}",
+            "Generated commit message variations:".green().bold()
+        );
         println!("{}", "─".repeat(50).dimmed());
         for (i, msg) in messages.iter().enumerate() {
             println!("{}. {}", i + 1, msg);
@@ -247,7 +256,9 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
                         name: "pre-commit",
                         commands: hooks,
                         strict: config.hook_strict.unwrap_or(true),
-                        timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+                        timeout: std::time::Duration::from_millis(
+                            config.hook_timeout_ms.unwrap_or(30000),
+                        ),
                         envs,
                     })?;
                     if let Ok(updated) = std::fs::read_to_string(&commit_file) {
@@ -312,7 +323,11 @@ fn select_commit_action_with_variants(num_variants: usize) -> Result<CommitActio
     let mut choices: Vec<String> = (1..=num_variants)
         .map(|i| format!("Use option {}", i))
         .collect();
-    choices.extend(vec!["Edit message".to_string(), "Cancel".to_string(), "Regenerate".to_string()]);
+    choices.extend(vec![
+        "Edit message".to_string(),
+        "Cancel".to_string(),
+        "Regenerate".to_string(),
+    ]);
 
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("What would you like to do?")
@@ -399,17 +414,26 @@ async fn generate_commit_messages(
             .template("{spinner:.green} {msg}")
             .unwrap(),
     );
-    pb.set_message(format!("Generating {} commit message{}...", count, if count > 1 { "s" } else { "" }));
+    pb.set_message(format!(
+        "Generating {} commit message{}...",
+        count,
+        if count > 1 { "s" } else { "" }
+    ));
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
     // Try to use an active account first
-    let provider: Box<dyn providers::AIProvider> = if let Some(account) = config.get_active_account()? {
-        tracing::info!("Using account: {}", account.alias);
-        println!("{} Using account: {}", "🔐".dimmed(), account.alias.yellow());
-        providers::create_provider_for_account(&account, config)?
-    } else {
-        providers::create_provider(config)?
-    };
+    let provider: Box<dyn providers::AIProvider> =
+        if let Some(account) = config.get_active_account()? {
+            tracing::info!("Using account: {}", account.alias);
+            println!(
+                "{} Using account: {}",
+                "🔐".dimmed(),
+                account.alias.yellow()
+            );
+            providers::create_provider_for_account(&account, config)?
+        } else {
+            providers::create_provider(config)?
+        };
 
     let messages = provider
         .generate_commit_messages(diff, context, full_gitmoji, config, count)
@@ -456,11 +480,9 @@ fn filter_diff_by_rcoignore(diff: &str) -> Result<String> {
 
     for line in diff.lines() {
         if line.starts_with("+++ b/") || line.starts_with("--- a/") {
-            let file_path = if line.starts_with("+++ b/") {
-                &line[6..]
-            } else {
-                &line[6..]
-            };
+            let file_path = line
+                .strip_prefix("+++ b/")
+                .unwrap_or_else(|| line.strip_prefix("--- a/").unwrap_or(&line[6..]));
 
             include_current_file = !patterns.iter().any(|pattern| {
                 if pattern.starts_with('/') {
@@ -541,8 +563,13 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
 
         // Write to stdin, handling the Result properly
         {
-            let stdin = process.stdin.as_mut().context("pbcopy stdin not available")?;
-            stdin.write_all(text.as_bytes()).context("Failed to write to clipboard")?;
+            let stdin = process
+                .stdin
+                .as_mut()
+                .context("pbcopy stdin not available")?;
+            stdin
+                .write_all(text.as_bytes())
+                .context("Failed to write to clipboard")?;
         }
 
         let status = process
@@ -560,7 +587,11 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
         use std::process::{Command, Stdio};
 
         // Check if xclip is available, otherwise try xsel as fallback
-        let use_xclip = !Command::new("which").arg("xclip").output()?.stdout.is_empty();
+        let use_xclip = !Command::new("which")
+            .arg("xclip")
+            .output()?
+            .stdout
+            .is_empty();
 
         let (cmd_name, args) = if use_xclip {
             ("xclip", vec!["-selection", "clipboard"])
@@ -575,8 +606,12 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
             .context(format!("Failed to spawn {} process", cmd_name))?;
 
         {
-            let stdin = process.stdin.as_mut().context(format!("{} stdin not available", cmd_name))?;
-            stdin.write_all(text.as_bytes())
+            let stdin = process
+                .stdin
+                .as_mut()
+                .context(format!("{} stdin not available", cmd_name))?;
+            stdin
+                .write_all(text.as_bytes())
                 .context("Failed to write to clipboard")?;
         }
 

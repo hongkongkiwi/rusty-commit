@@ -156,7 +156,11 @@ impl VercelOAuthClient {
     }
 
     /// Exchange authorization code for access token
-    async fn exchange_code_for_token(&self, code: &str, verifier: &str) -> Result<VercelTokenResponse> {
+    async fn exchange_code_for_token(
+        &self,
+        code: &str,
+        verifier: &str,
+    ) -> Result<VercelTokenResponse> {
         let params = [
             ("grant_type", "authorization_code"),
             ("code", code),
@@ -174,10 +178,17 @@ impl VercelOAuthClient {
             .context("Failed to exchange code for token")?;
 
         if response.status().is_success() {
-            response.json::<VercelTokenResponse>().await.context("Failed to parse token response")
+            response
+                .json::<VercelTokenResponse>()
+                .await
+                .context("Failed to parse token response")
         } else {
             let error: VercelErrorResponse = response.json().await?;
-            anyhow::bail!("Token exchange failed: {} - {}", error.error, error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token exchange failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
 
@@ -199,10 +210,17 @@ impl VercelOAuthClient {
             .context("Failed to refresh token")?;
 
         if response.status().is_success() {
-            response.json::<VercelTokenResponse>().await.context("Failed to parse refresh token response")
+            response
+                .json::<VercelTokenResponse>()
+                .await
+                .context("Failed to parse refresh token response")
         } else {
             let error: VercelErrorResponse = response.json().await?;
-            anyhow::bail!("Token refresh failed: {} - {}", error.error, error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token refresh failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
 }

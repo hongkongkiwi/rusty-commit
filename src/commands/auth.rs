@@ -77,7 +77,7 @@ async fn login() -> Result<()> {
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("🤖 Select AI provider")
         .items(
-            &providers
+            providers
                 .iter()
                 .map(|(name, desc)| format!("{:<20} {}", name, desc.dimmed()))
                 .collect::<Vec<_>>(),
@@ -226,7 +226,10 @@ async fn handle_claude_api_key_creation() -> Result<()> {
 async fn handle_codex_auth() -> Result<()> {
     use crate::auth::codex_oauth::CodexOAuthClient;
 
-    println!("\n{}", "🔐 OpenAI Codex (ChatGPT) Authentication".cyan().bold());
+    println!(
+        "\n{}",
+        "🔐 OpenAI Codex (ChatGPT) Authentication".cyan().bold()
+    );
     println!(
         "{}",
         "This will use your ChatGPT Pro/Plus subscription".dimmed()
@@ -326,7 +329,8 @@ async fn handle_ollama_auth() -> Result<()> {
         );
         eprintln!(
             "{}",
-            "Warning: Using HTTP for local Ollama. This is acceptable for localhost connections.".yellow()
+            "Warning: Using HTTP for local Ollama. This is acceptable for localhost connections."
+                .yellow()
         );
     } else {
         let url: String = Input::with_theme(&ColorfulTheme::default())
@@ -341,7 +345,8 @@ async fn handle_ollama_auth() -> Result<()> {
             eprintln!(
                 "{}",
                 "Warning: Using insecure HTTP connection. Your API requests may be intercepted. \
-                Consider using HTTPS for production use.".red()
+                Consider using HTTPS for production use."
+                    .red()
             );
         }
 
@@ -585,7 +590,12 @@ async fn handle_mistral_auth() -> Result<()> {
 
 /// Handle Qwen AI (Alibaba DashScope) authentication
 async fn handle_qwen_auth() -> Result<()> {
-    println!("\n{}", "🌟 Qwen AI (Alibaba DashScope) Authentication".cyan().bold());
+    println!(
+        "\n{}",
+        "🌟 Qwen AI (Alibaba DashScope) Authentication"
+            .cyan()
+            .bold()
+    );
     println!(
         "{}",
         "Get your API key from: https://dashscope.console.aliyun.com/".cyan()

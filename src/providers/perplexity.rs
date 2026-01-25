@@ -65,7 +65,11 @@ impl PerplexityProvider {
 
     /// Create provider from account configuration
     #[allow(dead_code)]
-    pub fn from_account(_account: &crate::config::accounts::AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
+    pub fn from_account(
+        _account: &crate::config::accounts::AccountConfig,
+        api_key: &str,
+        config: &Config,
+    ) -> Result<Self> {
         let client = Client::new();
         let model = _account
             .model
@@ -174,7 +178,7 @@ impl AIProvider for PerplexityProvider {
         let message = perplexity_response
             .choices
             .first()
-            .and_then(|choice| Some(&choice.message.content))
+            .map(|choice| &choice.message.content)
             .context("Perplexity returned an empty response. The model may be overloaded - please try again.")?
             .trim()
             .to_string();

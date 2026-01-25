@@ -316,8 +316,9 @@ pub fn get_tokens_for_account(_account_id: &str) -> Result<Option<TokenStorage>>
             let access_key = account_storage_key(_account_id, "access_token");
             if let Ok(Some(access_token)) = crate::config::secure_storage::get_secret(&access_key) {
                 let refresh_key = account_storage_key(_account_id, "refresh_token");
-                let refresh_token =
-                    crate::config::secure_storage::get_secret(&refresh_key).ok().flatten();
+                let refresh_token = crate::config::secure_storage::get_secret(&refresh_key)
+                    .ok()
+                    .flatten();
 
                 let expiry_key = account_storage_key(_account_id, "token_expires_at");
                 let expires_at = crate::config::secure_storage::get_secret(&expiry_key)

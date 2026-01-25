@@ -24,7 +24,10 @@ async fn list_models(config: &Config, provider_override: Option<&str>) -> Result
         .unwrap_or(config.ai_provider.as_deref().unwrap_or("openai"))
         .to_lowercase();
 
-    println!("{}", format!("Available models for provider: {}", provider).green());
+    println!(
+        "{}",
+        format!("Available models for provider: {}", provider).green()
+    );
     println!("{}", "─".repeat(50).dimmed());
 
     let models = match provider.as_str() {
@@ -66,18 +69,8 @@ async fn list_models(config: &Config, provider_override: Option<&str>) -> Result
             "gemini-1.5-flash",
             "gemini-1.0-pro",
         ],
-        "azure" | "azure-openai" => vec![
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-35-turbo",
-        ],
-        "perplexity" => vec![
-            "sonar-reasoning",
-            "sonar",
-            "r1-1776",
-            "doctl",
-        ],
+        "azure" | "azure-openai" => vec!["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-35-turbo"],
+        "perplexity" => vec!["sonar-reasoning", "sonar", "r1-1776", "doctl"],
         _ => vec!["gpt-3.5-turbo", "gpt-4", "gpt-4o", "claude-3-5-sonnet"],
     };
 
@@ -99,7 +92,11 @@ async fn list_models(config: &Config, provider_override: Option<&str>) -> Result
 }
 
 async fn select_model_interactive(config: &mut Config) -> Result<()> {
-    let provider = config.ai_provider.as_deref().unwrap_or("openai").to_lowercase();
+    let provider = config
+        .ai_provider
+        .as_deref()
+        .unwrap_or("openai")
+        .to_lowercase();
 
     println!("{}", "🤖 Interactive Model Selection".green().bold());
     println!("Current provider: {}", provider.cyan());
@@ -148,8 +145,8 @@ async fn select_model_interactive(config: &mut Config) -> Result<()> {
 fn get_provider_models(provider: &str) -> Vec<String> {
     match provider {
         "openai" | "deepseek" | "groq" | "openrouter" | "together" | "deepinfra"
-        | "huggingface" | "mistral" | "fireworks" | "moonshot"
-        | "amazon-bedrock" | "github-models" => vec![
+        | "huggingface" | "mistral" | "fireworks" | "moonshot" | "amazon-bedrock"
+        | "github-models" => vec![
             "gpt-4o".to_string(),
             "gpt-4o-mini".to_string(),
             "gpt-4-turbo".to_string(),

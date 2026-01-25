@@ -25,19 +25,12 @@ impl XAIProvider {
             .as_ref()
             .context("xAI API key not configured.\nRun: rco config set RCO_API_KEY=<your_key>\nGet your API key from: https://x.ai/api")?;
 
-        let openai_config = OpenAIConfig::new().with_api_key(api_key).with_api_base(
-            config
-                .api_url
-                .as_deref()
-                .unwrap_or("https://api.x.ai/v1"),
-        );
+        let openai_config = OpenAIConfig::new()
+            .with_api_key(api_key)
+            .with_api_base(config.api_url.as_deref().unwrap_or("https://api.x.ai/v1"));
 
         let client = Client::with_config(openai_config);
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("grok-beta")
-            .to_string();
+        let model = config.model.as_deref().unwrap_or("grok-beta").to_string();
 
         Ok(Self { client, model })
     }

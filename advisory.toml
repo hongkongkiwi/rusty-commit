@@ -1,0 +1,5 @@
+[advisories]
+# Ignore the xcb vulnerability as it's a transitive dependency from the unmaintained
+# clipboard crate. The clipboard crate is used for Linux clipboard integration but
+# is unmaintained and has no fix available. This is a known limitation.
+ignore = ["RUSTSEC-2021-0019"]

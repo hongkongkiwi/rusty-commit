@@ -17,9 +17,7 @@ pub async fn execute(cmd: PrCommand) -> Result<()> {
         crate::cli::PrAction::Generate { base } => {
             generate_pr_description(&config, base.as_deref()).await
         }
-        crate::cli::PrAction::Browse { base } => {
-            browse_pr_page(&repo_root, base.as_deref())
-        }
+        crate::cli::PrAction::Browse { base } => browse_pr_page(&repo_root, base.as_deref()),
     }
 }
 
@@ -42,7 +40,10 @@ async fn generate_pr_description(config: &Config, base_branch: Option<&str>) -> 
     let diff = git::get_diff_between(base, &current_branch)?;
 
     if commits.is_empty() {
-        println!("{}", "No commits found to generate PR description.".yellow());
+        println!(
+            "{}",
+            "No commits found to generate PR description.".yellow()
+        );
         return Ok(());
     }
 
@@ -142,10 +143,7 @@ fn convert_to_pr_url(remote_url: &str, branch: &str, base: &str) -> Result<Strin
         }
     } else if remote_url.contains("github.com") {
         // HTTPS format
-        remote_url
-            .replace(".git", "")
-            .replace("https://github.com/", "https://github.com/")
-            + &format!("/compare/{}...{}?expand=1", base, branch)
+        remote_url.replace(".git", "") + &format!("/compare/{}...{}?expand=1", base, branch)
     } else {
         // Non-GitHub repo
         format!("{}/compare/{}...{}", remote_url, base, branch)
@@ -166,11 +164,16 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
             .context("Failed to spawn pbcopy process")?;
 
         {
-            let stdin = process.stdin.as_mut().context("pbcopy stdin not available")?;
+            let stdin = process
+                .stdin
+                .as_mut()
+                .context("pbcopy stdin not available")?;
             stdin.write_all(text.as_bytes())?;
         }
 
-        let status = process.wait().context("Failed to wait for pbcopy process")?;
+        let status = process
+            .wait()
+            .context("Failed to wait for pbcopy process")?;
         if !status.success() {
             anyhow::bail!("pbcopy exited with error: {:?}", status);
         }
@@ -182,7 +185,11 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
         use std::process::{Command, Stdio};
 
         // Check if xclip is available, otherwise try xsel as fallback
-        let use_xclip = !Command::new("which").arg("xclip").output()?.stdout.is_empty();
+        let use_xclip = !Command::new("which")
+            .arg("xclip")
+            .output()?
+            .stdout
+            .is_empty();
 
         let (cmd_name, args) = if use_xclip {
             ("xclip", vec!["-selection", "clipboard"])
@@ -197,11 +204,16 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
             .context(format!("Failed to spawn {} process", cmd_name))?;
 
         {
-            let stdin = process.stdin.as_mut().context(format!("{} stdin not available", cmd_name))?;
+            let stdin = process
+                .stdin
+                .as_mut()
+                .context(format!("{} stdin not available", cmd_name))?;
             stdin.write_all(text.as_bytes())?;
         }
 
-        let status = process.wait().context(format!("Failed to wait for {} process", cmd_name))?;
+        let status = process
+            .wait()
+            .context(format!("Failed to wait for {} process", cmd_name))?;
         if !status.success() {
             anyhow::bail!("{} exited with error: {:?}", cmd_name, status);
         }

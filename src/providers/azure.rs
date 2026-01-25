@@ -75,11 +75,17 @@ impl AzureProvider {
 
     /// Create provider from account configuration
     #[allow(dead_code)]
-    pub fn from_account(account: &crate::config::accounts::AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
+    pub fn from_account(
+        account: &crate::config::accounts::AccountConfig,
+        api_key: &str,
+        config: &Config,
+    ) -> Result<Self> {
         let endpoint = account
             .api_url
             .as_ref()
-            .context("Azure endpoint required. Set with: rco config set RCO_API_URL=<your_endpoint>")?
+            .context(
+                "Azure endpoint required. Set with: rco config set RCO_API_URL=<your_endpoint>",
+            )?
             .clone();
 
         let deployment = account

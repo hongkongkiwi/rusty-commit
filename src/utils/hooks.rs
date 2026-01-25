@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Duration;
-use std::path::PathBuf;
 
 pub struct HookOptions<'a> {
     pub name: &'a str,
@@ -42,11 +42,17 @@ pub fn run_hooks(opts: HookOptions) -> Result<()> {
 
         // Security: warn about potentially dangerous commands
         let executable_lower = executable.to_lowercase();
-        if executable_lower == "sh" || executable_lower == "bash" || executable_lower == "cmd" || executable_lower == "powershell" {
+        if executable_lower == "sh"
+            || executable_lower == "bash"
+            || executable_lower == "cmd"
+            || executable_lower == "powershell"
+        {
             eprintln!(
                 "Warning: Shell execution in {} hook {} is deprecated for security reasons. \
                 Consider using direct command execution instead: {}",
-                opts.name, idx + 1, cmd
+                opts.name,
+                idx + 1,
+                cmd
             );
         }
 

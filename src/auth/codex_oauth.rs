@@ -213,7 +213,11 @@ impl CodexOAuthClient {
     }
 
     /// Exchange authorization code for access token
-    async fn exchange_code_for_token(&self, code: &str, verifier: &str) -> Result<CodeXTokenResponse> {
+    async fn exchange_code_for_token(
+        &self,
+        code: &str,
+        verifier: &str,
+    ) -> Result<CodeXTokenResponse> {
         let params = [
             ("grant_type", "authorization_code"),
             ("code", code),

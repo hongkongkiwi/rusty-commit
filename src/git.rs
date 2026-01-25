@@ -234,7 +234,7 @@ pub fn get_commits_between(base: &str, head: &str) -> Result<Vec<String>> {
             commits.push(format!(
                 "{} - {}",
                 commit.id().to_string().chars().take(7).collect::<String>(),
-                commit.message().unwrap_or("").to_string()
+                commit.message().unwrap_or("")
             ));
         }
     }
@@ -249,11 +249,15 @@ pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
     let base_commit = repo.revparse_single(base)?;
     let head_commit = repo.revparse_single(head)?;
 
-    let base_tree = base_commit.as_tree().ok_or(anyhow::anyhow!("Failed to get base commit tree"))?;
-    let head_tree = head_commit.as_tree().ok_or(anyhow::anyhow!("Failed to get head commit tree"))?;
+    let base_tree = base_commit
+        .as_tree()
+        .ok_or(anyhow::anyhow!("Failed to get base commit tree"))?;
+    let head_tree = head_commit
+        .as_tree()
+        .ok_or(anyhow::anyhow!("Failed to get head commit tree"))?;
 
     let mut diff_opts = DiffOptions::new();
-    let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Some(&mut diff_opts))?;
+    let diff = repo.diff_tree_to_tree(Some(base_tree), Some(head_tree), Some(&mut diff_opts))?;
 
     let mut diff_text = String::new();
     diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
@@ -270,7 +274,10 @@ pub fn get_remote_url() -> Result<String> {
     let repo = Repository::open_from_env()?;
 
     let remote = repo.find_remote("origin")?;
-    let url = remote.url().context("Could not get remote URL")?.to_string();
+    let url = remote
+        .url()
+        .context("Could not get remote URL")?
+        .to_string();
 
     Ok(url)
 }

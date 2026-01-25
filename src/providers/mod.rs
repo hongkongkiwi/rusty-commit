@@ -1,21 +1,21 @@
 // AI Provider modules - conditionally compiled based on features
-#[cfg(feature = "openai")]
-pub mod openai;
 #[cfg(feature = "anthropic")]
 pub mod anthropic;
-#[cfg(feature = "ollama")]
-pub mod ollama;
-#[cfg(feature = "gemini")]
-pub mod gemini;
 #[cfg(feature = "azure")]
 pub mod azure;
+#[cfg(feature = "gemini")]
+pub mod gemini;
+#[cfg(feature = "ollama")]
+pub mod ollama;
+#[cfg(feature = "openai")]
+pub mod openai;
 #[cfg(feature = "perplexity")]
 pub mod perplexity;
 #[cfg(feature = "xai")]
 pub mod xai;
 
-use crate::config::Config;
 use crate::config::accounts::AccountConfig;
+use crate::config::Config;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
@@ -40,7 +40,10 @@ pub trait AIProvider: Send + Sync {
     ) -> Result<Vec<String>> {
         let mut messages = Vec::with_capacity(count as usize);
         for _ in 0..count {
-            match self.generate_commit_message(diff, context, full_gitmoji, config).await {
+            match self
+                .generate_commit_message(diff, context, full_gitmoji, config)
+                .await
+            {
                 Ok(msg) => messages.push(msg),
                 Err(e) => tracing::warn!("Failed to generate message: {}", e),
             }
@@ -71,7 +74,12 @@ pub trait AIProvider: Send + Sync {
         ];
 
         let request = async_openai::types::chat::CreateChatCompletionRequestArgs::default()
-            .model(&config.model.clone().unwrap_or_else(|| "gpt-3.5-turbo".to_string()))
+            .model(
+                config
+                    .model
+                    .clone()
+                    .unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
+            )
             .messages(messages)
             .temperature(0.7)
             .max_tokens(config.tokens_max_output.unwrap_or(1000) as u16)
@@ -143,26 +151,30 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
         "deepseek" | "groq" | "openrouter" | "together" | "deepinfra" | "huggingface"
         | "mistral" | "github-models" | "amazon-bedrock" | "fireworks" | "fireworks-ai"
         | "moonshot" | "moonshot-ai" | "dashscope" | "alibaba" | "qwen" | "qwen-coder"
-        | "vertex" | "vertex-ai" | "google-vertex" | "codex" => Ok(Box::new(openai::OpenAIProvider::new(config)?)),
+        | "vertex" | "vertex-ai" | "google-vertex" | "codex" => {
+            Ok(Box::new(openai::OpenAIProvider::new(config)?))
+        }
         _ => {
             // Build available providers list based on enabled features
-            let mut available = Vec::new();
-            #[cfg(feature = "openai")]
-            available.push("openai");
-            #[cfg(feature = "anthropic")]
-            available.push("anthropic / claude");
-            #[cfg(feature = "ollama")]
-            available.push("ollama");
-            #[cfg(feature = "gemini")]
-            available.push("gemini");
-            #[cfg(feature = "azure")]
-            available.push("azure");
-            #[cfg(feature = "perplexity")]
-            available.push("perplexity");
-            #[cfg(feature = "xai")]
-            available.push("xai / grok");
-            #[cfg(feature = "openai")]
-            available.push("deepseek, groq, openrouter, together, deepseek (OpenAI-compatible)");
+            #[allow(clippy::useless_vec)]
+            let available = vec![
+                #[cfg(feature = "openai")]
+                "openai",
+                #[cfg(feature = "anthropic")]
+                "anthropic / claude",
+                #[cfg(feature = "ollama")]
+                "ollama",
+                #[cfg(feature = "gemini")]
+                "gemini",
+                #[cfg(feature = "azure")]
+                "azure",
+                #[cfg(feature = "perplexity")]
+                "perplexity",
+                #[cfg(feature = "xai")]
+                "xai / grok",
+                #[cfg(feature = "openai")]
+                "deepseek, groq, openrouter, together, deepseek (OpenAI-compatible)",
+            ];
 
             if available.is_empty() {
                 anyhow::bail!(
@@ -176,7 +188,11 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
                  Available providers (based on enabled features):\n{}\n\n\
                  Set with: rco config set RCO_AI_PROVIDER=<provider_name>",
                 provider,
-                available.iter().map(|p| format!("- {}", p)).collect::<Vec<_>>().join("\n")
+                available
+                    .iter()
+                    .map(|p| format!("- {}", p))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             )
         }
     }
@@ -253,7 +269,10 @@ pub fn build_prompt(
 
 /// Create an AI provider from an account configuration
 #[allow(dead_code)]
-pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> Result<Box<dyn AIProvider>> {
+pub fn create_provider_for_account(
+    account: &AccountConfig,
+    config: &Config,
+) -> Result<Box<dyn AIProvider>> {
     use crate::auth::token_storage;
     use crate::config::secure_storage;
 
@@ -266,14 +285,14 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
             token_storage::get_api_key_for_account(key_id)?
                 .or_else(|| secure_storage::get_secret(key_id).ok().flatten())
         }
-        crate::config::accounts::AuthMethod::OAuth { provider: _oauth_provider, account_id } => {
+        crate::config::accounts::AuthMethod::OAuth {
+            provider: _oauth_provider,
+            account_id,
+        } => {
             // Get OAuth access token from secure storage
-            token_storage::get_tokens_for_account(account_id)?
-                .map(|t| t.access_token)
+            token_storage::get_tokens_for_account(account_id)?.map(|t| t.access_token)
         }
-        crate::config::accounts::AuthMethod::EnvVar { name } => {
-            std::env::var(name).ok()
-        }
+        crate::config::accounts::AuthMethod::EnvVar { name } => std::env::var(name).ok(),
         crate::config::accounts::AuthMethod::Bearer { token_id } => {
             // Get bearer token from secure storage
             token_storage::get_bearer_token_for_account(token_id)?
@@ -285,7 +304,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "openai")]
         "openai" | "codex" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(openai::OpenAIProvider::from_account(account, key, config)?))
+                Ok(Box::new(openai::OpenAIProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(openai::OpenAIProvider::new(config)?))
             }
@@ -293,7 +314,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "anthropic")]
         "anthropic" | "claude" | "claude-code" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(anthropic::AnthropicProvider::from_account(account, key, config)?))
+                Ok(Box::new(anthropic::AnthropicProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(anthropic::AnthropicProvider::new(config)?))
             }
@@ -301,7 +324,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "ollama")]
         "ollama" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(ollama::OllamaProvider::from_account(account, key, config)?))
+                Ok(Box::new(ollama::OllamaProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(ollama::OllamaProvider::new(config)?))
             }
@@ -309,7 +334,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "gemini")]
         "gemini" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(gemini::GeminiProvider::from_account(account, key, config)?))
+                Ok(Box::new(gemini::GeminiProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(gemini::GeminiProvider::new(config)?))
             }
@@ -317,7 +344,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "azure")]
         "azure" | "azure-openai" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(azure::AzureProvider::from_account(account, key, config)?))
+                Ok(Box::new(azure::AzureProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(azure::AzureProvider::new(config)?))
             }
@@ -325,7 +354,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "perplexity")]
         "perplexity" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(perplexity::PerplexityProvider::from_account(account, key, config)?))
+                Ok(Box::new(perplexity::PerplexityProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(perplexity::PerplexityProvider::new(config)?))
             }
@@ -333,7 +364,9 @@ pub fn create_provider_for_account(account: &AccountConfig, config: &Config) -> 
         #[cfg(feature = "xai")]
         "xai" | "grok" | "x-ai" => {
             if let Some(key) = credentials.as_ref() {
-                Ok(Box::new(xai::XAIProvider::from_account(account, key, config)?))
+                Ok(Box::new(xai::XAIProvider::from_account(
+                    account, key, config,
+                )?))
             } else {
                 Ok(Box::new(xai::XAIProvider::new(config)?))
             }

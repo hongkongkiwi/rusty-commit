@@ -1,4 +1,10 @@
 #![allow(deprecated)]
+#![allow(
+    clippy::field_reassign_with_default,
+    clippy::assertions_on_constants,
+    clippy::overly_complex_bool_expr,
+    clippy::useless_vec
+)]
 
 use assert_cmd::Command;
 use predicates::prelude::*;

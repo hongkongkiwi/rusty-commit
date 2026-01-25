@@ -161,7 +161,11 @@ impl GitLabOAuthClient {
     }
 
     /// Exchange authorization code for access token
-    async fn exchange_code_for_token(&self, code: &str, verifier: &str) -> Result<GitLabTokenResponse> {
+    async fn exchange_code_for_token(
+        &self,
+        code: &str,
+        verifier: &str,
+    ) -> Result<GitLabTokenResponse> {
         let params = [
             ("grant_type", "authorization_code"),
             ("code", code),
@@ -179,10 +183,17 @@ impl GitLabOAuthClient {
             .context("Failed to exchange code for token")?;
 
         if response.status().is_success() {
-            response.json::<GitLabTokenResponse>().await.context("Failed to parse token response")
+            response
+                .json::<GitLabTokenResponse>()
+                .await
+                .context("Failed to parse token response")
         } else {
             let error: GitLabErrorResponse = response.json().await?;
-            anyhow::bail!("Token exchange failed: {} - {}", error.error, error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token exchange failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
 
@@ -204,10 +215,17 @@ impl GitLabOAuthClient {
             .context("Failed to refresh token")?;
 
         if response.status().is_success() {
-            response.json::<GitLabTokenResponse>().await.context("Failed to parse refresh token response")
+            response
+                .json::<GitLabTokenResponse>()
+                .await
+                .context("Failed to parse refresh token response")
         } else {
             let error: GitLabErrorResponse = response.json().await?;
-            anyhow::bail!("Token refresh failed: {} - {}", error.error, error.error_description.unwrap_or_default())
+            anyhow::bail!(
+                "Token refresh failed: {} - {}",
+                error.error,
+                error.error_description.unwrap_or_default()
+            )
         }
     }
 }

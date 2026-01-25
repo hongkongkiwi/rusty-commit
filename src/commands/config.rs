@@ -215,7 +215,7 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             let alias = alias.unwrap_or_else(|| {
                 Input::new()
                     .with_prompt("Enter account alias (e.g., 'work', 'personal')")
-                    .with_initial_text(&format!("{}-default", provider_name))
+                    .with_initial_text(format!("{}-default", provider_name))
                     .interact()
                     .unwrap_or_else(|_| format!("{}-default", provider_name))
             });
@@ -226,7 +226,11 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                 .allow_empty(true)
                 .interact()?;
 
-            let model = if model_input.trim().is_empty() { None } else { Some(model_input.trim().to_string()) };
+            let model = if model_input.trim().is_empty() {
+                None
+            } else {
+                Some(model_input.trim().to_string())
+            };
 
             // Get optional API URL
             let api_url_input: String = Input::new()
@@ -234,18 +238,25 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                 .allow_empty(true)
                 .interact()?;
 
-            let api_url = if api_url_input.trim().is_empty() { None } else { Some(api_url_input.trim().to_string()) };
+            let api_url = if api_url_input.trim().is_empty() {
+                None
+            } else {
+                Some(api_url_input.trim().to_string())
+            };
 
             // Get API key (skip for Ollama)
             let api_key = if provider_selection == 5 {
                 None
             } else {
                 let key_input: String = Input::new()
-                    .with_prompt(&format!("Enter your {} API key", provider_name))
+                    .with_prompt(format!("Enter your {} API key", provider_name))
                     .interact()?;
 
                 if key_input.trim().is_empty() {
-                    eprintln!("{}", "⚠ No API key entered. You'll need to set it later.".yellow());
+                    eprintln!(
+                        "{}",
+                        "⚠ No API key entered. You'll need to set it later.".yellow()
+                    );
                     None
                 } else {
                     Some(key_input.trim().to_string())
@@ -256,14 +267,20 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             let auth = if api_key.is_some() {
                 // Generate a key_id for this account
                 let key_id = format!("rco_{}", alias.to_lowercase().replace(' ', "_"));
-                accounts::AuthMethod::ApiKey { key_id: key_id.clone() }
+                accounts::AuthMethod::ApiKey {
+                    key_id: key_id.clone(),
+                }
             } else {
                 // For Ollama or no key, use env var
                 if let Some(env_var) = provider_key {
-                    accounts::AuthMethod::EnvVar { name: env_var.to_string() }
+                    accounts::AuthMethod::EnvVar {
+                        name: env_var.to_string(),
+                    }
                 } else {
                     // Fallback - no auth
-                    accounts::AuthMethod::EnvVar { name: "OLLAMA_HOST".to_string() }
+                    accounts::AuthMethod::EnvVar {
+                        name: "OLLAMA_HOST".to_string(),
+                    }
                 }
             };
 
@@ -279,15 +296,18 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             };
 
             // Save the account
-            let mut accounts_config = accounts::AccountsConfig::load()?
-                .unwrap_or_else(|| accounts::AccountsConfig {
+            let mut accounts_config =
+                accounts::AccountsConfig::load()?.unwrap_or_else(|| accounts::AccountsConfig {
                     active_account: None,
                     accounts: std::collections::HashMap::new(),
                 });
 
             // Check if alias already exists
             if accounts_config.get_account(&account.alias).is_some() {
-                eprintln!("{}", format!("❌ Account '{}' already exists", account.alias).red());
+                eprintln!(
+                    "{}",
+                    format!("❌ Account '{}' already exists", account.alias).red()
+                );
             } else {
                 accounts_config.add_account(account.clone());
 
@@ -297,16 +317,30 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                         accounts::AuthMethod::ApiKey { key_id } => key_id.clone(),
                         _ => unreachable!(),
                     };
-                    if let Err(e) = crate::auth::token_storage::store_api_key_for_account(&key_id, &key) {
-                        eprintln!("{}", format!("⚠ Failed to store API key securely: {e}").yellow());
+                    if let Err(e) =
+                        crate::auth::token_storage::store_api_key_for_account(&key_id, &key)
+                    {
+                        eprintln!(
+                            "{}",
+                            format!("⚠ Failed to store API key securely: {e}").yellow()
+                        );
                     }
                 }
 
                 accounts_config.save()?;
-                println!("");
-                println!("{}", format!("✅ Account '{}' added successfully!", account.alias).green());
-                println!("");
-                println!("{} To use this account: {}", "→".cyan(), format!("rco config use-account {}", account.alias).bold().white());
+                println!();
+                println!(
+                    "{}",
+                    format!("✅ Account '{}' added successfully!", account.alias).green()
+                );
+                println!();
+                println!(
+                    "{} To use this account: {}",
+                    "→".cyan(),
+                    format!("rco config use-account {}", account.alias)
+                        .bold()
+                        .white()
+                );
             }
         }
         ConfigAction::ListAccounts => {
@@ -342,16 +376,25 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                 }
             } else {
                 println!("\n{}", "No accounts configured yet.".dimmed());
-                println!("{}", "Use: rco config add-provider to add an account".dimmed());
+                println!(
+                    "{}",
+                    "Use: rco config add-provider to add an account".dimmed()
+                );
             }
         }
         ConfigAction::UseAccount { alias } => {
-            println!("\n{}", format!("🔄 Switching to account: {}", alias).bold().green());
+            println!(
+                "\n{}",
+                format!("🔄 Switching to account: {}", alias).bold().green()
+            );
 
             match config.set_default_account(&alias) {
                 Ok(_) => {
                     println!("{}", format!("✅ Now using account: {alias}").green());
-                    println!("\n{}", "Note: Account switching requires restart of commands".dimmed());
+                    println!(
+                        "\n{}",
+                        "Note: Account switching requires restart of commands".dimmed()
+                    );
                 }
                 Err(e) => {
                     eprintln!("{}", format!("❌ Failed to switch account: {e}").red());
@@ -359,7 +402,10 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             }
         }
         ConfigAction::RemoveAccount { alias } => {
-            println!("\n{}", format!("🗑️  Removing account: {}", alias).bold().yellow());
+            println!(
+                "\n{}",
+                format!("🗑️  Removing account: {}", alias).bold().yellow()
+            );
 
             match config.remove_account(&alias) {
                 Ok(_) => {
@@ -393,7 +439,10 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
                         crate::config::accounts::AuthMethod::ApiKey { .. } => {
                             println!("Auth: API Key 🔑");
                         }
-                        crate::config::accounts::AuthMethod::OAuth { provider, account_id } => {
+                        crate::config::accounts::AuthMethod::OAuth {
+                            provider,
+                            account_id,
+                        } => {
                             println!("Auth: OAuth ({}) - Account: {}", provider, account_id);
                         }
                         crate::config::accounts::AuthMethod::EnvVar { name } => {

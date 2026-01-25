@@ -51,7 +51,11 @@ impl OllamaProvider {
 
     /// Create provider from account configuration
     #[allow(dead_code)]
-    pub fn from_account(account: &crate::config::accounts::AccountConfig, _api_key: &str, config: &Config) -> Result<Self> {
+    pub fn from_account(
+        account: &crate::config::accounts::AccountConfig,
+        _api_key: &str,
+        config: &Config,
+    ) -> Result<Self> {
         let client = Client::new();
         let api_url = account
             .api_url

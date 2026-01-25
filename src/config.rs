@@ -312,7 +312,9 @@ impl Config {
             }
             "RCO_CLIPBOARD_ON_TIMEOUT" => {
                 self.clipboard_on_timeout = Some(
-                    value.parse().context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?,
+                    value
+                        .parse()
+                        .context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?,
                 );
             }
             // Ignore unsupported keys
@@ -406,7 +408,9 @@ impl Config {
                     "RCO_HOOK_STRICT" => self.hook_strict = default.hook_strict,
                     "RCO_HOOK_TIMEOUT_MS" => self.hook_timeout_ms = default.hook_timeout_ms,
                     "RCO_GENERATE_COUNT" => self.generate_count = default.generate_count,
-                    "RCO_CLIPBOARD_ON_TIMEOUT" => self.clipboard_on_timeout = default.clipboard_on_timeout,
+                    "RCO_CLIPBOARD_ON_TIMEOUT" => {
+                        self.clipboard_on_timeout = default.clipboard_on_timeout
+                    }
                     _ => anyhow::bail!("Unknown configuration key: {}", key),
                 }
             }
@@ -631,7 +635,11 @@ impl Config {
     /// List all accounts
     pub fn list_accounts(&self) -> Result<Vec<accounts::AccountConfig>> {
         if let Some(accounts_config) = accounts::AccountsConfig::load()? {
-            Ok(accounts_config.list_accounts().into_iter().cloned().collect())
+            Ok(accounts_config
+                .list_accounts()
+                .into_iter()
+                .cloned()
+                .collect())
         } else {
             Ok(Vec::new())
         }

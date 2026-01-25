@@ -46,9 +46,15 @@ pub fn is_account_authenticated(account: &AccountConfig) -> bool {
     match &account.auth {
         AuthMethod::ApiKey { key_id } => {
             // Check if we have the API key stored
-            token_storage::get_api_key_for_account(key_id).ok().flatten().is_some()
+            token_storage::get_api_key_for_account(key_id)
+                .ok()
+                .flatten()
+                .is_some()
         }
-        AuthMethod::OAuth { provider: _, account_id } => {
+        AuthMethod::OAuth {
+            provider: _,
+            account_id,
+        } => {
             // Check if we have valid OAuth tokens
             if let Ok(Some(tokens)) = token_storage::get_tokens_for_account(account_id) {
                 !tokens.is_expired()
@@ -79,7 +85,9 @@ pub fn get_account_auth_header(account: &AccountConfig) -> Result<String> {
                 Ok(api_key)
             } else {
                 // Try to get from environment
-                if let Ok(key_from_env) = std::env::var(format!("RCO_API_KEY_{}", key_id.to_uppercase())) {
+                if let Ok(key_from_env) =
+                    std::env::var(format!("RCO_API_KEY_{}", key_id.to_uppercase()))
+                {
                     return Ok(key_from_env);
                 }
                 anyhow::bail!(
@@ -89,7 +97,10 @@ pub fn get_account_auth_header(account: &AccountConfig) -> Result<String> {
                 )
             }
         }
-        AuthMethod::OAuth { provider: _, account_id } => {
+        AuthMethod::OAuth {
+            provider: _,
+            account_id,
+        } => {
             if let Ok(Some(tokens)) = token_storage::get_tokens_for_account(account_id) {
                 Ok(format!("Bearer {}", tokens.access_token))
             } else {
@@ -114,10 +125,7 @@ pub fn get_account_auth_header(account: &AccountConfig) -> Result<String> {
             if let Some(token) = token_storage::get_bearer_token_for_account(token_id)? {
                 Ok(format!("Bearer {}", token))
             } else {
-                anyhow::bail!(
-                    "Bearer token not found for account '{}'",
-                    account.alias
-                )
+                anyhow::bail!("Bearer token not found for account '{}'", account.alias)
             }
         }
     }

@@ -1,3 +1,10 @@
+#![allow(
+    clippy::field_reassign_with_default,
+    clippy::assertions_on_constants,
+    clippy::overly_complex_bool_expr,
+    clippy::useless_vec
+)]
+
 use rusty_commit::config::Config;
 use std::sync::Mutex;
 use tempfile::tempdir;

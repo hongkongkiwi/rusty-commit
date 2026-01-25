@@ -6,7 +6,6 @@ use rmcp::{
     service::{RequestContext, RoleServer},
     ErrorData as McpError, ServiceExt,
 };
-use std::future::Future;
 use tokio::io::{stdin, stdout};
 
 use crate::cli::McpCommand;
@@ -78,95 +77,102 @@ impl ServerHandler for RustyCommitMcpServer {
         }
     }
 
-    fn list_tools(
+    async fn list_tools(
         &self,
         _request: Option<PaginatedRequestParam>,
         _context: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ListToolsResult, McpError>> + Send + '_ {
-        async move {
-            let tools = vec![
-                Tool {
-                    name: "generate_commit_message".into(),
-                    description: Some("Generate AI-powered commit message for staged git changes using Rusty Commit".into()),
-                    input_schema: std::sync::Arc::new(
-                        serde_json::json!({
-                            "type": "object",
-                            "properties": {
-                                "context": {
-                                    "type": "string",
-                                    "description": "Additional context for the commit message"
-                                },
-                                "full_gitmoji": {
-                                    "type": "boolean",
-                                    "description": "Use full GitMoji specification",
-                                    "default": false
-                                },
-                                "commit_type": {
-                                    "type": "string",
-                                    "description": "Commit format type (conventional, gitmoji)",
-                                    "enum": ["conventional", "gitmoji"],
-                                    "default": "conventional"
-                                }
+    ) -> Result<ListToolsResult, McpError> {
+        let tools = vec![
+            Tool {
+                name: "generate_commit_message".into(),
+                description: Some(
+                    "Generate AI-powered commit message for staged git changes using Rusty Commit"
+                        .into(),
+                ),
+                input_schema: std::sync::Arc::new(
+                    serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "context": {
+                                "type": "string",
+                                "description": "Additional context for the commit message"
                             },
-                            "required": []
-                        }).as_object().unwrap().clone()
-                    ),
-                    output_schema: None,
-                    annotations: None,
-                    icons: None,
-                    title: None,
-                    meta: None,
-                },
-                Tool {
-                    name: "show_commit_prompt".into(),
-                    description: Some("Show the prompt that would be sent to AI for commit message generation".into()),
-                    input_schema: std::sync::Arc::new(
-                        serde_json::json!({
-                            "type": "object",
-                            "properties": {
-                                "context": {
-                                    "type": "string",
-                                    "description": "Additional context for the commit message"
-                                },
-                                "full_gitmoji": {
-                                    "type": "boolean",
-                                    "description": "Use full GitMoji specification",
-                                    "default": false
-                                }
+                            "full_gitmoji": {
+                                "type": "boolean",
+                                "description": "Use full GitMoji specification",
+                                "default": false
                             },
-                            "required": []
-                        }).as_object().unwrap().clone()
-                    ),
-                    output_schema: None,
-                    annotations: None,
-                    icons: None,
-                    title: None,
-                    meta: None,
-                },
-            ];
-
-            Ok(ListToolsResult {
-                tools,
-                next_cursor: None,
+                            "commit_type": {
+                                "type": "string",
+                                "description": "Commit format type (conventional, gitmoji)",
+                                "enum": ["conventional", "gitmoji"],
+                                "default": "conventional"
+                            }
+                        },
+                        "required": []
+                    })
+                    .as_object()
+                    .unwrap()
+                    .clone(),
+                ),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                title: None,
                 meta: None,
-            })
-        }
+            },
+            Tool {
+                name: "show_commit_prompt".into(),
+                description: Some(
+                    "Show the prompt that would be sent to AI for commit message generation".into(),
+                ),
+                input_schema: std::sync::Arc::new(
+                    serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "context": {
+                                "type": "string",
+                                "description": "Additional context for the commit message"
+                            },
+                            "full_gitmoji": {
+                                "type": "boolean",
+                                "description": "Use full GitMoji specification",
+                                "default": false
+                            }
+                        },
+                        "required": []
+                    })
+                    .as_object()
+                    .unwrap()
+                    .clone(),
+                ),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                title: None,
+                meta: None,
+            },
+        ];
+
+        Ok(ListToolsResult {
+            tools,
+            next_cursor: None,
+            meta: None,
+        })
     }
 
-    fn call_tool(
+    async fn call_tool(
         &self,
         request: CallToolRequestParam,
         _context: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<CallToolResult, McpError>> + Send + '_ {
-        async move {
-            match request.name.as_ref() {
-                "generate_commit_message" => generate_commit_message_mcp(&request.arguments).await,
-                "show_commit_prompt" => show_commit_prompt_mcp(&request.arguments).await,
-                _ => Ok(CallToolResult::error(vec![Content::text(format!(
-                    "Unknown tool: {}",
-                    request.name
-                ))])),
-            }
+    ) -> Result<CallToolResult, McpError> {
+        match request.name.as_ref() {
+            "generate_commit_message" => generate_commit_message_mcp(&request.arguments).await,
+            "show_commit_prompt" => show_commit_prompt_mcp(&request.arguments).await,
+            _ => Ok(CallToolResult::error(vec![Content::text(format!(
+                "Unknown tool: {}",
+                request.name
+            ))])),
         }
     }
 }

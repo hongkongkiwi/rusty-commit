@@ -144,9 +144,7 @@ pub fn store_tokens(
                 }
 
                 if let Some(expires_in) = expires_in {
-                    let expires_at = current_unix_timestamp()
-                        .unwrap_or(u64::MAX)
-                        + expires_in;
+                    let expires_at = current_unix_timestamp().unwrap_or(u64::MAX) + expires_in;
                     if let Err(e) = crate::config::secure_storage::store_secret(
                         "claude_token_expires_at",
                         &expires_at.to_string(),
@@ -165,9 +163,7 @@ pub fn store_tokens(
     }
 
     // Fall back to file storage
-    let expires_at = expires_in.map(|exp| {
-        current_unix_timestamp().unwrap_or(u64::MAX) + exp
-    });
+    let expires_at = expires_in.map(|exp| current_unix_timestamp().unwrap_or(u64::MAX) + exp);
 
     let storage = TokenStorage {
         access_token: access_token.to_string(),
@@ -282,9 +278,7 @@ pub fn store_tokens_for_account(
 
                 // Store expiry
                 if let Some(expires_in) = expires_in {
-                    let expires_at = current_unix_timestamp()
-                        .unwrap_or(u64::MAX)
-                        + expires_in;
+                    let expires_at = current_unix_timestamp().unwrap_or(u64::MAX) + expires_in;
                     let expiry_key = account_storage_key(_account_id, "token_expires_at");
                     let _ = crate::config::secure_storage::store_secret(
                         &expiry_key,

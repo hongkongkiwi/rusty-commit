@@ -20,7 +20,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     git::assert_git_repo()?;
 
     // Load and validate configuration
-    let mut config = load_and_validate_config()?;
+    let config = load_and_validate_config()?;
 
     // Determine effective generate count (CLI > config > default), clamped to 1-5
     let generate_count = options
@@ -29,11 +29,16 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         .clamp(1, 5);
 
     // Prepare the diff for processing
-    let (final_diff, token_count) = prepare_diff(&mut config)?;
+    let (final_diff, token_count) = prepare_diff(&config)?;
 
     // If --show-prompt flag is set, just show the prompt and exit
     if options.show_prompt {
-        display_prompt(&config, &final_diff, options.context.as_deref(), options.full_gitmoji);
+        display_prompt(
+            &config,
+            &final_diff,
+            options.context.as_deref(),
+            options.full_gitmoji,
+        );
         return Ok(());
     }
 
@@ -229,7 +234,7 @@ async fn handle_commit_action(
     options: &GlobalOptions,
     config: &Config,
     messages: &[String],
-    final_message: &mut String,
+    final_message: &mut str,
 ) -> Result<()> {
     let action = if options.skip_confirmation {
         CommitAction::Commit

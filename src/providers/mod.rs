@@ -64,9 +64,8 @@ pub trait AIProvider: Send + Sync {
             }
         } else {
             // Generate messages in parallel using FuturesUnordered
-            let futures = (0..count).map(|_| {
-                self.generate_commit_message(diff, context, full_gitmoji, config)
-            });
+            let futures = (0..count)
+                .map(|_| self.generate_commit_message(diff, context, full_gitmoji, config));
             let mut stream = futures::stream::FuturesUnordered::from_iter(futures);
 
             let mut messages = Vec::with_capacity(count as usize);

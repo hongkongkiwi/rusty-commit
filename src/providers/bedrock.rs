@@ -29,7 +29,9 @@ impl BedrockProvider {
                     .and_then(|s| s.split('.').next())
                     .map(|s| s.to_string())
             })
-            .unwrap_or_else(|| std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string()));
+            .unwrap_or_else(|| {
+                std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string())
+            });
 
         let region_provider = Region::new(region.clone());
         let shared_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
@@ -39,7 +41,9 @@ impl BedrockProvider {
 
         let client = bedrock::Client::new(&shared_config);
 
-        let model = config.model.as_deref()
+        let model = config
+            .model
+            .as_deref()
             .unwrap_or("anthropic.claude-3-5-sonnet-20241022-v2:0")
             .to_string();
 
@@ -125,7 +129,8 @@ impl AIProvider for BedrockProvider {
             .temperature(0.7)
             .build();
 
-        let converse_output = self.client
+        let converse_output = self
+            .client
             .converse()
             .model_id(&self.model)
             .messages(user_message)

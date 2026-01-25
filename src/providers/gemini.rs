@@ -121,7 +121,9 @@ impl AIProvider for GeminiProvider {
             }],
             system_instruction: Some(SystemInstruction {
                 role: "system".to_string(),
-                parts: vec![Part { text: system_prompt }],
+                parts: vec![Part {
+                    text: system_prompt,
+                }],
             }),
             generation_config: GenerationConfig {
                 temperature: 0.7,

@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use std::fs;
+use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::io::Write;
 
 use crate::cli::{HookAction, HookCommand};
 use crate::git;
@@ -84,7 +84,10 @@ fn install_prepare_commit_msg_hook() -> Result<()> {
         fs::set_permissions(&hook_path, perms).context("Failed to make hook executable")?;
     }
 
-    println!("{}", "✅ prepare-commit-msg hook installed successfully!".green());
+    println!(
+        "{}",
+        "✅ prepare-commit-msg hook installed successfully!".green()
+    );
     println!("The hook will run automatically when you use 'git commit'");
     println!("Note: This hook is interactive (prompts for confirmation)");
 
@@ -149,7 +152,8 @@ fn uninstall_all_hooks() -> Result<()> {
     if prepare_hook_path.exists() {
         let content = fs::read_to_string(&prepare_hook_path)?;
         if content.contains("rco --hook") {
-            fs::remove_file(&prepare_hook_path).context("Failed to remove prepare-commit-msg hook")?;
+            fs::remove_file(&prepare_hook_path)
+                .context("Failed to remove prepare-commit-msg hook")?;
             uninstalled.push("prepare-commit-msg");
 
             // Restore backup if it exists
@@ -276,7 +280,9 @@ fn uninstall_precommit_hook() -> Result<()> {
     let new_content: Vec<&str> = content
         .lines()
         .filter(|line| {
-            !line.trim_start().starts_with("hongkongkiwi/precommit-rusty-commit")
+            !line
+                .trim_start()
+                .starts_with("hongkongkiwi/precommit-rusty-commit")
                 && !line.trim_start().starts_with("rev:")
                 && !line.trim_start().starts_with("hooks:")
                 && !line.trim_start().starts_with("- id:")

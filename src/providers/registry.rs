@@ -40,6 +40,7 @@ pub trait ProviderBuilder: Send + Sync {
 
 /// Provider categories for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ProviderCategory {
     /// Direct API providers (OpenAI, Anthropic, etc.)
     Standard,
@@ -57,7 +58,9 @@ pub struct ProviderEntry {
     pub name: &'static str,
     pub aliases: Vec<&'static str>,
     pub category: ProviderCategory,
+    #[allow(dead_code)]
     pub requires_api_key: bool,
+    #[allow(dead_code)]
     pub default_model: Option<&'static str>,
 }
 
@@ -73,6 +76,7 @@ impl ProviderEntry {
     }
 
     /// Check if this entry matches a provider name
+    #[allow(dead_code)]
     pub fn matches(&self, provider: &str) -> bool {
         let lower = provider.to_lowercase();
         self.name.eq_ignore_ascii_case(&lower)
@@ -113,6 +117,7 @@ impl ProviderRegistry {
     }
 
     /// Get a provider entry by name or alias
+    #[allow(dead_code)]
     pub fn get(&self, provider: &str) -> Option<ProviderEntry> {
         let lower = provider.to_lowercase();
 
@@ -146,17 +151,23 @@ impl ProviderRegistry {
     }
 
     /// Check if any providers are registered
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.entries.read().unwrap().is_empty()
     }
 
     /// Get count of registered providers
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.entries.read().unwrap().len()
     }
 
     /// Create a provider instance
-    pub fn create(&self, name: &str, config: &Config) -> Result<Option<Box<dyn super::AIProvider>>> {
+    pub fn create(
+        &self,
+        name: &str,
+        config: &Config,
+    ) -> Result<Option<Box<dyn super::AIProvider>>> {
         let lower = name.to_lowercase();
 
         // Try direct lookup first

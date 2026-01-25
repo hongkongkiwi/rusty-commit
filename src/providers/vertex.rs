@@ -58,7 +58,9 @@ impl VertexProvider {
 
         let project_id = std::env::var("GOOGLE_CLOUD_PROJECT")
             .or_else(|_| std::env::var("CLOUDSDK_CORE_PROJECT"))
-            .context("Google Cloud project ID not set. Set GOOGLE_CLOUD_PROJECT or run 'gcloud init'")?;
+            .context(
+                "Google Cloud project ID not set. Set GOOGLE_CLOUD_PROJECT or run 'gcloud init'",
+            )?;
 
         let location = config
             .api_url
@@ -71,7 +73,9 @@ impl VertexProvider {
             })
             .unwrap_or_else(|| "us-central1".to_string());
 
-        let model = config.model.as_deref()
+        let model = config
+            .model
+            .as_deref()
             .unwrap_or("gemini-1.5-pro")
             .to_string();
 
@@ -172,9 +176,7 @@ impl AIProvider for VertexProvider {
             ),
             contents: vec![VertexContent {
                 role: "user".to_string(),
-                parts: vec![VertexPart {
-                    text: user_prompt,
-                }],
+                parts: vec![VertexPart { text: user_prompt }],
             }],
             system_instruction: Some(VertexSystemInstruction {
                 role: "system".to_string(),
@@ -196,7 +198,10 @@ impl AIProvider for VertexProvider {
         let response = self
             .client
             .post(&url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+            .header(
+                header::AUTHORIZATION,
+                format!("Bearer {}", self.access_token),
+            )
             .header(header::CONTENT_TYPE, "application/json")
             .json(&request)
             .send()

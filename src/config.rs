@@ -327,7 +327,9 @@ impl Config {
             }
             "RCO_LEARN_FROM_HISTORY" => {
                 self.learn_from_history = Some(
-                    value.parse().context("Invalid boolean for LEARN_FROM_HISTORY")?,
+                    value
+                        .parse()
+                        .context("Invalid boolean for LEARN_FROM_HISTORY")?,
                 );
             }
             "RCO_HISTORY_COMMITS_COUNT" => {

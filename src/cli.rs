@@ -32,7 +32,8 @@ use clap::{Parser, Subcommand};
     rco completions bash
     rco completions zsh
     rco completions fish
-"#)]
+"#
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,

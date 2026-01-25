@@ -243,6 +243,7 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
     )
 }
 
+#[allow(dead_code)]
 /// Get list of all available provider names
 pub fn available_providers() -> Vec<&'static str> {
     let mut providers = PROVIDER_REGISTRY
@@ -254,8 +255,16 @@ pub fn available_providers() -> Vec<&'static str> {
     #[cfg(feature = "openai")]
     {
         providers.extend_from_slice(&[
-            "deepseek", "groq", "openrouter", "together", "deepinfra",
-            "mistral", "github-models", "fireworks", "moonshot", "dashscope",
+            "deepseek",
+            "groq",
+            "openrouter",
+            "together",
+            "deepinfra",
+            "mistral",
+            "github-models",
+            "fireworks",
+            "moonshot",
+            "dashscope",
         ]);
     }
 
@@ -263,6 +272,7 @@ pub fn available_providers() -> Vec<&'static str> {
 }
 
 /// Get provider info for display
+#[allow(dead_code)]
 pub fn provider_info(provider: &str) -> Option<String> {
     PROVIDER_REGISTRY.get(provider).map(|e| {
         let aliases = if e.aliases.is_empty() {
@@ -274,12 +284,7 @@ pub fn provider_info(provider: &str) -> Option<String> {
             .default_model
             .map(|m| format!(", default model: {}", m))
             .unwrap_or_default();
-        format!(
-            "{}{}{}",
-            e.name,
-            aliases,
-            model
-        )
+        format!("{}{}{}", e.name, aliases, model)
     })
 }
 
@@ -304,21 +309,28 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     // Core constraints
     prompt.push_str("CONSTRAINTS:\n");
     prompt.push_str("- Return ONLY the commit message, with no additional explanation, markdown formatting, or code blocks\n");
-    prompt.push_str("- Do not include any reasoning, thinking, analysis, or <thinking> tags in your response\n");
-    prompt.push_str("- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n");
+    prompt.push_str(
+        "- Do not include any reasoning, thinking, analysis, or <thinking> tags in your response\n",
+    );
+    prompt.push_str(
+        "- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n",
+    );
 
     // Add style guidance from history if enabled
     if config.learn_from_history.unwrap_or(false) {
         if let Some(style_guidance) = get_style_guidance(config) {
             prompt.push_str("REPO STYLE (learned from commit history):\n");
             prompt.push_str(&style_guidance);
-            prompt.push_str("\n");
+            prompt.push('\n');
         }
     }
 
     // Add locale if specified
     if let Some(locale) = &config.language {
-        prompt.push_str(&format!("- Generate the commit message in {} language\n", locale));
+        prompt.push_str(&format!(
+            "- Generate the commit message in {} language\n",
+            locale
+        ));
     }
 
     // Add commit type preference
@@ -338,7 +350,9 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
                 prompt.push_str("- Use GitMoji format with full emoji specification from https://gitmoji.dev/\n");
             } else {
                 prompt.push_str("- Use GitMoji format: <emoji> <type>: <description>\n");
-                prompt.push_str("- Emojis: 🐛(fix), ✨(feat), 📝(docs), 🚀(deploy), ✅(test), ♻️(refactor)\n");
+                prompt.push_str(
+                    "- Emojis: 🐛(fix), ✨(feat), 📝(docs), 🚀(deploy), ✅(test), ♻️(refactor)\n",
+                );
             }
         }
         _ => {}
@@ -346,7 +360,10 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
 
     // Description requirements
     let max_length = config.description_max_length.unwrap_or(100);
-    prompt.push_str(&format!("- Keep the description under {} characters\n", max_length));
+    prompt.push_str(&format!(
+        "- Keep the description under {} characters\n",
+        max_length
+    ));
 
     if config.description_capitalize.unwrap_or(true) {
         prompt.push_str("- Capitalize the first letter of the description\n");
@@ -361,8 +378,8 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
 
 /// Get style guidance from commit history analysis
 fn get_style_guidance(config: &Config) -> Option<String> {
-    use crate::utils::commit_style::CommitStyleProfile;
     use crate::git;
+    use crate::utils::commit_style::CommitStyleProfile;
 
     // Get cached style profile or analyze fresh
     if let Some(cached) = &config.style_profile {
@@ -537,17 +554,13 @@ pub fn create_provider_for_account(
             }
         }
         #[cfg(feature = "bedrock")]
-        "bedrock" | "aws-bedrock" | "amazon-bedrock" => {
-            Ok(Box::new(bedrock::BedrockProvider::from_account(
-                account, "", config,
-            )?))
-        }
+        "bedrock" | "aws-bedrock" | "amazon-bedrock" => Ok(Box::new(
+            bedrock::BedrockProvider::from_account(account, "", config)?,
+        )),
         #[cfg(feature = "vertex")]
-        "vertex" | "vertex-ai" | "google-vertex" | "gcp-vertex" => {
-            Ok(Box::new(vertex::VertexProvider::from_account(
-                account, "", config,
-            )?))
-        }
+        "vertex" | "vertex-ai" | "google-vertex" | "gcp-vertex" => Ok(Box::new(
+            vertex::VertexProvider::from_account(account, "", config)?,
+        )),
         _ => {
             anyhow::bail!(
                 "Unsupported AI provider for account: {}\n\n\

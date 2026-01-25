@@ -105,6 +105,7 @@ fn test_create_provider_gemini() {
     assert!(provider.is_ok());
 }
 
+#[cfg(feature = "azure")]
 #[test]
 fn test_create_provider_azure() {
     let mut config = Config::default();
@@ -113,7 +114,7 @@ fn test_create_provider_azure() {
     config.api_url = Some("https://test.openai.azure.com".to_string());
 
     let provider = create_provider(&config);
-    assert!(provider.is_ok());
+    assert!(provider.is_ok(), "Azure provider creation failed: {:?}", provider.err());
 }
 
 #[test]

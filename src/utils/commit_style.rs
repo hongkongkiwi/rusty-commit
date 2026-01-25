@@ -24,12 +24,13 @@ pub struct CommitStyleProfile {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum PrefixFormat {
-    Conventional,    // feat(scope): description
+    Conventional,        // feat(scope): description
     ConventionalNoScope, // feat: description
-    GitMoji,         // ✨ feat: description
-    GitMojiDev,      // Full gitmoji.dev format
-    Simple,          // Just type: description
+    GitMoji,             // ✨ feat: description
+    GitMojiDev,          // Full gitmoji.dev format
+    Simple,              // Just type: description
     Other,
 }
 
@@ -66,12 +67,21 @@ impl CommitStyleProfile {
                     if is_emoji(emoji) {
                         profile.uses_gitmoji = true;
                         // Extract emoji
-                        let emoji_str = commit_str.chars().take_while(|c| !c.is_ascii_alphanumeric()).collect::<String>();
+                        let emoji_str = commit_str
+                            .chars()
+                            .take_while(|c| !c.is_ascii_alphanumeric())
+                            .collect::<String>();
                         if !emoji_str.is_empty() {
-                            *profile.emoji_frequencies.entry(emoji_str.trim().to_string()).or_insert(0) += 1;
+                            *profile
+                                .emoji_frequencies
+                                .entry(emoji_str.trim().to_string())
+                                .or_insert(0) += 1;
                         }
                         // Get type after emoji - extract just the type before any scope
-                        let type_part = prefix.chars().skip_while(|c| !c.is_ascii_alphanumeric()).collect::<String>();
+                        let type_part = prefix
+                            .chars()
+                            .skip_while(|c| !c.is_ascii_alphanumeric())
+                            .collect::<String>();
                         // Extract just the type (before '(' if present)
                         let clean_type = if let Some((t, _)) = type_part.split_once('(') {
                             t.to_string()
@@ -89,21 +99,30 @@ impl CommitStyleProfile {
                             // Extract scope (text between '(' and ')')
                             if let Some((scope, _)) = scope_part.split_once(')') {
                                 if !scope.is_empty() {
-                                    *profile.scope_frequencies.entry(scope.to_string()).or_insert(0) += 1;
+                                    *profile
+                                        .scope_frequencies
+                                        .entry(scope.to_string())
+                                        .or_insert(0) += 1;
                                 }
                             }
-                            *profile.type_frequencies.entry(type_part.to_string()).or_insert(0) += 1;
+                            *profile
+                                .type_frequencies
+                                .entry(type_part.to_string())
+                                .or_insert(0) += 1;
                             profile.prefix_format = PrefixFormat::Conventional;
                         } else {
                             profile.prefix_format = PrefixFormat::ConventionalNoScope;
-                            *profile.type_frequencies.entry(prefix.to_string().trim().to_string()).or_insert(0) += 1;
+                            *profile
+                                .type_frequencies
+                                .entry(prefix.to_string().trim().to_string())
+                                .or_insert(0) += 1;
                         }
                     }
                 }
             }
 
             // Analyze description
-            if let Some(desc) = commit_str.splitn(2, ':').nth(1) {
+            if let Some(desc) = commit_str.split_once(':').map(|x| x.1) {
                 let desc = desc.trim();
                 total_desc_len += desc.len();
                 desc_count += 1;
@@ -126,7 +145,8 @@ impl CommitStyleProfile {
         if desc_count > 0 {
             profile.avg_description_length = total_desc_len as f64 / desc_count as f64;
             profile.adds_period = (periods as f64 / total) > 0.3; // 30% threshold
-            profile.capitalizes_description = (capitalized as f64 / desc_count as f64) > 0.5; // 50% threshold
+            profile.capitalizes_description = (capitalized as f64 / desc_count as f64) > 0.5;
+            // 50% threshold
         }
 
         profile
@@ -138,32 +158,32 @@ impl CommitStyleProfile {
 
         // Add type guidance if we have data
         if !self.type_frequencies.is_empty() {
-            let top_types: Vec<_> = self.type_frequencies
+            let top_types: Vec<_> = self
+                .type_frequencies
                 .iter()
                 .filter(|(t, _)| is_valid_commit_type(t))
                 .take(3)
                 .collect();
 
             if !top_types.is_empty() {
-                let types_list: Vec<String> = top_types
-                    .iter()
-                    .map(|(t, _)| (*t).clone())
-                    .collect();
+                let types_list: Vec<String> = top_types.iter().map(|(t, _)| (*t).clone()).collect();
 
-                guidance.push_str(&format!("- Common commit types in this repo: {}\n", types_list.join(", ")));
+                guidance.push_str(&format!(
+                    "- Common commit types in this repo: {}\n",
+                    types_list.join(", ")
+                ));
             }
         }
 
         // Add scope guidance
         if self.uses_scopes && !self.scope_frequencies.is_empty() {
-            let top_scopes: Vec<_> = self.scope_frequencies
-                .keys()
-                .take(3)
-                .cloned()
-                .collect();
+            let top_scopes: Vec<_> = self.scope_frequencies.keys().take(3).cloned().collect();
 
             if !top_scopes.is_empty() {
-                guidance.push_str(&format!("- Common scopes in this repo: {}\n", top_scopes.join(", ")));
+                guidance.push_str(&format!(
+                    "- Common scopes in this repo: {}\n",
+                    top_scopes.join(", ")
+                ));
             }
         }
 
@@ -190,14 +210,13 @@ impl CommitStyleProfile {
 
         // Add gitmoji guidance
         if self.uses_gitmoji {
-            let top_emojis: Vec<_> = self.emoji_frequencies
-                .keys()
-                .take(3)
-                .cloned()
-                .collect();
+            let top_emojis: Vec<_> = self.emoji_frequencies.keys().take(3).cloned().collect();
 
             if !top_emojis.is_empty() {
-                guidance.push_str(&format!("- Common emojis used: {} (prefer gitmoji format)\n", top_emojis.join(", ")));
+                guidance.push_str(&format!(
+                    "- Common emojis used: {} (prefer gitmoji format)\n",
+                    top_emojis.join(", ")
+                ));
             }
         }
 
@@ -245,9 +264,18 @@ fn is_emoji(c: char) -> bool {
 fn is_valid_commit_type(t: &str) -> bool {
     matches!(
         t.to_lowercase().as_str(),
-        "feat" | "fix" | "docs" | "style" | "refactor" |
-        "perf" | "test" | "build" | "ci" | "chore" |
-        "revert" | "breaking"
+        "feat"
+            | "fix"
+            | "docs"
+            | "style"
+            | "refactor"
+            | "perf"
+            | "test"
+            | "build"
+            | "ci"
+            | "chore"
+            | "revert"
+            | "breaking"
     )
 }
 
@@ -308,10 +336,7 @@ mod tests {
 
     #[test]
     fn test_generate_prompt_guidance() {
-        let commits = vec![
-            "feat(auth): add login",
-            "fix(api): resolve issue",
-        ];
+        let commits = vec!["feat(auth): add login", "fix(api): resolve issue"];
 
         let profile = CommitStyleProfile::analyze_from_commits(&commits);
         let guidance = profile.to_prompt_guidance();

@@ -50,7 +50,11 @@ impl HuggingFaceProvider {
             .clone();
 
         let client = Client::new();
-        let model = config.model.as_deref().unwrap_or("mistralai/Mistral-7B-Instruct-v0.2").to_string();
+        let model = config
+            .model
+            .as_deref()
+            .unwrap_or("mistralai/Mistral-7B-Instruct-v0.2")
+            .to_string();
 
         // Determine if this is an inference API call or dedicated endpoint
         let api_url = config
@@ -68,11 +72,7 @@ impl HuggingFaceProvider {
 
     /// Create provider from account configuration
     #[allow(dead_code)]
-    pub fn from_account(
-        account: &AccountConfig,
-        api_key: &str,
-        config: &Config,
-    ) -> Result<Self> {
+    pub fn from_account(account: &AccountConfig, api_key: &str, config: &Config) -> Result<Self> {
         let client = Client::new();
         let model = account
             .model
@@ -117,9 +117,7 @@ impl AIProvider for HuggingFaceProvider {
                 max_new_tokens: Some(config.tokens_max_output.unwrap_or(500)),
                 return_full_text: false,
             },
-            options: HFOptions {
-                use_cache: true,
-            },
+            options: HFOptions { use_cache: true },
         };
 
         // Use Inference API endpoint

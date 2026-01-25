@@ -131,6 +131,7 @@ impl AIProvider for OpenAIProvider {
 
 /// OpenAICompatibleProvider - A wrapper that handles OpenAI-compatible providers
 /// This struct registers all OpenAI-compatible API providers in the registry
+#[allow(dead_code)]
 pub struct OpenAICompatibleProvider {
     pub name: &'static str,
     pub aliases: Vec<&'static str>,
@@ -156,7 +157,10 @@ impl OpenAICompatibleProvider {
         compat.insert("dashscope", "https://dashscope.console.aliyuncs.com/api/v1");
         compat.insert("alibaba", "https://dashscope.console.aliyuncs.com/api/v1");
         compat.insert("qwen", "https://dashscope.console.aliyuncs.com/api/v1");
-        compat.insert("qwen-coder", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert(
+            "qwen-coder",
+            "https://dashscope.console.aliyuncs.com/api/v1",
+        );
         compat.insert("codex", "https://api.openai.com/v1");
 
         Self {

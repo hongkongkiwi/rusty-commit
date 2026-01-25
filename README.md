@@ -639,9 +639,12 @@ Prebuilt archives and packages for:
 
 ## GitHub Action
 
+Use the dedicated [Rusty Commit GitHub Action](https://github.com/hongkongkiwi/action-rusty-commit) for CI/CD workflows:
+
 ```yaml
 name: AI Commits
 on: [push]
+
 jobs:
   ai-commit:
     runs-on: ubuntu-latest
@@ -649,23 +652,27 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: hongkongkiwi/rusty-commit@main
+        with:
+          fetch-depth: 0
+      - uses: hongkongkiwi/action-rusty-commit@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RCO_API_KEY: ${{ secrets.RCO_API_KEY }}
           RCO_AI_PROVIDER: 'anthropic'
           RCO_MODEL: 'claude-3-5-haiku-20241022'
+          confirm: true
 ```
 
-### GitHub Action Inputs
+### Features
 
-| Input | Description | Required |
-|-------|-------------|----------|
-| `RCO_API_KEY` | API key for AI provider | Yes |
-| `RCO_AI_PROVIDER` | Provider name | No (default: anthropic) |
-| `RCO_MODEL` | Model name | No |
-| `RCO_COMMIT_TYPE` | conventional or gitmoji | No |
-| `GITHUB_TOKEN` | GitHub token for commit | Yes |
+- **Auto-installs** latest Rusty Commit binary from releases
+- **18+ AI providers** including OpenAI, Anthropic, Ollama, Groq, and more
+- **Conventional commits** and GitMoji formats
+- **Multi-language** commit messages
+- **Auto-push** support
+- **Version pinned** releases for stability
+
+See the [action repository](https://github.com/hongkongkiwi/action-rusty-commit) for full documentation.
 
 ## Advanced Options
 

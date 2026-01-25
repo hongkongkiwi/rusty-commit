@@ -22,7 +22,31 @@ path = "src/main.rs"
 [features]
 # Default features - common providers enabled by default for convenience
 # Users can disable individual providers to reduce binary size
-default = ["openai", "anthropic", "ollama", "gemini"]
+default = [
+    # Core providers
+    "openai",
+    "anthropic",
+    "ollama",
+    "gemini",
+    "azure",
+    "perplexity",
+    "xai",
+    # OpenAI-compatible providers
+    "openrouter",
+    "groq",
+    "deepseek",
+    "together",
+    "deepinfra",
+    "mistral",
+    "github-models",
+    "fireworks",
+    "moonshot",
+    "dashscope",
+    # Cloud providers
+    "huggingface",
+    "bedrock",
+    "vertex",
+]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
 # Include extra documentation (for docs.rs)

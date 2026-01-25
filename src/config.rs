@@ -60,6 +60,11 @@ pub struct Config {
     // Global commitlint configuration
     pub commitlint_config: Option<String>,
     pub custom_prompt: Option<String>,
+
+    // Commit style learning from history
+    pub learn_from_history: Option<bool>,
+    pub history_commits_count: Option<usize>,
+    pub style_profile: Option<String>,
 }
 
 impl Default for Config {
@@ -96,6 +101,9 @@ impl Default for Config {
             hook_timeout_ms: Some(30000),
             commitlint_config: None,
             custom_prompt: None,
+            learn_from_history: Some(false),
+            history_commits_count: Some(10),
+            style_profile: None,
         }
     }
 }
@@ -316,6 +324,21 @@ impl Config {
                         .parse()
                         .context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?,
                 );
+            }
+            "RCO_LEARN_FROM_HISTORY" => {
+                self.learn_from_history = Some(
+                    value.parse().context("Invalid boolean for LEARN_FROM_HISTORY")?,
+                );
+            }
+            "RCO_HISTORY_COMMITS_COUNT" => {
+                self.history_commits_count = Some(
+                    value
+                        .parse()
+                        .context("Invalid number for HISTORY_COMMITS_COUNT")?,
+                );
+            }
+            "RCO_STYLE_PROFILE" => {
+                self.style_profile = Some(value.to_string());
             }
             // Ignore unsupported keys
             "RCO_API_CUSTOM_HEADERS" => {
@@ -546,6 +569,9 @@ impl Config {
         merge_field!(custom_prompt);
         merge_field!(generate_count);
         merge_field!(clipboard_on_timeout);
+        merge_field!(learn_from_history);
+        merge_field!(history_commits_count);
+        merge_field!(style_profile);
     }
 
     /// Load configuration values from environment variables
@@ -596,6 +622,9 @@ impl Config {
         load_env_var!(custom_prompt, "CUSTOM_PROMPT");
         load_env_var_parse!(generate_count, "GENERATE_COUNT", u8);
         load_env_var_parse!(clipboard_on_timeout, "CLIPBOARD_ON_TIMEOUT", bool);
+        load_env_var_parse!(learn_from_history, "LEARN_FROM_HISTORY", bool);
+        load_env_var_parse!(history_commits_count, "HISTORY_COMMITS_COUNT", usize);
+        load_env_var!(style_profile, "STYLE_PROFILE");
     }
 }
 

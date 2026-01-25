@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 use crate::utils::retry::retry_async;
@@ -22,7 +22,7 @@ struct AnthropicRequest {
     temperature: f32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct Message {
     role: String,
     content: String,
@@ -99,14 +99,20 @@ impl AIProvider for AnthropicProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = build_prompt(diff, context, config, full_gitmoji);
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let request = AnthropicRequest {
             model: self.model.clone(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: prompt,
-            }],
+            messages: vec![
+                Message {
+                    role: "system".to_string(),
+                    content: system_prompt,
+                },
+                Message {
+                    role: "user".to_string(),
+                    content: user_prompt,
+                },
+            ],
             max_tokens: config.tokens_max_output.unwrap_or(500),
             temperature: 0.7,
         };
@@ -162,5 +168,30 @@ impl AIProvider for AnthropicProvider {
             .context("Anthropic returned an empty response. The model may be overloaded - please try again.")?;
 
         Ok(message)
+    }
+}
+
+/// ProviderBuilder for Anthropic
+pub struct AnthropicProviderBuilder;
+
+impl super::registry::ProviderBuilder for AnthropicProviderBuilder {
+    fn name(&self) -> &'static str {
+        "anthropic"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["claude", "claude-code"]
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn AIProvider>> {
+        Ok(Box::new(AnthropicProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("claude-3-5-sonnet-20241022")
     }
 }

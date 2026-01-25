@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::Config;
 
 pub struct PerplexityProvider {
@@ -95,27 +95,16 @@ impl AIProvider for PerplexityProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = if let Some(ref custom_prompt) = config.custom_prompt {
-            // Use custom prompt with variable substitution
-            let mut prompt = custom_prompt.clone();
-            prompt = prompt.replace("$diff", diff);
-            if let Some(ctx) = context {
-                prompt = prompt.replace("$context", ctx);
-            }
-            prompt
-        } else {
-            build_prompt(diff, context, config, full_gitmoji)
-        };
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let messages = vec![
             Message {
                 role: "system".to_string(),
-                content: "You are an expert at writing clear, concise git commit messages."
-                    .to_string(),
+                content: system_prompt,
             },
             Message {
                 role: "user".to_string(),
-                content: prompt,
+                content: user_prompt,
             },
         ];
 
@@ -184,5 +173,26 @@ impl AIProvider for PerplexityProvider {
             .to_string();
 
         Ok(message)
+    }
+}
+
+/// ProviderBuilder for Perplexity
+pub struct PerplexityProviderBuilder;
+
+impl super::registry::ProviderBuilder for PerplexityProviderBuilder {
+    fn name(&self) -> &'static str {
+        "perplexity"
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(PerplexityProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("llama-3.1-sonar-small-128k-online")
     }
 }

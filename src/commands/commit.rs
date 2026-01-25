@@ -166,6 +166,13 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         return Ok(());
     }
 
+    // If print mode, output to stdout and exit (for hooks)
+    if options.print_message {
+        // For print mode, use the first message (non-interactive)
+        print!("{}", messages[0]);
+        return Ok(());
+    }
+
     // Run pre-commit hooks (can modify message via temp file)
     let mut final_message = messages[0].clone();
     if !options.no_pre_hooks {

@@ -9,7 +9,7 @@ use async_openai::{
 };
 use async_trait::async_trait;
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 
@@ -67,14 +67,11 @@ impl AIProvider for XAIProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = build_prompt(diff, context, config, full_gitmoji);
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let messages = vec![
-            ChatCompletionRequestSystemMessage::from(
-                "You are an expert at writing clear, concise git commit messages.",
-            )
-            .into(),
-            ChatCompletionRequestUserMessage::from(prompt).into(),
+            ChatCompletionRequestSystemMessage::from(system_prompt).into(),
+            ChatCompletionRequestUserMessage::from(user_prompt).into(),
         ];
 
         let request = CreateChatCompletionRequestArgs::default()
@@ -100,5 +97,30 @@ impl AIProvider for XAIProvider {
             .to_string();
 
         Ok(message)
+    }
+}
+
+/// ProviderBuilder for XAI
+pub struct XAIProviderBuilder;
+
+impl super::registry::ProviderBuilder for XAIProviderBuilder {
+    fn name(&self) -> &'static str {
+        "xai"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["grok", "x-ai"]
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(XAIProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("grok-beta")
     }
 }

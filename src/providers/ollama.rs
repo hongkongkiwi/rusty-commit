@@ -4,6 +4,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::{build_prompt, AIProvider};
+// Note: Ollama uses the combined prompt since its API doesn't support separate system messages
 use crate::config::Config;
 use crate::utils::retry::retry_async;
 
@@ -125,5 +126,30 @@ impl AIProvider for OllamaProvider {
         .context("Failed to generate commit message from Ollama after retries")?;
 
         Ok(ollama_response.response.trim().to_string())
+    }
+}
+
+/// ProviderBuilder for Ollama
+pub struct OllamaProviderBuilder;
+
+impl super::registry::ProviderBuilder for OllamaProviderBuilder {
+    fn name(&self) -> &'static str {
+        "ollama"
+    }
+
+    fn category(&self) -> super::registry::ProviderCategory {
+        super::registry::ProviderCategory::Local
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(OllamaProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        false
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("llama3.1")
     }
 }

@@ -9,7 +9,7 @@ use async_openai::{
 };
 use async_trait::async_trait;
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 use crate::utils::retry::retry_async;
@@ -75,20 +75,16 @@ impl AIProvider for OpenAIProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = build_prompt(diff, context, config, full_gitmoji);
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let messages = vec![
-            ChatCompletionRequestSystemMessage::from(
-                "You are an expert at writing clear, concise git commit messages.",
-            )
-            .into(),
-            ChatCompletionRequestUserMessage::from(prompt).into(),
+            ChatCompletionRequestSystemMessage::from(system_prompt).into(),
+            ChatCompletionRequestUserMessage::from(user_prompt).into(),
         ];
 
         // Handle model-specific parameters
         let request = if self.model.contains("gpt-5-nano") {
             // GPT-5-nano doesn't support temperature=0, use 1.0 (default)
-            // Note: For now we use regular max_tokens until async-openai supports max_completion_tokens
             CreateChatCompletionRequestArgs::default()
                 .model(&self.model)
                 .messages(messages)
@@ -130,5 +126,77 @@ impl AIProvider for OpenAIProvider {
             .to_string();
 
         Ok(message)
+    }
+}
+
+/// OpenAICompatibleProvider - A wrapper that handles OpenAI-compatible providers
+/// This struct registers all OpenAI-compatible API providers in the registry
+pub struct OpenAICompatibleProvider {
+    pub name: &'static str,
+    pub aliases: Vec<&'static str>,
+    pub default_api_url: &'static str,
+    pub default_model: Option<&'static str>,
+    pub compatible_providers: std::collections::HashMap<&'static str, &'static str>,
+}
+
+impl OpenAICompatibleProvider {
+    pub fn new() -> Self {
+        let mut compat = std::collections::HashMap::new();
+        compat.insert("deepseek", "https://api.deepseek.com/v1");
+        compat.insert("groq", "https://api.groq.com/openai/v1");
+        compat.insert("openrouter", "https://openrouter.ai/api/v1");
+        compat.insert("together", "https://api.together.ai/v1");
+        compat.insert("deepinfra", "https://api.deepinfra.com/v1/openai");
+        compat.insert("mistral", "https://api.mistral.ai/v1");
+        compat.insert("github-models", "https://models.inference.ai.azure.com");
+        compat.insert("fireworks", "https://api.fireworks.ai/v1");
+        compat.insert("fireworks-ai", "https://api.fireworks.ai/v1");
+        compat.insert("moonshot", "https://api.moonshot.cn/v1");
+        compat.insert("moonshot-ai", "https://api.moonshot.cn/v1");
+        compat.insert("dashscope", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert("alibaba", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert("qwen", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert("qwen-coder", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert("codex", "https://api.openai.com/v1");
+
+        Self {
+            name: "openai",
+            aliases: vec!["openai"],
+            default_api_url: "https://api.openai.com/v1",
+            default_model: Some("gpt-4o-mini"),
+            compatible_providers: compat,
+        }
+    }
+}
+
+impl Default for OpenAICompatibleProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl super::registry::ProviderBuilder for OpenAICompatibleProvider {
+    fn name(&self) -> &'static str {
+        self.name
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        self.aliases.clone()
+    }
+
+    fn category(&self) -> super::registry::ProviderCategory {
+        super::registry::ProviderCategory::OpenAICompatible
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(OpenAIProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        self.default_model
     }
 }

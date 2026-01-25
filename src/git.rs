@@ -281,3 +281,32 @@ pub fn get_remote_url() -> Result<String> {
 
     Ok(url)
 }
+
+/// Returns recent commit messages for style analysis
+pub fn get_recent_commit_messages(count: usize) -> Result<Vec<String>> {
+    let repo = Repository::open_from_env()?;
+
+    // Get HEAD reference
+    let head = repo.head()?;
+
+    // Get the commit
+    let commit = head.peel_to_commit()?;
+
+    // Walk back through history
+    let mut commits = Vec::new();
+    let mut current = Some(commit);
+
+    while let Some(c) = current {
+        if commits.len() >= count {
+            break;
+        }
+
+        if let Some(msg) = c.message() {
+            commits.push(msg.to_string());
+        }
+
+        current = c.parent(0).ok();
+    }
+
+    Ok(commits)
+}

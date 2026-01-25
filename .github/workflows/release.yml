@@ -716,3 +716,36 @@ jobs:
           git add Formula/rusty-commit.rb
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
+
+  update-precommit:
+    name: Update Pre-commit Hook
+    needs: finalize-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout precommit-rusty-commit
+        uses: actions/checkout@v4
+        with:
+          repository: hongkongkiwi/precommit-rusty-commit
+          token: ${{ secrets.HOMEBREW_UPDATE_TOKEN }}
+          path: precommit-tap
+
+      - name: Update pre-commit hooks version
+        run: |
+          VERSION_RAW='${{ github.event.inputs.version || github.ref_name }}'
+          VERSION="${VERSION_RAW#v}"
+
+          # Update the rev in .pre-commit-hooks.yaml
+          sed -i "s/rev: v[0-9]\+\.[0-9]\+\.[0-9]\+/rev: v${VERSION}/" precommit-tap/.pre-commit-hooks.yaml
+
+          cat precommit-tap/.pre-commit-hooks.yaml
+
+      - name: Commit and push changes
+        working-directory: ./precommit-tap
+        run: |
+          VERSION_RAW='${{ github.event.inputs.version || github.ref_name }}'
+          VERSION="${VERSION_RAW#v}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .pre-commit-hooks.yaml
+          git commit -m "Update rusty-commit to v${VERSION}"
+          git push

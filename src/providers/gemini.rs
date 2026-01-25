@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::Config;
 
 pub struct GeminiProvider {
@@ -15,17 +15,25 @@ pub struct GeminiProvider {
 #[derive(Serialize)]
 struct GeminiRequest {
     contents: Vec<Content>,
+    system_instruction: Option<SystemInstruction>,
     generation_config: GenerationConfig,
 }
 
 #[derive(Serialize)]
 struct Content {
+    role: String,
     parts: Vec<Part>,
 }
 
 #[derive(Serialize)]
 struct Part {
     text: String,
+}
+
+#[derive(Serialize)]
+struct SystemInstruction {
+    role: String,
+    parts: Vec<Part>,
 }
 
 #[derive(Serialize)]
@@ -104,12 +112,17 @@ impl AIProvider for GeminiProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = build_prompt(diff, context, config, full_gitmoji);
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let request = GeminiRequest {
             contents: vec![Content {
-                parts: vec![Part { text: prompt }],
+                role: "user".to_string(),
+                parts: vec![Part { text: user_prompt }],
             }],
+            system_instruction: Some(SystemInstruction {
+                role: "system".to_string(),
+                parts: vec![Part { text: system_prompt }],
+            }),
             generation_config: GenerationConfig {
                 temperature: 0.7,
                 max_output_tokens: config.tokens_max_output.unwrap_or(500),
@@ -147,5 +160,26 @@ impl AIProvider for GeminiProvider {
             .context("No response from Gemini")?;
 
         Ok(message)
+    }
+}
+
+/// ProviderBuilder for Gemini
+pub struct GeminiProviderBuilder;
+
+impl super::registry::ProviderBuilder for GeminiProviderBuilder {
+    fn name(&self) -> &'static str {
+        "gemini"
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(GeminiProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("gemini-1.5-pro")
     }
 }

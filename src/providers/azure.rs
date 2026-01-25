@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 
-use super::{build_prompt, AIProvider};
+use super::{split_prompt, AIProvider};
 use crate::config::Config;
 
 pub struct AzureProvider {
@@ -115,18 +115,17 @@ impl AIProvider for AzureProvider {
         full_gitmoji: bool,
         config: &Config,
     ) -> Result<String> {
-        let prompt = build_prompt(diff, context, config, full_gitmoji);
+        let (system_prompt, user_prompt) = split_prompt(diff, context, config, full_gitmoji);
 
         let request = AzureRequest {
             messages: vec![
                 Message {
                     role: "system".to_string(),
-                    content: "You are an expert at writing clear, concise git commit messages."
-                        .to_string(),
+                    content: system_prompt,
                 },
                 Message {
                     role: "user".to_string(),
-                    content: prompt,
+                    content: user_prompt,
                 },
             ],
             max_tokens: config.tokens_max_output.unwrap_or(500),
@@ -165,5 +164,30 @@ impl AIProvider for AzureProvider {
             .context("No response from Azure OpenAI")?;
 
         Ok(message)
+    }
+}
+
+/// ProviderBuilder for Azure
+pub struct AzureProviderBuilder;
+
+impl super::registry::ProviderBuilder for AzureProviderBuilder {
+    fn name(&self) -> &'static str {
+        "azure"
+    }
+
+    fn aliases(&self) -> Vec<&'static str> {
+        vec!["azure-openai"]
+    }
+
+    fn create(&self, config: &Config) -> Result<Box<dyn super::AIProvider>> {
+        Ok(Box::new(AzureProvider::new(config)?))
+    }
+
+    fn requires_api_key(&self) -> bool {
+        true
+    }
+
+    fn default_model(&self) -> Option<&'static str> {
+        Some("gpt-4o")
     }
 }

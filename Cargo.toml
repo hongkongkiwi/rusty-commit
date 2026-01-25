@@ -20,13 +20,16 @@ name = "rco"
 path = "src/main.rs"
 
 [features]
-default = ["openai", "anthropic", "ollama", "gemini", "azure", "perplexity", "xai"]
+# Default features - common providers enabled by default for convenience
+# Users can disable individual providers to reduce binary size
+default = ["openai", "anthropic", "ollama", "gemini"]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
 # Include extra documentation (for docs.rs)
 docs = []
 
-# AI Provider features
+# AI Provider features - all providers are opt-in
+# This allows users to build minimal binaries with only needed providers
 openai = ["async-openai"]
 anthropic = []
 ollama = []
@@ -34,10 +37,28 @@ gemini = []
 azure = []
 perplexity = []
 xai = ["async-openai"]
+huggingface = []
+bedrock = []
+vertex = ["chrono"]
+
+# OpenAI-compatible provider presets - enable all for maximum compatibility
+# These don't need extra dependencies, they use the openai module
+openrouter = ["openai"]
+groq = ["openai"]
+deepseek = ["openai"]
+together = ["openai"]
+deepinfra = ["openai"]
+mistral = ["openai"]
+github-models = ["openai"]
+fireworks = ["openai"]
+moonshot = ["openai"]
+dashscope = ["openai"]
 
 [dependencies]
 # CLI and UI
-clap = { version = "4.5", features = ["derive", "env"] }
+clap = { version = "4.5", features = ["derive", "env", "help"] }
+clap_complete = "4.5"
+clap_complete_fig = "4.5"
 colored = "3.0"
 dialoguer = { version = "0.12", features = ["fuzzy-select"] }
 indicatif = "0.18"
@@ -73,6 +94,11 @@ regex = "1.10"
 once_cell = "1.19"
 url = "2.5"
 base64 = "0.22"
+chrono = { version = "0.4", default-features = false, optional = true }
+
+# Cloud providers
+aws-config = { version = "1", default-features = false }
+aws-sdk-bedrockruntime = { version = "1", default-features = false }
 sha2 = "0.10"
 tiktoken-rs = "0.9"
 keyring = { version = "3.6", optional = true }

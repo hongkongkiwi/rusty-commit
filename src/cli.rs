@@ -5,8 +5,34 @@ use clap::{Parser, Subcommand};
     name = "rco",
     version,
     author,
-    about = "Rusty Commit - AI-powered commit message generator written in Rust 🚀🤖"
-)]
+    about = "Rusty Commit - AI-powered commit message generator written in Rust 🚀🤖",
+    after_help = r#"EXAMPLES:
+    # Generate a commit message for staged changes
+    rco
+
+    # Generate with context and copy to clipboard
+    rco -c "Focus on auth changes" --clipboard
+
+    # Generate 3 variations and skip confirmation
+    rco -g 3 -y
+
+    # Use GitMoji format
+    rco --fgm
+
+    # Authenticate with Anthropic
+    rco auth login
+
+    # Setup git hooks
+    rco hook set
+
+    # Generate PR description
+    rco pr generate --base main
+
+    # Generate shell completions
+    rco completions bash
+    rco completions zsh
+    rco completions fish
+"#)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -60,6 +86,10 @@ pub struct GlobalOptions {
     /// Strip <thinking> tags from AI responses (for reasoning models)
     #[arg(long = "strip-thinking", default_value = "false")]
     pub strip_thinking: bool,
+
+    /// Output commit message to stdout instead of committing (for hooks)
+    #[arg(long = "print", default_value = "false")]
+    pub print_message: bool,
 }
 
 #[derive(Parser)]
@@ -98,6 +128,9 @@ pub enum Commands {
 
     /// Interactive setup wizard
     Setup(SetupCommand),
+
+    /// Generate shell completions
+    Completions(CompletionsCommand),
 }
 
 #[derive(Parser)]
@@ -189,10 +222,21 @@ pub struct HookCommand {
 
 #[derive(Subcommand)]
 pub enum HookAction {
-    /// Install git hooks
-    Set,
+    /// Install prepare-commit-msg git hook
+    PrepareCommitMsg,
+    /// Install commit-msg git hook (non-interactive)
+    CommitMsg,
     /// Uninstall git hooks
     Unset,
+    /// Install or uninstall pre-commit hooks
+    Precommit {
+        /// Install pre-commit hooks
+        #[arg(long)]
+        set: bool,
+        /// Uninstall pre-commit hooks
+        #[arg(long)]
+        unset: bool,
+    },
 }
 
 #[derive(Parser)]
@@ -259,4 +303,11 @@ pub struct ModelCommand {
     /// Specify provider to list models for
     #[arg(short, long)]
     pub provider: Option<String>,
+}
+
+#[derive(Parser)]
+pub struct CompletionsCommand {
+    /// Shell to generate completions for
+    #[arg(value_enum)]
+    pub shell: clap_complete::Shell,
 }

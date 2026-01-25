@@ -289,6 +289,65 @@ impl Styling {
         };
         format!("{} {}", component.dimmed(), duration.green())
     }
+
+    /// Print a section with header, divider, content, and closing divider.
+    pub fn print_section(title: &str, content: &str) {
+        let divider = Self::divider(50);
+        println!("\n{}", title.cyan().bold());
+        println!("{}", divider.dimmed());
+        println!("{}", content);
+        println!("{}", divider.dimmed());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_divider_length() {
+        let d = Styling::divider(10);
+        // Use chars().count() for unicode-aware length
+        assert_eq!(d.chars().count(), 10);
+        assert!(d.chars().all(|c| c == '─'));
+    }
+
+    #[test]
+    fn test_key_value_format() {
+        let kv = Styling::key_value("Key", "Value");
+        assert!(kv.contains("Key:"));
+        assert!(kv.contains("Value"));
+    }
+
+    #[test]
+    fn test_timing_ms() {
+        let t = Styling::timing("test", 500);
+        assert!(t.contains("500ms"));
+    }
+
+    #[test]
+    fn test_timing_seconds() {
+        let t = Styling::timing("test", 2500);
+        assert!(t.contains("2.5s"));
+    }
+
+    #[test]
+    fn test_theme_has_colors_option() {
+        let theme = Theme::new();
+        // Theme should have a use_colors field (may be true or false depending on tty)
+        let _ = theme.use_colors;
+    }
+
+    #[test]
+    fn test_palette_colors() {
+        let palette = Palette::default();
+        // Verify palette has valid colors
+        match palette.primary {
+            Color::MutedBlue => {}
+            Color::Standard(_) => {}
+            _ => panic!("Expected MutedBlue or Standard color"),
+        }
+    }
 }
 
 /// Emoji constants for consistent usage.

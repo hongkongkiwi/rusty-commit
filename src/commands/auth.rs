@@ -1,13 +1,13 @@
 use anyhow::Result;
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
 use crate::auth::oauth::OAuthClient;
 use crate::auth::token_storage;
 use crate::cli::{AuthAction, AuthCommand};
 use crate::config::Config;
+use crate::output::progress;
 
 /// Unified output helper for auth commands.
 struct AuthOutput;
@@ -202,15 +202,7 @@ async fn handle_claude_oauth() -> Result<()> {
     }
 
     // Show progress spinner
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} {msg}")
-            .unwrap()
-            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
-    );
-    pb.set_message("Waiting for authentication...");
-    pb.enable_steady_tick(Duration::from_millis(100));
+    let pb = progress::oauth_wait_spinner();
 
     // Wait for callback
     match oauth_client.start_callback_server(verifier).await {
@@ -296,15 +288,7 @@ async fn handle_codex_auth() -> Result<()> {
     }
 
     // Show progress spinner
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.cyan} {msg}")
-            .unwrap()
-            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
-    );
-    pb.set_message("Waiting for authentication...");
-    pb.enable_steady_tick(Duration::from_millis(100));
+    let pb = progress::oauth_wait_spinner();
 
     // Wait for callback
     match oauth_client.start_callback_server(verifier).await {

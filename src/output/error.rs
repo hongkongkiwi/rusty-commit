@@ -348,3 +348,90 @@ pub fn context<T, E: std::error::Error + Send + Sync>(
 ) -> Result<T, StructuredError> {
     result.map_err(|e| StructuredError::new(message).with_underlying(&e.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_structured_error_new() {
+        let error = StructuredError::new("Test error");
+        assert_eq!(error.message, "Test error");
+        assert!(error.provider.is_none());
+        assert!(error.hints.is_empty());
+        assert_eq!(error.exit_code(), 1);
+    }
+
+    #[test]
+    fn test_structured_error_with_chain() {
+        let error = StructuredError::new("Main error")
+            .with_provider("TestProvider")
+            .with_model("TestModel")
+            .with_underlying("Underlying error")
+            .with_hint("Hint 1")
+            .with_hint("Hint 2")
+            .with_exit_code(42);
+
+        assert_eq!(error.message, "Main error");
+        assert_eq!(error.provider, Some("TestProvider".to_string()));
+        assert_eq!(error.model, Some("TestModel".to_string()));
+        assert_eq!(error.underlying, Some("Underlying error".to_string()));
+        assert_eq!(error.hints.len(), 2);
+        assert_eq!(error.exit_code(), 42);
+    }
+
+    #[test]
+    fn test_error_patterns_rate_limit() {
+        let error = patterns::rate_limit("Anthropic", "claude-3-5-haiku");
+        assert!(error.message.contains("rate limit"));
+        assert_eq!(error.provider, Some("Anthropic".to_string()));
+        assert_eq!(error.model, Some("claude-3-5-haiku".to_string()));
+        assert!(!error.hints.is_empty());
+    }
+
+    #[test]
+    fn test_error_patterns_auth() {
+        let error = patterns::auth("OpenAI");
+        assert!(error.message.contains("Authentication"));
+        assert_eq!(error.exit_code(), 401);
+    }
+
+    #[test]
+    fn test_error_patterns_no_changes() {
+        let error = patterns::no_changes();
+        assert!(error.message.contains("No changes"));
+        assert_eq!(error.exit_code(), 0);
+    }
+
+    #[test]
+    fn test_error_to_json() {
+        let error = StructuredError::new("Test")
+            .with_hint("Hint 1");
+        let json = error.to_json();
+        assert!(json.contains("Test"));
+        assert!(json.contains("Hint 1"));
+    }
+
+    #[test]
+    fn test_error_to_markdown() {
+        let error = StructuredError::new("Test Error")
+            .with_provider("TestProvider")
+            .with_hint("Try again");
+        let md = error.to_markdown();
+        assert!(md.contains("## Error"));
+        assert!(md.contains("Test Error"));
+        assert!(md.contains("Provider"));
+        assert!(md.contains("## Suggestions"));
+    }
+
+    #[test]
+    fn test_structured_error_display() {
+        let theme = Theme::new();
+        let error = StructuredError::new("Test error")
+            .with_hint("Test hint");
+        let display = error.display(&theme);
+        assert!(display.contains("Test error"));
+        assert!(display.contains("Suggestions"));
+        assert!(display.contains("Test hint"));
+    }
+}

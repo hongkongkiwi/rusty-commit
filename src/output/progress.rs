@@ -291,6 +291,20 @@ pub fn spinner(message: &str) -> ProgressBar {
     pb
 }
 
+/// OAuth wait spinner with consistent styling for authentication flows.
+pub fn oauth_wait_spinner() -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.cyan} {msg}")
+            .unwrap()
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+    );
+    pb.set_message("Waiting for authentication...".to_string());
+    pb.enable_steady_tick(std::time::Duration::from_millis(100));
+    pb
+}
+
 /// Create a styled progress bar with custom template.
 pub fn styled_progress(message: &str, palette: &Palette) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
@@ -333,4 +347,56 @@ pub fn format_timing_breakdown(breakdown: &[(String, u64)], total_ms: u64) -> St
     result.push_str(&format!("  {} {}", "Total".dimmed(), total_str.green()));
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_step_pending() {
+        let step = Step::pending("Test Step");
+        assert_eq!(step.title(), "Test Step");
+        assert_eq!(step.status(), StepStatus::Pending);
+        assert!(step.detail().is_none());
+    }
+
+    #[test]
+    fn test_step_active() {
+        let step = Step::active("Active Step", "details here");
+        assert_eq!(step.title(), "Active Step");
+        assert_eq!(step.status(), StepStatus::Active);
+        assert_eq!(step.detail(), Some("details here"));
+    }
+
+    #[test]
+    fn test_step_completed() {
+        let step = Step::active("Test", "detail").completed();
+        assert_eq!(step.status(), StepStatus::Completed);
+        assert!(step.duration_ms().is_some());
+    }
+
+    #[test]
+    fn test_format_timing_breakdown_empty() {
+        let result = format_timing_breakdown(&[], 0);
+        assert!(result.contains("Total"));
+    }
+
+    #[test]
+    fn test_format_timing_breakdown_with_items() {
+        let breakdown = vec![("Step1".to_string(), 100u64), ("Step2".to_string(), 500u64)];
+        let result = format_timing_breakdown(&breakdown, 600);
+        assert!(result.contains("Step1"));
+        assert!(result.contains("Step2"));
+        assert!(result.contains("100ms"));
+        assert!(result.contains("500ms"));
+        assert!(result.contains("600ms"));
+    }
+
+    #[test]
+    fn test_format_timing_breakdown_seconds() {
+        let breakdown = vec![("Long Step".to_string(), 2500u64)];
+        let result = format_timing_breakdown(&breakdown, 2500);
+        assert!(result.contains("2.5s"));
+    }
 }

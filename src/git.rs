@@ -205,7 +205,20 @@ pub fn get_repo_root() -> Result<String> {
     Ok(workdir.to_string_lossy().to_string())
 }
 
-/// Returns the current branch name
+/// Returns the current branch name.
+///
+/// # Errors
+///
+/// Returns an error if the repository has no HEAD or if the branch name cannot be determined.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// let branch = git::get_current_branch().unwrap();
+/// println!("Current branch: {}", branch);
+/// ```
 pub fn get_current_branch() -> Result<String> {
     let repo = Repository::open_from_env()?;
     let head = repo.head()?;
@@ -216,7 +229,30 @@ pub fn get_current_branch() -> Result<String> {
     Ok(branch_name)
 }
 
-/// Returns commits between two branches
+/// Returns a list of commit hashes and messages between two branches.
+///
+/// The output format is `"<hash> - <message>"` for each commit, with the hash
+/// truncated to 7 characters.
+///
+/// # Arguments
+///
+/// * `base` - The base branch/commit (exclusive)
+/// * `head` - The head branch/commit (inclusive)
+///
+/// # Errors
+///
+/// Returns an error if the branches cannot be parsed or the repository cannot be accessed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// let commits = git::get_commits_between("main", "feature-branch").unwrap();
+/// for commit in commits {
+///     println!("{}", commit);
+/// }
+/// ```
 pub fn get_commits_between(base: &str, head: &str) -> Result<Vec<String>> {
     let repo = Repository::open_from_env()?;
 
@@ -242,7 +278,25 @@ pub fn get_commits_between(base: &str, head: &str) -> Result<Vec<String>> {
     Ok(commits)
 }
 
-/// Returns the diff between two branches
+/// Returns the diff between two branches or commits.
+///
+/// # Arguments
+///
+/// * `base` - The base branch/commit
+/// * `head` - The head branch/commit to compare against base
+///
+/// # Errors
+///
+/// Returns an error if the commits cannot be parsed or the diff cannot be generated.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// let diff = git::get_diff_between("main", "HEAD").unwrap();
+/// println!("{}", diff);
+/// ```
 pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
     let repo = Repository::open_from_env()?;
 
@@ -269,7 +323,20 @@ pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
     Ok(diff_text)
 }
 
-/// Returns the remote URL for the origin
+/// Returns the remote URL for the origin remote.
+///
+/// # Errors
+///
+/// Returns an error if no remote named "origin" exists or if the URL cannot be retrieved.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// let url = git::get_remote_url().unwrap();
+/// println!("Remote URL: {}", url);
+/// ```
 pub fn get_remote_url() -> Result<String> {
     let repo = Repository::open_from_env()?;
 
@@ -282,7 +349,26 @@ pub fn get_remote_url() -> Result<String> {
     Ok(url)
 }
 
-/// Returns recent commit messages for style analysis
+/// Returns recent commit messages for style analysis.
+///
+/// # Arguments
+///
+/// * `count` - Maximum number of recent commit messages to retrieve
+///
+/// # Errors
+///
+/// Returns an error if the repository cannot be accessed or has no commits.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// let messages = git::get_recent_commit_messages(5).unwrap();
+/// for msg in messages {
+///     println!("{}", msg);
+/// }
+/// ```
 pub fn get_recent_commit_messages(count: usize) -> Result<Vec<String>> {
     let repo = Repository::open_from_env()?;
 

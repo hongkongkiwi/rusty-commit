@@ -5,11 +5,17 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+/// Options for running hooks.
 pub struct HookOptions<'a> {
+    /// The name of the hook (e.g., "pre-commit", "pre-gen")
     pub name: &'a str,
+    /// List of commands to execute
     pub commands: Vec<String>,
+    /// Whether to treat hook failures as errors
     pub strict: bool,
+    /// Maximum time to wait for each hook command
     pub timeout: Duration,
+    /// Environment variables to pass to hook commands
     pub envs: Vec<(&'a str, String)>,
 }
 
@@ -29,6 +35,33 @@ fn parse_command(cmd: &str) -> Option<(String, Vec<String>)> {
     Some((executable, args))
 }
 
+/// Execute a list of hook commands with the given options.
+///
+/// Each command is executed sequentially with the specified environment variables.
+/// If `strict` mode is enabled, any command failure will return an error.
+/// Otherwise, failures are printed as warnings and execution continues.
+///
+/// # Errors
+///
+/// Returns an error if a command fails in strict mode, if a command cannot be spawned,
+/// or if a command times out.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+/// use rusty_commit::utils::hooks::{run_hooks, HookOptions};
+///
+/// let opts = HookOptions {
+///     name: "pre-commit",
+///     commands: vec!["echo 'Running tests'".to_string()],
+///     strict: true,
+///     timeout: Duration::from_secs(30),
+///     envs: vec![("RCO_VAR", "value".to_string())],
+/// };
+///
+/// let result = run_hooks(opts);
+/// ```
 pub fn run_hooks(opts: HookOptions) -> Result<()> {
     for (idx, cmd) in opts.commands.iter().enumerate() {
         // Parse command into executable and arguments

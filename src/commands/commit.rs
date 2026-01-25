@@ -633,11 +633,9 @@ fn copy_to_clipboard(text: &str) -> Result<()> {
 
     #[cfg(target_os = "windows")]
     {
-        use clipboard::ClipboardContext;
-        use clipboard::ClipboardProvider;
-        let mut ctx: ClipboardContext = ClipboardProvider::new()
+        let mut ctx = arboard::Clipboard::new()
             .map_err(|e| anyhow::anyhow!("Failed to access clipboard: {}", e))?;
-        ctx.set_contents(text.to_string())
+        ctx.set_text(text.to_string())
             .map_err(|e| anyhow::anyhow!("Failed to set clipboard contents: {}", e))?;
     }
 

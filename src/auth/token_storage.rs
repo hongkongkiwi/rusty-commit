@@ -4,6 +4,16 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+/// Get current Unix timestamp in seconds.
+///
+/// Returns `None` if system time is before Unix epoch (extremely rare).
+fn current_unix_timestamp() -> Option<u64> {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs())
+}
+
 /// OAuth token storage structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenStorage {
@@ -84,10 +94,7 @@ impl TokenStorage {
     /// Check if token is expired
     pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("System time is before Unix epoch - this should not happen")
-                .as_secs();
+            let now = current_unix_timestamp().unwrap_or(u64::MAX);
             now >= expires_at
         } else {
             false
@@ -98,10 +105,7 @@ impl TokenStorage {
     #[allow(dead_code)]
     pub fn expires_soon(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("System time is before Unix epoch - this should not happen")
-                .as_secs();
+            let now = current_unix_timestamp().unwrap_or(u64::MAX);
             now >= expires_at.saturating_sub(300) // 5 minutes buffer, saturating to avoid underflow
         } else {
             false
@@ -140,10 +144,8 @@ pub fn store_tokens(
                 }
 
                 if let Some(expires_in) = expires_in {
-                    let expires_at = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
+                    let expires_at = current_unix_timestamp()
+                        .unwrap_or(u64::MAX)
                         + expires_in;
                     if let Err(e) = crate::config::secure_storage::store_secret(
                         "claude_token_expires_at",
@@ -164,11 +166,7 @@ pub fn store_tokens(
 
     // Fall back to file storage
     let expires_at = expires_in.map(|exp| {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            + exp
+        current_unix_timestamp().unwrap_or(u64::MAX) + exp
     });
 
     let storage = TokenStorage {
@@ -284,10 +282,8 @@ pub fn store_tokens_for_account(
 
                 // Store expiry
                 if let Some(expires_in) = expires_in {
-                    let expires_at = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
+                    let expires_at = current_unix_timestamp()
+                        .unwrap_or(u64::MAX)
                         + expires_in;
                     let expiry_key = account_storage_key(_account_id, "token_expires_at");
                     let _ = crate::config::secure_storage::store_secret(

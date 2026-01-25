@@ -631,11 +631,12 @@ jobs:
       - name: Extract SHA256 checksums for all platforms
         id: sha256
         run: |
-          # Extract SHA256 for each platform (files include version prefix like v0.1.32)
-          SHA256_X86_64_DARWIN=$(grep -E 'rusty-commit-.*-x86_64-apple-darwin\\.tar\\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
-          SHA256_AARCH64_DARWIN=$(grep -E 'rusty-commit-.*-aarch64-apple-darwin\\.tar\\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
-          SHA256_X86_64_LINUX=$(grep -E 'rusty-commit-.*-x86_64-unknown-linux-gnu\\.tar\\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
-          SHA256_AARCH64_LINUX=$(grep -E 'rusty-commit-.*-aarch64-unknown-linux-gnu\\.tar\\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
+          # Extract SHA256 for each platform (files include version prefix like v1.0.18)
+          # Note: releases use musl for Linux, not gnu
+          SHA256_X86_64_DARWIN=$(grep -E 'rusty-commit-.*-x86_64-apple-darwin\.tar\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
+          SHA256_AARCH64_DARWIN=$(grep -E 'rusty-commit-.*-aarch64-apple-darwin\.tar\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
+          SHA256_X86_64_LINUX=$(grep -E 'rusty-commit-.*-x86_64-unknown-linux-musl\.tar\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
+          SHA256_AARCH64_LINUX=$(grep -E 'rusty-commit-.*-aarch64-unknown-linux-musl\.tar\.gz' homebrew-tmp/SHA256SUMS.txt | awk '{print $1}')
 
           for value in "$SHA256_X86_64_DARWIN" "$SHA256_AARCH64_DARWIN" "$SHA256_X86_64_LINUX" "$SHA256_AARCH64_LINUX"; do
             if [ -z "$value" ]; then
@@ -652,8 +653,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "SHA256 x86_64-darwin: $SHA256_X86_64_DARWIN"
           echo "SHA256 aarch64-darwin: $SHA256_AARCH64_DARWIN"
-          echo "SHA256 x86_64-linux: $SHA256_X86_64_LINUX"
-          echo "SHA256 aarch64-linux: $SHA256_AARCH64_LINUX"
+          echo "SHA256 x86_64-linux-musl: $SHA256_X86_64_LINUX"
+          echo "SHA256 aarch64-linux-musl: $SHA256_AARCH64_LINUX"
 
       - name: Update Homebrew formula
         run: |
@@ -666,41 +667,39 @@ jobs:
 
           cat > homebrew-tap/Formula/rusty-commit.rb << EOF
           class RustyCommit < Formula
-            desc "AI-powered git commit message generator"
+            desc "Rust-powered AI commit message generator with 18+ AI providers"
             homepage "https://github.com/hongkongkiwi/rusty-commit"
-            version "${VERSION}"
             license "MIT"
+            version "${VERSION}"
 
             on_macos do
-              on_intel do
-                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-x86_64-apple-darwin.tar.gz"
-                sha256 "${SHA256_X86_64_DARWIN}"
-              end
-
               on_arm do
                 url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-aarch64-apple-darwin.tar.gz"
                 sha256 "${SHA256_AARCH64_DARWIN}"
               end
+              on_intel do
+                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA256_X86_64_DARWIN}"
+              end
             end
 
             on_linux do
-              on_x86_64 do
-                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-                sha256 "${SHA256_X86_64_LINUX}"
-              end
-
               on_arm do
-                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-aarch64-unknown-linux-gnu.tar.gz"
+                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-aarch64-unknown-linux-musl.tar.gz"
                 sha256 "${SHA256_AARCH64_LINUX}"
+              end
+              on_x86_64 do
+                url "https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-x86_64-unknown-linux-musl.tar.gz"
+                sha256 "${SHA256_X86_64_LINUX}"
               end
             end
 
             def install
-              bin.install "rusty-commit"
+              bin.install "rco"
             end
 
             test do
-              assert_match version.to_s, shell_output("#{bin}/rusty-commit --version").strip
+              assert_match version.to_s, shell_output("#{bin}/rco --version").strip
             end
           end
           EOF
@@ -714,7 +713,7 @@ jobs:
           VERSION="${VERSION_RAW#v}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/rusty-commit.rb
+          git add Formula/rusty-commit.rb README.md
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
 
@@ -738,6 +737,10 @@ jobs:
           # Update the rev in .pre-commit-hooks.yaml
           sed -i "s/rev: v[0-9]\+\.[0-9]\+\.[0-9]\+/rev: v${VERSION}/" precommit-tap/.pre-commit-hooks.yaml
 
+          # Update version references in README.md
+          sed -i "s/rusty-commit v[0-9]\+\.[0-9]\+\.[0-9]\+/rusty-commit v${VERSION}/g" precommit-tap/README.md
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\]*/v${VERSION}/g" precommit-tap/README.md
+
           cat precommit-tap/.pre-commit-hooks.yaml
 
       - name: Commit and push changes
@@ -747,7 +750,7 @@ jobs:
           VERSION="${VERSION_RAW#v}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .pre-commit-hooks.yaml
+          git add .pre-commit-hooks.yaml README.md
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
 
@@ -756,10 +759,10 @@ jobs:
     needs: finalize-release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout actions-rusty-commit
+      - name: Checkout action-rusty-commit
         uses: actions/checkout@v4
         with:
-          repository: hongkongkiwi/actions-rusty-commit
+          repository: hongkongkiwi/action-rusty-commit
           token: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN }}
           path: actions-tap
 
@@ -768,8 +771,8 @@ jobs:
           VERSION_RAW='${{ github.event.inputs.version || github.ref_name }}'
           VERSION="${VERSION_RAW#v}"
 
-          # Update the version in action.yml
-          sed -i "s/tag: v[0-9]\+\.[0-9]\+\.[0-9]\+/tag: v${VERSION}/" actions-tap/action.yml
+          # Update the version in action.yml (if it has a tag reference)
+          sed -i "s/tag: v[0-9]\+\.[0-9]\+\.[0-9]\+/tag: v${VERSION}/" actions-tap/action.yml 2>/dev/null || true
 
           cat actions-tap/action.yml
 
@@ -780,6 +783,6 @@ jobs:
           VERSION="${VERSION_RAW#v}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add action.yml
+          git add action.yml README.md 2>/dev/null || git add action.yml
           git commit -m "Update rusty-commit to v${VERSION}"
           git push

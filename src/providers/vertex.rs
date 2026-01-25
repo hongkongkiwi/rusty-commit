@@ -141,7 +141,7 @@ impl VertexProvider {
 
     async fn get_gcloud_token() -> Result<String> {
         let output = tokio::process::Command::new("gcloud")
-            .args(&["auth", "print-access-token"])
+            .args(["auth", "print-access-token"])
             .output()
             .await
             .context("Failed to execute gcloud command")?;

@@ -10,6 +10,7 @@ use crate::config::Config;
 pub struct BedrockProvider {
     client: bedrock::Client,
     model: String,
+    #[allow(dead_code)]
     region: String,
 }
 

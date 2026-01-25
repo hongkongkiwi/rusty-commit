@@ -107,12 +107,21 @@ impl ProviderRegistry {
         let entry = ProviderEntry::from_builder(&*builder);
 
         // Register primary name
-        self.entries.write().unwrap().insert(name, entry.clone());
-        self.builders.write().unwrap().insert(name, builder);
+        self.entries
+            .write()
+            .expect("ProviderRegistry entries lock is poisoned")
+            .insert(name, entry.clone());
+        self.builders
+            .write()
+            .expect("ProviderRegistry builders lock is poisoned")
+            .insert(name, builder);
 
         // Register aliases
         for &alias in &entry.aliases {
-            self.by_alias.write().unwrap().insert(alias, name);
+            self.by_alias
+                .write()
+                .expect("ProviderRegistry by_alias lock is poisoned")
+                .insert(alias, name);
         }
     }
 
@@ -122,13 +131,21 @@ impl ProviderRegistry {
         let lower = provider.to_lowercase();
 
         // Try direct lookup
-        if let Some(entry) = self.entries.read().unwrap().get(lower.as_str()) {
+        let entries = self
+            .entries
+            .read()
+            .expect("ProviderRegistry entries lock is poisoned");
+        if let Some(entry) = entries.get(lower.as_str()) {
             return Some(entry.clone());
         }
 
         // Try alias lookup
-        if let Some(&primary) = self.by_alias.read().unwrap().get(lower.as_str()) {
-            return self.entries.read().unwrap().get(primary).cloned();
+        let by_alias = self
+            .by_alias
+            .read()
+            .expect("ProviderRegistry by_alias lock is poisoned");
+        if let Some(&primary) = by_alias.get(lower.as_str()) {
+            return entries.get(primary).cloned();
         }
 
         None
@@ -136,14 +153,19 @@ impl ProviderRegistry {
 
     /// Get all registered providers
     pub fn all(&self) -> Vec<ProviderEntry> {
-        self.entries.read().unwrap().values().cloned().collect()
+        self.entries
+            .read()
+            .expect("ProviderRegistry entries lock is poisoned")
+            .values()
+            .cloned()
+            .collect()
     }
 
     /// Get providers by category
     pub fn by_category(&self, category: ProviderCategory) -> Vec<ProviderEntry> {
         self.entries
             .read()
-            .unwrap()
+            .expect("ProviderRegistry entries lock is poisoned")
             .values()
             .filter(|e| e.category == category)
             .cloned()
@@ -153,13 +175,19 @@ impl ProviderRegistry {
     /// Check if any providers are registered
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
-        self.entries.read().unwrap().is_empty()
+        self.entries
+            .read()
+            .expect("ProviderRegistry entries lock is poisoned")
+            .is_empty()
     }
 
     /// Get count of registered providers
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
-        self.entries.read().unwrap().len()
+        self.entries
+            .read()
+            .expect("ProviderRegistry entries lock is poisoned")
+            .len()
     }
 
     /// Create a provider instance
@@ -170,14 +198,23 @@ impl ProviderRegistry {
     ) -> Result<Option<Box<dyn super::AIProvider>>> {
         let lower = name.to_lowercase();
 
+        let builders = self
+            .builders
+            .read()
+            .expect("ProviderRegistry builders lock is poisoned");
+        let by_alias = self
+            .by_alias
+            .read()
+            .expect("ProviderRegistry by_alias lock is poisoned");
+
         // Try direct lookup first
-        if let Some(builder) = self.builders.read().unwrap().get(lower.as_str()) {
+        if let Some(builder) = builders.get(lower.as_str()) {
             return Ok(Some(builder.create(config)?));
         }
 
         // Try alias lookup
-        if let Some(&primary) = self.by_alias.read().unwrap().get(lower.as_str()) {
-            if let Some(builder) = self.builders.read().unwrap().get(primary) {
+        if let Some(&primary) = by_alias.get(lower.as_str()) {
+            if let Some(builder) = builders.get(primary) {
                 return Ok(Some(builder.create(config)?));
             }
         }

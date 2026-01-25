@@ -136,7 +136,7 @@ futures = "0.3"
 flate2 = "1.0"
 tar = "0.4"
 zip = "7.1"
-clipboard = "0.5"
+arboard = "3.4"
 
 # MCP (Model Context Protocol) support
 rmcp = { version = "0.13.0", features = ["server"] }

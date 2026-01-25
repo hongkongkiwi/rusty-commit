@@ -9,6 +9,49 @@ use crate::auth::token_storage;
 use crate::cli::{AuthAction, AuthCommand};
 use crate::config::Config;
 
+/// Unified output helper for auth commands.
+struct AuthOutput;
+
+impl AuthOutput {
+    fn header(&self, text: &str) {
+        println!("\n{}", text.cyan().bold());
+    }
+
+    fn subheader(&self, text: &str) {
+        println!("{}", text.dimmed());
+    }
+
+    fn success(&self, message: &str) {
+        println!("{}", format!("✓ {}", message).green().bold());
+    }
+
+    fn warning(&self, message: &str) {
+        println!("{}", format!("⚠ {}", message).yellow());
+    }
+
+    fn error(&self, message: &str) {
+        println!("{}", format!("✗ {}", message).red().bold());
+    }
+
+    fn info(&self, message: &str) {
+        println!("{}", message.cyan());
+    }
+
+    fn divider(&self) {
+        println!("{}", "─".repeat(40).dimmed());
+    }
+
+    fn section(&self, title: &str) {
+        self.divider();
+        println!("{}", title.cyan().bold());
+        self.divider();
+    }
+
+    fn key_value(&self, key: &str, value: &str) {
+        println!("  {}: {}", key.dimmed(), value);
+    }
+}
+
 /// Execute auth command from CLI
 pub async fn execute(cmd: AuthCommand) -> Result<()> {
     match cmd.action {
@@ -20,11 +63,9 @@ pub async fn execute(cmd: AuthCommand) -> Result<()> {
 
 /// Login with interactive provider selection
 async fn login() -> Result<()> {
-    println!(
-        "\n{}",
-        "🚀 Welcome to Rusty Commit Authentication".cyan().bold()
-    );
-    println!("{}", "──────────────────────────────────────────".dimmed());
+    let out = AuthOutput;
+    out.header("🚀 Welcome to Rusty Commit Authentication");
+    out.divider();
 
     // Check if already authenticated
     if token_storage::has_valid_token() {
@@ -34,7 +75,7 @@ async fn login() -> Result<()> {
             .interact()?;
 
         if !should_reauth {
-            println!("{}", "✓ Authentication unchanged".green());
+            out.success("Authentication unchanged");
             return Ok(());
         }
     }
@@ -820,12 +861,13 @@ async fn handle_manual_auth() -> Result<()> {
 
 /// Logout and remove stored tokens
 async fn logout() -> Result<()> {
-    println!("{}", "🔐 Logging out...".cyan());
+    let out = AuthOutput;
+    out.info("Logging out...");
 
     // Remove stored tokens
     token_storage::delete_tokens()?;
 
-    println!("{}", "✓ Successfully logged out".green().bold());
+    out.success("Successfully logged out");
     println!("  Your authentication tokens have been removed.");
 
     Ok(())
@@ -833,28 +875,25 @@ async fn logout() -> Result<()> {
 
 /// Check authentication status
 async fn status() -> Result<()> {
-    println!("{}", "🔐 Authentication Status".cyan().bold());
-    println!("{}", "─".repeat(40));
+    let out = AuthOutput;
+    out.section("Authentication Status");
 
     let config = Config::load()?;
 
     // Check for API key
     if config.api_key.is_some() {
-        println!("{}", "✓ API Key configured".green());
-        println!(
-            "  Provider: {}",
-            config.ai_provider.as_deref().unwrap_or("openai")
-        );
+        out.success("API Key configured");
+        out.key_value("Provider", config.ai_provider.as_deref().unwrap_or("openai"));
         return Ok(());
     }
 
     // Check for OAuth tokens
     if let Some(tokens) = token_storage::get_tokens()? {
-        println!("{}", "✓ Authenticated with Claude OAuth".green());
+        out.success("Authenticated with Claude OAuth");
 
         // Check token expiry
         if tokens.is_expired() {
-            println!("{}", "  ⚠ Token expired - please re-authenticate".yellow());
+            out.warning("Token expired - please re-authenticate");
         } else if let Some(expires_at) = tokens.expires_at {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -864,34 +903,30 @@ async fn status() -> Result<()> {
             let remaining = expires_at - now;
             let hours = remaining / 3600;
             let minutes = (remaining % 3600) / 60;
-            println!("  Token expires in: {}h {}m", hours, minutes);
+            out.key_value("Token expires in", &format!("{}h {}m", hours, minutes));
         }
 
         if tokens.refresh_token.is_some() {
-            println!("  Refresh token: {}", "Available".green());
+            out.key_value("Refresh token", "Available");
         }
 
         // Show where tokens are stored
         #[cfg(feature = "secure-storage")]
         if crate::config::secure_storage::is_available() {
-            println!("  Storage: {}", "System Keychain".green());
+            out.key_value("Storage", "System Keychain");
         } else {
-            println!("  Storage: {}", "~/.config/rustycommit/auth.json".yellow());
+            out.key_value("Storage", "~/.config/rustycommit/auth.json");
         }
 
         #[cfg(not(feature = "secure-storage"))]
-        println!("  Storage: {}", "~/.config/rustycommit/auth.json".yellow());
+        {
+            out.key_value("Storage", "~/.config/rustycommit/auth.json");
+        }
     } else {
-        println!("{}", "✗ Not authenticated".red());
-        println!("\n{}", "To authenticate, run one of:".yellow());
-        println!(
-            "  • {} - Use Claude OAuth (recommended for Pro/Max users)",
-            "rco auth login".cyan()
-        );
-        println!(
-            "  • {} - Use API key",
-            "rco config set RCO_API_KEY=<your_key>".cyan()
-        );
+        out.error("Not authenticated");
+        out.subheader("To authenticate, run one of:");
+        println!("  • {} - Use Claude OAuth (recommended for Pro/Max users)", "rco auth login".cyan());
+        println!("  • {} - Use API key", "rco config set RCO_API_KEY=<your_key>".cyan());
     }
 
     println!("\n{}", "Storage Information:".bold());

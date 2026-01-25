@@ -2,8 +2,6 @@
 //!
 //! Provides structured, beautiful error messages with hints and context.
 
-use std::fmt;
-
 use anyhow::Result;
 use colored::Colorize;
 
@@ -184,12 +182,7 @@ impl StructuredError {
     }
 }
 
-impl fmt::Display for StructuredError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.display(&Theme::new()))
-    }
-}
-
+#[allow(dead_code)]
 /// Helper to convert anyhow errors to structured errors.
 pub trait ToStructured {
     fn to_structured(&self) -> StructuredError;
@@ -202,6 +195,7 @@ impl ToStructured for anyhow::Error {
 }
 
 /// Common error patterns with built-in hints.
+#[allow(dead_code)]
 pub mod patterns {
     use super::*;
 
@@ -310,6 +304,7 @@ pub mod patterns {
     }
 }
 
+#[allow(dead_code)]
 /// Print a structured error with the appropriate format.
 pub fn print_error(error: &StructuredError, theme: &Theme) {
     match theme.use_colors {
@@ -337,6 +332,7 @@ pub fn print_error(error: &StructuredError, theme: &Theme) {
     }
 }
 
+#[allow(dead_code)]
 /// Exit with a structured error.
 pub fn exit_with_error(error: &StructuredError) -> ! {
     let theme = Theme::new();
@@ -344,6 +340,7 @@ pub fn exit_with_error(error: &StructuredError) -> ! {
     std::process::exit(error.exit_code());
 }
 
+#[allow(dead_code)]
 /// Convert an anyhow Result to a StructuredError with optional context.
 pub fn context<T, E: std::error::Error + Send + Sync>(
     result: Result<T, E>,

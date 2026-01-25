@@ -10,9 +10,11 @@ use indicatif::{ProgressBar, ProgressStyle};
 use super::styling::{Color, Palette, Theme};
 
 /// Default progress spinner characters.
+#[allow(dead_code)]
 static SPINNER_CHARS: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 /// Step status for multi-step progress.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepStatus {
     /// Step is pending (not started).
@@ -28,6 +30,7 @@ pub enum StepStatus {
 }
 
 /// A single step in a multi-step workflow.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Step {
     /// The title of this step.
@@ -42,6 +45,7 @@ pub struct Step {
     duration_ms: Option<u64>,
 }
 
+#[allow(dead_code)]
 impl Step {
     /// Create a new pending step.
     pub fn pending(title: &str) -> Self {
@@ -111,6 +115,7 @@ impl Step {
 }
 
 /// Enhanced progress tracker with multi-step support.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ProgressTracker {
     /// The underlying progress bar.
@@ -127,6 +132,7 @@ pub struct ProgressTracker {
     timing_breakdown: Vec<(String, u64)>,
 }
 
+#[allow(dead_code)]
 impl ProgressTracker {
     /// Create a new progress tracker.
     pub fn new(message: &str) -> Self {

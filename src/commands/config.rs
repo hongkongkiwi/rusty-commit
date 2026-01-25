@@ -5,6 +5,49 @@ use dialoguer::{Input, Select};
 use crate::cli::{ConfigAction, ConfigCommand};
 use crate::config::{self, accounts, Config};
 
+/// Unified output helper for config commands.
+struct ConfigOutput;
+
+impl ConfigOutput {
+    fn header(&self, text: &str) {
+        println!("\n{}", text.bold());
+    }
+
+    fn subheader(&self, text: &str) {
+        println!("{}", text.dimmed());
+    }
+
+    fn success(&self, message: &str) {
+        println!("{}", format!("✅ {}", message).green());
+    }
+
+    fn error(&self, message: &str) {
+        println!("{}", format!("❌ {}", message).red());
+    }
+
+    fn warning(&self, message: &str) {
+        println!("{}", format!("⚠️  {}", message).yellow());
+    }
+
+    fn info(&self, message: &str) {
+        println!("{}", message.cyan());
+    }
+
+    fn divider(&self) {
+        println!("{}", "─".repeat(50).dimmed());
+    }
+
+    fn section(&self, title: &str) {
+        self.divider();
+        println!("{}", title.cyan().bold());
+        self.divider();
+    }
+
+    fn key_value(&self, key: &str, value: &str) {
+        println!("  {}: {}", key.dimmed(), value);
+    }
+}
+
 pub async fn execute(cmd: ConfigCommand) -> Result<()> {
     let mut config = Config::load()?;
 
@@ -50,63 +93,43 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             }
         }
         ConfigAction::Status => {
-            println!("\n{}", "🔐 Secure Storage Status".bold());
-            println!("{}", "─".repeat(50).dimmed());
+            let out = ConfigOutput;
+            out.header("🔐 Secure Storage Status");
+            out.divider();
 
             // Show platform info
-            println!("Platform: {}", config::secure_storage::get_platform_info());
+            out.key_value("Platform", &config::secure_storage::get_platform_info());
 
             let status = config::secure_storage::status_message();
-            println!("Status: {}", status);
+            out.key_value("Status", &status);
 
             if config::secure_storage::is_available() {
                 println!("\n{}", "✅ API keys will be stored securely".green());
-                println!(
-                    "{}",
-                    "   Your API keys are encrypted and protected by your system".dimmed()
-                );
+                out.subheader("Your API keys are encrypted and protected by your system");
 
                 // Platform-specific information
                 #[cfg(target_os = "macos")]
-                println!(
-                    "{}",
-                    "   Stored in: macOS Keychain (login keychain)".dimmed()
-                );
+                out.subheader("Stored in: macOS Keychain (login keychain)");
 
                 #[cfg(target_os = "linux")]
-                println!(
-                    "{}",
-                    "   Stored in: Secret Service (GNOME Keyring/KWallet)".dimmed()
-                );
+                out.subheader("Stored in: Secret Service (GNOME Keyring/KWallet)");
 
                 #[cfg(target_os = "windows")]
-                println!("{}", "   Stored in: Windows Credential Manager".dimmed());
+                out.subheader("Stored in: Windows Credential Manager");
             } else {
-                println!(
-                    "\n{}",
-                    "⚠️  API keys will be stored in the configuration file".yellow()
-                );
-                println!(
-                    "{}",
-                    "   Location: ~/.config/rustycommit/config.toml".dimmed()
-                );
+                out.warning("API keys will be stored in the configuration file");
+                out.subheader("Location: ~/.config/rustycommit/config.toml");
 
                 #[cfg(not(feature = "secure-storage"))]
                 {
-                    println!("{}", "   To enable secure storage:".dimmed());
-                    println!(
-                        "{}",
-                        "   cargo install rustycommit --features secure-storage".dimmed()
-                    );
+                    out.subheader("To enable secure storage:");
+                    out.subheader("cargo install rustycommit --features secure-storage");
                 }
 
                 #[cfg(feature = "secure-storage")]
                 {
-                    println!(
-                        "{}",
-                        "   Note: Secure storage is not available on this system".dimmed()
-                    );
-                    println!("{}", "   Falling back to file-based storage".dimmed());
+                    out.subheader("Note: Secure storage is not available on this system");
+                    out.subheader("Falling back to file-based storage");
                 }
             }
 
@@ -344,8 +367,9 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             }
         }
         ConfigAction::ListAccounts => {
-            println!("\n{}", "📋 Configured Accounts".bold().green());
-            println!("{}", "═".repeat(50).dimmed());
+            let out = ConfigOutput;
+            out.header("📋 Configured Accounts");
+            out.divider();
 
             if config.has_accounts() {
                 match config.list_accounts() {

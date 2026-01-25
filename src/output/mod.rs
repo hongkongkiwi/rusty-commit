@@ -3,18 +3,19 @@
 //! Provides consistent styling, progress tracking, and error formatting
 //! across all commands.
 
-use std::fmt;
-
 pub mod error;
 pub mod prelude;
 pub mod progress;
 pub mod styling;
 
 pub use prelude::{OutputFormat, OutputLevel};
+
+#[allow(dead_code)]
 pub use styling::{Color, Styling, Theme};
 
 /// Trait for formatting output based on the current format.
-pub trait OutputFormatter: fmt::Display {
+#[allow(dead_code)]
+pub trait OutputFormatter: std::fmt::Display {
     /// Write a section header.
     fn section_header(&mut self, title: &str);
     /// Write a success message.

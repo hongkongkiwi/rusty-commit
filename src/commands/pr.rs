@@ -1,13 +1,48 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Select};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::process::Command;
 
 use crate::cli::PrCommand;
 use crate::config::Config;
 use crate::git;
+use crate::output::progress;
 use crate::providers;
+
+/// Unified output helper for PR commands.
+struct PrOutput;
+
+impl PrOutput {
+    fn header(&self, text: &str) {
+        println!("\n{}", text.green().bold());
+    }
+
+    fn subheader(&self, text: &str) {
+        println!("{}", text.dimmed());
+    }
+
+    fn success(&self, message: &str) {
+        println!("{}", format!("✓ {}", message).green());
+    }
+
+    fn warning(&self, message: &str) {
+        println!("{}", message.yellow());
+    }
+
+    fn info(&self, message: &str) {
+        println!("{}", message.cyan());
+    }
+
+    fn divider(&self) {
+        println!("{}", "─".repeat(50).dimmed());
+    }
+
+    fn section(&self, title: &str) {
+        self.divider();
+        println!("{}", title.green().bold());
+        self.divider();
+    }
+}
 
 pub async fn execute(cmd: PrCommand) -> Result<()> {
     let config = Config::load()?;
@@ -22,39 +57,25 @@ pub async fn execute(cmd: PrCommand) -> Result<()> {
 }
 
 async fn generate_pr_description(config: &Config, base_branch: Option<&str>) -> Result<()> {
+    let out = PrOutput;
     let current_branch = git::get_current_branch()?;
     let base = base_branch.unwrap_or("main");
 
-    println!(
-        "{}",
-        format!(
-            "Generating PR description for branch '{}' against '{}'...",
-            current_branch, base
-        )
-        .green()
-        .bold()
-    );
+    out.info(&format!(
+        "Generating PR description for branch '{}' against '{}'...",
+        current_branch, base
+    ));
 
     // Get commits between branches
     let commits = git::get_commits_between(base, &current_branch)?;
     let diff = git::get_diff_between(base, &current_branch)?;
 
     if commits.is_empty() {
-        println!(
-            "{}",
-            "No commits found to generate PR description.".yellow()
-        );
+        out.warning("No commits found to generate PR description.");
         return Ok(());
     }
 
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
-    pb.set_message("Generating PR description...");
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
+    let pb = progress::spinner("Generating PR description...");
 
     let provider = providers::create_provider(config)?;
     let description = provider
@@ -64,10 +85,10 @@ async fn generate_pr_description(config: &Config, base_branch: Option<&str>) -> 
     pb.finish_with_message("PR description generated!");
 
     // Display the description
-    println!("\n{}", "Generated PR Description:".green().bold());
-    println!("{}", "─".repeat(50).dimmed());
+    out.header("Generated PR Description");
+    out.divider();
     println!("{}", description);
-    println!("{}", "─".repeat(50).dimmed());
+    out.divider();
 
     // Copy to clipboard option
     let choices = vec!["Copy to clipboard", "Show markdown", "Cancel"];

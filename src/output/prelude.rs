@@ -28,6 +28,7 @@ pub enum OutputLevel {
     Debug,
 }
 
+#[allow(dead_code)]
 impl OutputLevel {
     pub fn is_verbose_or_higher(&self) -> bool {
         matches!(self, Self::Verbose | Self::Debug)

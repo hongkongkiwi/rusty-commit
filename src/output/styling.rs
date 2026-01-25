@@ -193,6 +193,7 @@ impl BoxStyle {
 #[derive(Debug, Clone, Default)]
 pub struct Styling;
 
+#[allow(dead_code)]
 impl Styling {
     /// Get the styled header format.
     pub fn header(text: &str) -> String {

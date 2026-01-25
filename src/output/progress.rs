@@ -306,6 +306,7 @@ pub fn oauth_wait_spinner() -> ProgressBar {
 }
 
 /// Create a styled progress bar with custom template.
+#[allow(dead_code)]
 pub fn styled_progress(message: &str, palette: &Palette) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
     let template = format!(
@@ -326,6 +327,7 @@ pub fn styled_progress(message: &str, palette: &Palette) -> ProgressBar {
 }
 
 /// Format timing breakdown as a string.
+#[allow(dead_code)]
 pub fn format_timing_breakdown(breakdown: &[(String, u64)], total_ms: u64) -> String {
     let mut result = String::new();
 

@@ -16,6 +16,7 @@ pub enum OutputFormat {
 
 /// Represents the verbosity level for output.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum OutputLevel {
     /// Quiet mode - minimal output.
     Quiet,

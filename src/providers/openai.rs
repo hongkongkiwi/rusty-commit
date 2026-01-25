@@ -37,7 +37,7 @@ impl OpenAIProvider {
         let model = config
             .model
             .as_deref()
-            .unwrap_or("gpt-3.5-turbo")
+            .unwrap_or("gpt-4o-mini")
             .to_string();
 
         Ok(Self { client, model })
@@ -59,7 +59,7 @@ impl OpenAIProvider {
             .model
             .as_deref()
             .or(config.model.as_deref())
-            .unwrap_or("gpt-3.5-turbo")
+            .unwrap_or("gpt-4o-mini")
             .to_string();
 
         Ok(Self { client, model })

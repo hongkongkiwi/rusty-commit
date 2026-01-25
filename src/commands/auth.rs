@@ -1,7 +1,6 @@
 use anyhow::Result;
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
-use std::time::Duration;
 
 use crate::auth::oauth::OAuthClient;
 use crate::auth::token_storage;

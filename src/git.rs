@@ -175,8 +175,9 @@ pub fn get_staged_diff() -> Result<String> {
     // Convert diff to string
     let mut diff_text = String::new();
     diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
-        let content = std::str::from_utf8(line.content()).unwrap_or("");
-        diff_text.push_str(content);
+        // Use lossy conversion to preserve content even with invalid UTF-8
+        let content = String::from_utf8_lossy(line.content());
+        diff_text.push_str(&content);
         true
     })?;
 
@@ -315,8 +316,9 @@ pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
 
     let mut diff_text = String::new();
     diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
-        let content = std::str::from_utf8(line.content()).unwrap_or("");
-        diff_text.push_str(content);
+        // Use lossy conversion to preserve content even with invalid UTF-8
+        let content = String::from_utf8_lossy(line.content());
+        diff_text.push_str(&content);
         true
     })?;
 

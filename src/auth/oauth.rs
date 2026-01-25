@@ -135,8 +135,8 @@ impl OAuthClient {
             .and(warp::query::<std::collections::HashMap<String, String>>())
             .map(move |params: std::collections::HashMap<String, String>| {
                 if let Some(auth_code) = params.get("code") {
-                    let mut code_lock = code_clone.blocking_lock();
-                    *code_lock = Some(auth_code.clone());
+                    let mut code_guard = code_clone.blocking_lock();
+                    *code_guard = Some(auth_code.clone());
                 }
 
                 warp::reply::html(

@@ -7,54 +7,28 @@ use std::process::Command;
 use crate::cli::GlobalOptions;
 use crate::config::Config;
 use crate::git;
-use crate::output::prelude::{OutputFormat, OutputLevel};
-use crate::output::styling::{Palette, Styling, Theme};
+use crate::output::styling::Styling;
 use crate::output::progress;
 use crate::providers;
 use crate::utils;
 use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
 
-/// Tokens reserved for prompt overhead when chunking diffs
+/// Tokens reserved for prompt overhead when chunking diffs.
+/// This accounts for system prompts, user instructions, and response tokens
+/// that are sent alongside the diff content.
 const PROMPT_OVERHEAD_TOKENS: usize = 500;
 
-/// Execution context with styling and theme settings.
-struct ExecContext {
-    output_format: OutputFormat,
-    output_level: OutputLevel,
-    theme: Theme,
-    palette: Palette,
-}
+/// Execution context for commit message output.
+struct ExecContext;
 
 impl ExecContext {
-    fn new(options: &GlobalOptions) -> Self {
-        let theme = match options.output_format {
-            OutputFormat::Pretty => Theme::new(),
-            OutputFormat::Json => Theme::json(),
-            OutputFormat::Markdown => Theme::markdown(),
-        };
-
-        let output_level = if options.timing {
-            OutputLevel::Verbose
-        } else {
-            OutputLevel::Normal
-        };
-
-        Self {
-            output_format: options.output_format,
-            output_level,
-            theme,
-            palette: Palette::default(),
-        }
+    fn new(_options: &GlobalOptions) -> Self {
+        Self
     }
 
     /// Print a success message.
     fn success(&self, message: &str) {
         println!("{} {}", "✓".green(), message);
-    }
-
-    /// Print an info message.
-    fn info(&self, message: &str) {
-        println!("{} {}", "i".cyan().bold(), message);
     }
 
     /// Print a warning message.
@@ -88,16 +62,6 @@ impl ExecContext {
         println!("{}: {}", key.dimmed(), value);
     }
 
-    /// Print timing information.
-    fn timing(&self, component: &str, duration_ms: u64) {
-        println!("  {} {}", component.dimmed(), Styling::timing(component, duration_ms));
-    }
-
-    /// Print a section box with title and content.
-    fn section_box(&self, title: &str, content: &str) {
-        let box_content = Styling::section_box(title, content, &self.theme);
-        println!("\n{}", box_content);
-    }
 }
 
 pub async fn execute(options: GlobalOptions) -> Result<()> {

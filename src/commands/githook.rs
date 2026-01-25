@@ -9,27 +9,6 @@ use std::path::Path;
 use crate::cli::{HookAction, HookCommand};
 use crate::git;
 
-/// Unified output helper for hook commands.
-struct HookOutput;
-
-impl HookOutput {
-    fn success(&self, message: &str) {
-        println!("{}", format!("✓ {}", message).green());
-    }
-
-    fn warning(&self, message: &str) {
-        println!("{}", message.yellow());
-    }
-
-    fn info(&self, message: &str) {
-        println!("{}", message.cyan());
-    }
-
-    fn key_value(&self, key: &str, value: &str) {
-        println!("  {}: {}", key.dimmed(), value);
-    }
-}
-
 const PREPARE_COMMIT_MSG_HOOK: &str = "prepare-commit-msg";
 const PREPARE_COMMIT_MSG_CONTENT: &str = r#"#!/bin/sh
 # Rusty Commit Git Hook

@@ -95,7 +95,8 @@ impl GitLabOAuthClient {
     /// Generate random state for CSRF protection
     fn generate_state() -> String {
         let mut bytes = [0u8; 32];
-        generate_random_bytes(&mut bytes).unwrap_or_default();
+        // fill_bytes never fails, so we don't need unwrap_or_default
+        let _ = generate_random_bytes(&mut bytes);
         URL_SAFE_NO_PAD.encode(bytes)
     }
 

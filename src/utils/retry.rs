@@ -2,6 +2,9 @@ use anyhow::Result;
 use backoff::{future::retry, ExponentialBackoff, ExponentialBackoffBuilder};
 use std::time::Duration;
 
+/// Maximum total time to spend retrying before giving up
+const MAX_RETRY_TIMEOUT_SECS: u64 = 120;
+
 /// Determines if an error is retryable
 pub fn is_retryable_error(error: &anyhow::Error) -> bool {
     let error_msg = error.to_string().to_lowercase();
@@ -42,7 +45,7 @@ pub fn create_backoff() -> ExponentialBackoff {
         .with_initial_interval(Duration::from_millis(500))
         .with_max_interval(Duration::from_secs(30))
         .with_multiplier(2.0)
-        .with_max_elapsed_time(Some(Duration::from_secs(120))) // 2 minutes total
+        .with_max_elapsed_time(Some(Duration::from_secs(MAX_RETRY_TIMEOUT_SECS)))
         .build()
 }
 

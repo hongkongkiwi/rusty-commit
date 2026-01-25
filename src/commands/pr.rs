@@ -10,8 +10,10 @@ use crate::output::progress;
 use crate::providers;
 
 /// Unified output helper for PR commands.
+#[allow(dead_code)]
 struct PrOutput;
 
+#[allow(dead_code)]
 impl PrOutput {
     fn header(&self, text: &str) {
         println!("\n{}", text.green().bold());
@@ -114,7 +116,9 @@ async fn generate_pr_description(config: &Config, base_branch: Option<&str>) -> 
 
             // Try to open in editor
             if let Ok(editor) = std::env::var("EDITOR") {
-                let _ = Command::new(&editor).arg(&preview_file).status();
+                if let Err(e) = Command::new(&editor).arg(&preview_file).status() {
+                    eprintln!("Warning: Failed to open editor '{}': {}", editor, e);
+                }
             }
         }
         _ => {

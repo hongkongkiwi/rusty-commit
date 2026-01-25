@@ -57,7 +57,7 @@ impl AnthropicProvider {
         let model = config
             .model
             .as_deref()
-            .unwrap_or("claude-3-sonnet-20240229")
+            .unwrap_or("claude-3-5-sonnet-20241022")
             .to_string();
 
         Ok(Self {
@@ -75,7 +75,7 @@ impl AnthropicProvider {
             .model
             .as_deref()
             .or(config.model.as_deref())
-            .unwrap_or("claude-3-sonnet-20240229")
+            .unwrap_or("claude-3-5-sonnet-20241022")
             .to_string();
 
         // For accounts, we'll use the api_key from the function parameter

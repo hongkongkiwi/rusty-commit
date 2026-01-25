@@ -132,13 +132,14 @@ impl AIProvider for GeminiProvider {
         };
 
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-            self.model, self.api_key
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+            self.model
         );
 
         let response = self
             .client
             .post(&url)
+            .header("X-Goog-Api-Key", &self.api_key)
             .json(&request)
             .send()
             .await

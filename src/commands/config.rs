@@ -6,8 +6,10 @@ use crate::cli::{ConfigAction, ConfigCommand};
 use crate::config::{self, accounts, Config};
 
 /// Unified output helper for config commands.
+#[allow(dead_code)]
 struct ConfigOutput;
 
+#[allow(dead_code)]
 impl ConfigOutput {
     fn header(&self, text: &str) {
         println!("\n{}", text.bold());

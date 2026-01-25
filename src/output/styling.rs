@@ -6,6 +6,7 @@ use colored::{Color as ColoredColor, Colorize};
 
 /// Primary color palette for Rusty Commit.
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub struct Palette {
     /// Primary accent color (used for headers and emphasis).
     pub primary: Color,
@@ -42,6 +43,7 @@ impl Default for Palette {
 
 /// Extended color definitions beyond standard colored::Color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Color {
     /// Standard colors from colored crate.
     Standard(ColoredColor),
@@ -63,6 +65,7 @@ pub enum Color {
 
 impl Color {
     /// Apply this color to a colored::Colorize string.
+    #[allow(dead_code)]
     pub fn apply<T: colored::Colorize>(&self, text: T) -> colored::ColoredString {
         match self {
             Color::Standard(c) => text.color(*c),
@@ -77,6 +80,7 @@ impl Color {
     }
 
     /// Get the underlying colored::Color.
+    #[allow(dead_code)]
     pub fn to_colored(self) -> ColoredColor {
         match self {
             Color::Standard(c) => c,
@@ -93,6 +97,7 @@ impl Color {
 
 /// Output theme configuration.
 #[derive(Debug, Clone, Copy, Default)]
+#[allow(dead_code)]
 pub struct Theme {
     /// Whether to use colors in output.
     pub use_colors: bool,
@@ -113,6 +118,7 @@ impl Theme {
     }
 
     /// Create a theme for minimal output (no colors, no emoji).
+    #[allow(dead_code)]
     pub fn minimal() -> Self {
         Self {
             use_colors: false,
@@ -124,6 +130,7 @@ impl Theme {
     }
 
     /// Create a theme for JSON output.
+    #[allow(dead_code)]
     pub fn json() -> Self {
         Self {
             use_colors: false,
@@ -135,6 +142,7 @@ impl Theme {
     }
 
     /// Create a theme for markdown output.
+    #[allow(dead_code)]
     pub fn markdown() -> Self {
         Self {
             use_colors: false,
@@ -148,6 +156,7 @@ impl Theme {
 
 /// Box drawing style for panels and sections.
 #[derive(Debug, Clone, Copy, Default)]
+#[allow(dead_code)]
 pub enum BoxStyle {
     /// No box drawing characters.
     #[default]

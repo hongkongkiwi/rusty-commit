@@ -59,12 +59,14 @@ impl StructuredError {
     }
 
     /// Add contextual information.
+    #[allow(dead_code)]
     pub fn with_context(mut self, key: &str, value: &str) -> Self {
         self.context.push((key.to_string(), value.to_string()));
         self
     }
 
     /// Add a hint.
+    #[allow(dead_code)]
     pub fn with_hint(mut self, hint: &str) -> Self {
         self.hints.push(hint.to_string());
         self
@@ -88,7 +90,7 @@ impl StructuredError {
     }
 
     /// Format the error for display.
-    pub fn display(&self, theme: &Theme) -> String {
+    pub fn display(&self, _theme: &Theme) -> String {
         let mut output = String::new();
 
         // Error header
@@ -131,6 +133,7 @@ impl StructuredError {
     }
 
     /// Format as JSON.
+    #[allow(dead_code)]
     pub fn to_json(&self) -> String {
         use serde_json::json;
 
@@ -155,6 +158,7 @@ impl StructuredError {
     }
 
     /// Format as markdown.
+    #[allow(dead_code)]
     pub fn to_markdown(&self) -> String {
         let mut output = String::new();
 

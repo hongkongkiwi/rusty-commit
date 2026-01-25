@@ -48,17 +48,36 @@ pub trait AIProvider: Send + Sync {
         config: &Config,
         count: u8,
     ) -> Result<Vec<String>> {
-        let mut messages = Vec::with_capacity(count as usize);
-        for _ in 0..count {
+        use futures::stream::StreamExt;
+
+        if count <= 1 {
+            // For single message, no parallelism needed
             match self
                 .generate_commit_message(diff, context, full_gitmoji, config)
                 .await
             {
-                Ok(msg) => messages.push(msg),
-                Err(e) => tracing::warn!("Failed to generate message: {}", e),
+                Ok(msg) => Ok(vec![msg]),
+                Err(e) => {
+                    tracing::warn!("Failed to generate message: {}", e);
+                    Ok(vec![])
+                }
             }
+        } else {
+            // Generate messages in parallel using FuturesUnordered
+            let futures = (0..count).map(|_| {
+                self.generate_commit_message(diff, context, full_gitmoji, config)
+            });
+            let mut stream = futures::stream::FuturesUnordered::from_iter(futures);
+
+            let mut messages = Vec::with_capacity(count as usize);
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(msg) => messages.push(msg),
+                    Err(e) => tracing::warn!("Failed to generate message: {}", e),
+                }
+            }
+            Ok(messages)
         }
-        Ok(messages)
     }
 
     /// Generate a PR description from commits
@@ -145,53 +164,53 @@ pub static PROVIDER_REGISTRY: Lazy<registry::ProviderRegistry> = Lazy::new(|| {
     // Register OpenAI-compatible providers (require openai feature)
     #[cfg(feature = "openai")]
     {
-        reg.register(Box::new(openai::OpenAICompatibleProvider::new()));
+        let _ = reg.register(Box::new(openai::OpenAICompatibleProvider::new()));
     }
 
     // Register dedicated providers
     #[cfg(feature = "anthropic")]
     {
-        reg.register(Box::new(anthropic::AnthropicProviderBuilder));
+        let _ = reg.register(Box::new(anthropic::AnthropicProviderBuilder));
     }
 
     #[cfg(feature = "ollama")]
     {
-        reg.register(Box::new(ollama::OllamaProviderBuilder));
+        let _ = reg.register(Box::new(ollama::OllamaProviderBuilder));
     }
 
     #[cfg(feature = "gemini")]
     {
-        reg.register(Box::new(gemini::GeminiProviderBuilder));
+        let _ = reg.register(Box::new(gemini::GeminiProviderBuilder));
     }
 
     #[cfg(feature = "azure")]
     {
-        reg.register(Box::new(azure::AzureProviderBuilder));
+        let _ = reg.register(Box::new(azure::AzureProviderBuilder));
     }
 
     #[cfg(feature = "perplexity")]
     {
-        reg.register(Box::new(perplexity::PerplexityProviderBuilder));
+        let _ = reg.register(Box::new(perplexity::PerplexityProviderBuilder));
     }
 
     #[cfg(feature = "xai")]
     {
-        reg.register(Box::new(xai::XAIProviderBuilder));
+        let _ = reg.register(Box::new(xai::XAIProviderBuilder));
     }
 
     #[cfg(feature = "huggingface")]
     {
-        reg.register(Box::new(huggingface::HuggingFaceProviderBuilder));
+        let _ = reg.register(Box::new(huggingface::HuggingFaceProviderBuilder));
     }
 
     #[cfg(feature = "bedrock")]
     {
-        reg.register(Box::new(bedrock::BedrockProviderBuilder));
+        let _ = reg.register(Box::new(bedrock::BedrockProviderBuilder));
     }
 
     #[cfg(feature = "vertex")]
     {
-        reg.register(Box::new(vertex::VertexProviderBuilder));
+        let _ = reg.register(Box::new(vertex::VertexProviderBuilder));
     }
 
     reg
@@ -209,6 +228,7 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
     // Provider not found - build error message with available providers
     let available: Vec<String> = PROVIDER_REGISTRY
         .all()
+        .unwrap_or_default()
         .iter()
         .map(|e| {
             let aliases = if e.aliases.is_empty() {
@@ -222,7 +242,7 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
             "- {} OpenAI-compatible providers (deepseek, groq, openrouter, etc.)",
             PROVIDER_REGISTRY
                 .by_category(registry::ProviderCategory::OpenAICompatible)
-                .len()
+                .map_or(0, |v| v.len())
         )))
         .filter(|s| !s.contains("0 OpenAI-compatible"))
         .collect();
@@ -248,6 +268,7 @@ pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
 pub fn available_providers() -> Vec<&'static str> {
     let mut providers = PROVIDER_REGISTRY
         .all()
+        .unwrap_or_default()
         .iter()
         .flat_map(|e| std::iter::once(e.name).chain(e.aliases.iter().copied()))
         .collect::<Vec<_>>();

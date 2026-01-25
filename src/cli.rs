@@ -42,7 +42,7 @@ pub struct Cli {
     pub global: GlobalOptions,
 }
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 pub struct GlobalOptions {
     /// Use full GitMoji specification
     #[arg(long = "fgm", default_value = "false")]

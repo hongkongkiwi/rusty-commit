@@ -12,16 +12,15 @@ use crate::providers;
 use crate::utils;
 use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
 
+/// Tokens reserved for prompt overhead when chunking diffs
+const PROMPT_OVERHEAD_TOKENS: usize = 500;
+
 pub async fn execute(options: GlobalOptions) -> Result<()> {
     // Ensure we're in a git repository
     git::assert_git_repo()?;
 
-    // Get the current configuration
-    let mut config = Config::load()?;
-
-    // Load and apply commitlint configuration
-    config.load_with_commitlint()?;
-    config.apply_commitlint_rules()?;
+    // Load and validate configuration
+    let mut config = load_and_validate_config()?;
 
     // Determine effective generate count (CLI > config > default), clamped to 1-5
     let generate_count = options
@@ -29,6 +28,66 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         .max(config.generate_count.unwrap_or(1))
         .clamp(1, 5);
 
+    // Prepare the diff for processing
+    let (final_diff, token_count) = prepare_diff(&mut config)?;
+
+    // If --show-prompt flag is set, just show the prompt and exit
+    if options.show_prompt {
+        display_prompt(&config, &final_diff, options.context.as_deref(), options.full_gitmoji);
+        return Ok(());
+    }
+
+    // Run pre-generation hooks
+    if !options.no_pre_hooks {
+        run_pre_gen_hooks(&config, token_count, options.context.as_deref())?;
+    }
+
+    // Generate commit message(s)
+    let messages = generate_commit_messages(
+        &config,
+        &final_diff,
+        options.context.as_deref(),
+        options.full_gitmoji,
+        generate_count,
+    )
+    .await?;
+
+    if messages.is_empty() {
+        anyhow::bail!("Failed to generate any commit messages");
+    }
+
+    // Handle clipboard mode
+    if options.clipboard {
+        return handle_clipboard_mode(&messages);
+    }
+
+    // Handle print mode
+    if options.print_message {
+        print!("{}", messages[0]);
+        return Ok(());
+    }
+
+    // Run pre-commit hooks on first message
+    let mut final_message = messages[0].clone();
+    if !options.no_pre_hooks {
+        final_message = run_pre_commit_hooks(&config, &final_message)?;
+    }
+
+    // Display messages and handle commit action
+    display_commit_messages(&messages);
+    handle_commit_action(&options, &config, &messages, &mut final_message).await
+}
+
+/// Load configuration and apply commitlint rules
+fn load_and_validate_config() -> Result<Config> {
+    let mut config = Config::load()?;
+    config.load_with_commitlint()?;
+    config.apply_commitlint_rules()?;
+    Ok(config)
+}
+
+/// Prepare the diff for processing: get staged changes, apply filters, chunk if needed
+fn prepare_diff(config: &Config) -> Result<(String, usize)> {
     // Check for staged files or changes
     let staged_files = git::get_staged_files()?;
     let changed_files = if staged_files.is_empty() {
@@ -38,8 +97,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     };
 
     if changed_files.is_empty() {
-        println!("{}", "No changes to commit.".yellow());
-        return Ok(());
+        anyhow::bail!("No changes to commit");
     }
 
     // If no staged files, ask user which files to stage
@@ -57,8 +115,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     // Get the diff of staged changes
     let diff = git::get_staged_diff()?;
     if diff.is_empty() {
-        println!("{}", "No staged changes to commit.".yellow());
-        return Ok(());
+        anyhow::bail!("No staged changes to commit");
     }
 
     // Apply .rcoignore if it exists
@@ -66,11 +123,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // Check if diff became empty after filtering
     if diff.trim().is_empty() {
-        println!(
-            "{}",
-            "No changes to commit after applying .rcoignore filters.".yellow()
-        );
-        return Ok(());
+        anyhow::bail!("No changes to commit after applying .rcoignore filters");
     }
 
     // Check if diff is too large - implement chunking if needed
@@ -99,112 +152,60 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         );
     }
 
-    // If --show-prompt flag is set, just show the prompt and exit
-    if options.show_prompt {
-        let prompt = config.get_effective_prompt(
-            &final_diff,
-            options.context.as_deref(),
-            options.full_gitmoji,
-        );
-        println!("\n{}", "Prompt that would be sent to AI:".green().bold());
-        println!("{}", "═".repeat(60).dimmed());
-        println!("{}", prompt);
-        println!("{}", "═".repeat(60).dimmed());
-        return Ok(());
+    Ok((final_diff, token_count))
+}
+
+/// Display the prompt that would be sent to AI
+fn display_prompt(config: &Config, diff: &str, context: Option<&str>, full_gitmoji: bool) {
+    let prompt = config.get_effective_prompt(diff, context, full_gitmoji);
+    println!("\n{}", "Prompt that would be sent to AI:".green().bold());
+    println!("{}", "═".repeat(60).dimmed());
+    println!("{}", prompt);
+    println!("{}", "═".repeat(60).dimmed());
+}
+
+/// Run pre-generation hooks
+fn run_pre_gen_hooks(config: &Config, token_count: usize, context: Option<&str>) -> Result<()> {
+    if let Some(hooks) = config.pre_gen_hook.clone() {
+        let envs = vec![
+            ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+            (
+                "RCO_MAX_TOKENS",
+                (config.tokens_max_input.unwrap_or(4096)).to_string(),
+            ),
+            ("RCO_DIFF_TOKENS", token_count.to_string()),
+            ("RCO_CONTEXT", context.unwrap_or_default().to_string()),
+            (
+                "RCO_PROVIDER",
+                config.ai_provider.clone().unwrap_or_default(),
+            ),
+            ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+        ];
+        run_hooks(HookOptions {
+            name: "pre-gen",
+            commands: hooks,
+            strict: config.hook_strict.unwrap_or(true),
+            timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+            envs,
+        })?;
     }
+    Ok(())
+}
 
-    // Run pre-generation hooks (optional)
-    if !options.no_pre_hooks {
-        if let Some(hooks) = config.pre_gen_hook.clone() {
-            let envs = vec![
-                ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
-                (
-                    "RCO_MAX_TOKENS",
-                    (config.tokens_max_input.unwrap_or(4096)).to_string(),
-                ),
-                ("RCO_DIFF_TOKENS", token_count.to_string()),
-                ("RCO_CONTEXT", options.context.clone().unwrap_or_default()),
-                (
-                    "RCO_PROVIDER",
-                    config.ai_provider.clone().unwrap_or_default(),
-                ),
-                ("RCO_MODEL", config.model.clone().unwrap_or_default()),
-            ];
-            run_hooks(HookOptions {
-                name: "pre-gen",
-                commands: hooks,
-                strict: config.hook_strict.unwrap_or(true),
-                timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
-                envs,
-            })?;
-        }
-    }
+/// Handle clipboard mode - copy message to clipboard and exit
+fn handle_clipboard_mode(messages: &[String]) -> Result<()> {
+    let selected = if messages.len() == 1 {
+        0
+    } else {
+        select_message_variant(messages)?
+    };
+    copy_to_clipboard(&messages[selected])?;
+    println!("{}", "✅ Commit message copied to clipboard!".green());
+    Ok(())
+}
 
-    // Generate commit message(s)
-    let messages = generate_commit_messages(
-        &config,
-        &final_diff,
-        options.context.as_deref(),
-        options.full_gitmoji,
-        generate_count,
-    )
-    .await?;
-
-    if messages.is_empty() {
-        anyhow::bail!("Failed to generate any commit messages");
-    }
-
-    // If clipboard mode, copy and exit
-    if options.clipboard {
-        let selected = if messages.len() == 1 {
-            0
-        } else {
-            select_message_variant(&messages)?
-        };
-        copy_to_clipboard(&messages[selected])?;
-        println!("{}", "✅ Commit message copied to clipboard!".green());
-        return Ok(());
-    }
-
-    // If print mode, output to stdout and exit (for hooks)
-    if options.print_message {
-        // For print mode, use the first message (non-interactive)
-        print!("{}", messages[0]);
-        return Ok(());
-    }
-
-    // Run pre-commit hooks (can modify message via temp file)
-    let mut final_message = messages[0].clone();
-    if !options.no_pre_hooks {
-        if let Some(hooks) = config.pre_commit_hook.clone() {
-            let commit_file = write_temp_commit_file(&final_message)?;
-            let envs = vec![
-                ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
-                ("RCO_COMMIT_MESSAGE", final_message.clone()),
-                ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
-                (
-                    "RCO_PROVIDER",
-                    config.ai_provider.clone().unwrap_or_default(),
-                ),
-                ("RCO_MODEL", config.model.clone().unwrap_or_default()),
-            ];
-            run_hooks(HookOptions {
-                name: "pre-commit",
-                commands: hooks,
-                strict: config.hook_strict.unwrap_or(true),
-                timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
-                envs,
-            })?;
-            // Read back possibly modified commit file
-            if let Ok(updated) = std::fs::read_to_string(&commit_file) {
-                if !updated.trim().is_empty() {
-                    final_message = updated;
-                }
-            }
-        }
-    }
-
-    // Display the generated commit message(s)
+/// Display the generated commit message(s)
+fn display_commit_messages(messages: &[String]) {
     if messages.len() == 1 {
         println!("\n{}", "Generated commit message:".green().bold());
         println!("{}", "─".repeat(50).dimmed());
@@ -221,8 +222,15 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         }
         println!("{}", "─".repeat(50).dimmed());
     }
+}
 
-    // Ask for confirmation or allow editing/selection
+/// Handle the commit action (commit, edit, select, cancel, regenerate)
+async fn handle_commit_action(
+    options: &GlobalOptions,
+    config: &Config,
+    messages: &[String],
+    final_message: &mut String,
+) -> Result<()> {
     let action = if options.skip_confirmation {
         CommitAction::Commit
     } else if messages.len() > 1 {
@@ -233,50 +241,25 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     match action {
         CommitAction::Commit => {
-            perform_commit(&final_message)?;
-            run_post_commit_hooks(&config, &final_message).await?;
+            perform_commit(final_message)?;
+            run_post_commit_hooks(config, final_message).await?;
             println!("{}", "✅ Changes committed successfully!".green());
         }
         CommitAction::Edit => {
-            let edited_message = edit_commit_message(&final_message)?;
+            let edited_message = edit_commit_message(final_message)?;
             perform_commit(&edited_message)?;
-            run_post_commit_hooks(&config, &edited_message).await?;
+            run_post_commit_hooks(config, &edited_message).await?;
             println!("{}", "✅ Changes committed successfully!".green());
         }
         CommitAction::Select { index } => {
-            let mut selected_message = messages[index].clone();
-            // Run hooks on selected message
-            if !options.no_pre_hooks {
-                if let Some(hooks) = config.pre_commit_hook.clone() {
-                    let commit_file = write_temp_commit_file(&selected_message)?;
-                    let envs = vec![
-                        ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
-                        ("RCO_COMMIT_MESSAGE", selected_message.clone()),
-                        ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
-                        (
-                            "RCO_PROVIDER",
-                            config.ai_provider.clone().unwrap_or_default(),
-                        ),
-                        ("RCO_MODEL", config.model.clone().unwrap_or_default()),
-                    ];
-                    run_hooks(HookOptions {
-                        name: "pre-commit",
-                        commands: hooks,
-                        strict: config.hook_strict.unwrap_or(true),
-                        timeout: std::time::Duration::from_millis(
-                            config.hook_timeout_ms.unwrap_or(30000),
-                        ),
-                        envs,
-                    })?;
-                    if let Ok(updated) = std::fs::read_to_string(&commit_file) {
-                        if !updated.trim().is_empty() {
-                            selected_message = updated;
-                        }
-                    }
-                }
-            }
-            perform_commit(&selected_message)?;
-            run_post_commit_hooks(&config, &selected_message).await?;
+            let selected_message = messages[index].clone();
+            let final_msg = if !options.no_pre_hooks {
+                run_pre_commit_hooks(config, &selected_message)?
+            } else {
+                selected_message
+            };
+            perform_commit(&final_msg)?;
+            run_post_commit_hooks(config, &final_msg).await?;
             println!("{}", "✅ Changes committed successfully!".green());
         }
         CommitAction::Cancel => {
@@ -284,7 +267,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         }
         CommitAction::Regenerate => {
             // Recursive call to regenerate
-            Box::pin(execute(options)).await?;
+            Box::pin(execute(options.clone())).await?;
         }
     }
 
@@ -408,6 +391,37 @@ async fn run_post_commit_hooks(config: &Config, message: &str) -> Result<()> {
     Ok(())
 }
 
+/// Run pre-commit hooks on a commit message, returning the possibly modified message
+fn run_pre_commit_hooks(config: &Config, message: &str) -> Result<String> {
+    if let Some(hooks) = config.pre_commit_hook.clone() {
+        let commit_file = write_temp_commit_file(message)?;
+        let envs = vec![
+            ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
+            ("RCO_COMMIT_MESSAGE", message.to_string()),
+            ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
+            (
+                "RCO_PROVIDER",
+                config.ai_provider.clone().unwrap_or_default(),
+            ),
+            ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+        ];
+        run_hooks(HookOptions {
+            name: "pre-commit",
+            commands: hooks,
+            strict: config.hook_strict.unwrap_or(true),
+            timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+            envs,
+        })?;
+        // Read back possibly modified commit file
+        if let Ok(updated) = std::fs::read_to_string(&commit_file) {
+            if !updated.trim().is_empty() {
+                return Ok(updated);
+            }
+        }
+    }
+    Ok(message.to_string())
+}
+
 async fn generate_commit_messages(
     config: &Config,
     diff: &str,
@@ -482,7 +496,8 @@ fn filter_diff_by_rcoignore(diff: &str) -> Result<String> {
         return Ok(diff.to_string());
     }
 
-    let mut filtered = String::new();
+    // Pre-allocate with reasonable capacity estimate
+    let mut filtered = String::with_capacity(diff.len().min(1024));
     let mut include_current_file = true;
 
     for line in diff.lines() {
@@ -514,11 +529,11 @@ fn filter_diff_by_rcoignore(diff: &str) -> Result<String> {
 /// Chunk a large diff into smaller pieces that fit within token limit
 fn chunk_diff(diff: &str, max_tokens: usize) -> Result<String> {
     let mut chunks = Vec::new();
-    let mut current_chunk = String::new();
+    let mut current_chunk = String::with_capacity(diff.len().min(4096));
     let mut current_tokens = 0;
 
-    // Reserve some tokens for the prompt (~500 tokens)
-    let effective_max = max_tokens.saturating_sub(500);
+    // Reserve some tokens for the prompt
+    let effective_max = max_tokens.saturating_sub(PROMPT_OVERHEAD_TOKENS);
 
     for line in diff.lines() {
         let line_tokens = utils::token::estimate_tokens(line)?;

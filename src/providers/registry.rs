@@ -5,9 +5,32 @@
 //! and registering them with the `ProviderRegistry`.
 
 use crate::config::Config;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::RwLock;
+
+/// Lock error type for registry operations
+#[derive(thiserror::Error, Debug)]
+#[error("Registry lock error")]
+pub struct LockError;
+
+macro_rules! read_lock {
+    ($lock:expr, $field:ident) => {
+        $lock.read().map_err(|_| {
+            tracing::error!("{} lock is poisoned", stringify!($field));
+            LockError
+        })
+    };
+}
+
+macro_rules! write_lock {
+    ($lock:expr, $field:ident) => {
+        $lock.write().map_err(|_| {
+            tracing::error!("{} lock is poisoned", stringify!($field));
+            LockError
+        })
+    };
+}
 
 /// Trait for building AI provider instances
 pub trait ProviderBuilder: Send + Sync {
@@ -102,27 +125,20 @@ impl ProviderRegistry {
     }
 
     /// Register a provider builder
-    pub fn register(&self, builder: Box<dyn ProviderBuilder>) {
+    pub fn register(&self, builder: Box<dyn ProviderBuilder>) -> Result<()> {
         let name = builder.name();
         let entry = ProviderEntry::from_builder(&*builder);
 
         // Register primary name
-        self.entries
-            .write()
-            .expect("ProviderRegistry entries lock is poisoned")
-            .insert(name, entry.clone());
-        self.builders
-            .write()
-            .expect("ProviderRegistry builders lock is poisoned")
-            .insert(name, builder);
+        write_lock!(self.entries, entries)?.insert(name, entry.clone());
+        write_lock!(self.builders, builders)?.insert(name, builder);
 
         // Register aliases
         for &alias in &entry.aliases {
-            self.by_alias
-                .write()
-                .expect("ProviderRegistry by_alias lock is poisoned")
-                .insert(alias, name);
+            write_lock!(self.by_alias, by_alias)?.insert(alias, name);
         }
+
+        Ok(())
     }
 
     /// Get a provider entry by name or alias
@@ -131,19 +147,13 @@ impl ProviderRegistry {
         let lower = provider.to_lowercase();
 
         // Try direct lookup
-        let entries = self
-            .entries
-            .read()
-            .expect("ProviderRegistry entries lock is poisoned");
+        let entries = read_lock!(self.entries, entries).ok()?;
         if let Some(entry) = entries.get(lower.as_str()) {
             return Some(entry.clone());
         }
 
         // Try alias lookup
-        let by_alias = self
-            .by_alias
-            .read()
-            .expect("ProviderRegistry by_alias lock is poisoned");
+        let by_alias = read_lock!(self.by_alias, by_alias).ok()?;
         if let Some(&primary) = by_alias.get(lower.as_str()) {
             return entries.get(primary).cloned();
         }
@@ -152,42 +162,39 @@ impl ProviderRegistry {
     }
 
     /// Get all registered providers
-    pub fn all(&self) -> Vec<ProviderEntry> {
-        self.entries
-            .read()
-            .expect("ProviderRegistry entries lock is poisoned")
-            .values()
-            .cloned()
-            .collect()
+    pub fn all(&self) -> Option<Vec<ProviderEntry>> {
+        let entries = read_lock!(self.entries, entries).ok()?;
+        Some(entries.values().cloned().collect())
     }
 
     /// Get providers by category
-    pub fn by_category(&self, category: ProviderCategory) -> Vec<ProviderEntry> {
-        self.entries
-            .read()
-            .expect("ProviderRegistry entries lock is poisoned")
-            .values()
-            .filter(|e| e.category == category)
-            .cloned()
-            .collect()
+    pub fn by_category(&self, category: ProviderCategory) -> Option<Vec<ProviderEntry>> {
+        let entries = read_lock!(self.entries, entries).ok()?;
+        Some(
+            entries
+                .values()
+                .filter(|e| e.category == category)
+                .cloned()
+                .collect(),
+        )
     }
 
     /// Check if any providers are registered
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
-        self.entries
-            .read()
-            .expect("ProviderRegistry entries lock is poisoned")
-            .is_empty()
+        match read_lock!(self.entries, entries) {
+            Ok(entries) => entries.is_empty(),
+            Err(_) => true,
+        }
     }
 
     /// Get count of registered providers
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
-        self.entries
-            .read()
-            .expect("ProviderRegistry entries lock is poisoned")
-            .len()
+        match read_lock!(self.entries, entries) {
+            Ok(entries) => entries.len(),
+            Err(_) => 0,
+        }
     }
 
     /// Create a provider instance
@@ -198,14 +205,8 @@ impl ProviderRegistry {
     ) -> Result<Option<Box<dyn super::AIProvider>>> {
         let lower = name.to_lowercase();
 
-        let builders = self
-            .builders
-            .read()
-            .expect("ProviderRegistry builders lock is poisoned");
-        let by_alias = self
-            .by_alias
-            .read()
-            .expect("ProviderRegistry by_alias lock is poisoned");
+        let builders = read_lock!(self.builders, builders).context("Failed to read builders")?;
+        let by_alias = read_lock!(self.by_alias, by_alias).context("Failed to read aliases")?;
 
         // Try direct lookup first
         if let Some(builder) = builders.get(lower.as_str()) {

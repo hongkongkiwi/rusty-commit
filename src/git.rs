@@ -378,11 +378,11 @@ pub fn get_recent_commit_messages(count: usize) -> Result<Vec<String>> {
     // Get the commit
     let commit = head.peel_to_commit()?;
 
-    // Walk back through history
+    // Walk back through history, following all parents (handles merge commits)
     let mut commits = Vec::new();
-    let mut current = Some(commit);
+    let mut queue = vec![commit];
 
-    while let Some(c) = current {
+    while let Some(c) = queue.pop() {
         if commits.len() >= count {
             break;
         }
@@ -391,7 +391,15 @@ pub fn get_recent_commit_messages(count: usize) -> Result<Vec<String>> {
             commits.push(msg.to_string());
         }
 
-        current = c.parent(0).ok();
+        // Add all parents to queue (reverse order to maintain commit order)
+        let parents: Result<Vec<_>, anyhow::Error> = (0..c.parent_count())
+            .map(|i| c.parent(i).map_err(anyhow::Error::from))
+            .collect();
+        if let Ok(parents) = parents {
+            for parent in parents.into_iter().rev() {
+                queue.push(parent);
+            }
+        }
     }
 
     Ok(commits)

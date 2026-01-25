@@ -105,8 +105,13 @@ impl ConfigLocations {
         if locations.global.exists() {
             if let Ok(contents) = fs::read_to_string(&locations.global) {
                 let format = ConfigFormat::from_path(&locations.global);
-                if let Ok(global_config) = format.parse(&contents) {
-                    config.merge(global_config);
+                match format.parse(&contents) {
+                    Ok(global_config) => config.merge(global_config),
+                    Err(e) => tracing::warn!(
+                        "Failed to parse global config at {}: {}",
+                        locations.global.display(),
+                        e
+                    ),
                 }
             }
         }
@@ -115,8 +120,13 @@ impl ConfigLocations {
         if let Some(repo_path) = &locations.repo {
             if let Ok(contents) = fs::read_to_string(repo_path) {
                 let format = ConfigFormat::from_path(repo_path);
-                if let Ok(repo_config) = format.parse(&contents) {
-                    config.merge(repo_config);
+                match format.parse(&contents) {
+                    Ok(repo_config) => config.merge(repo_config),
+                    Err(e) => tracing::warn!(
+                        "Failed to parse repo config at {}: {}",
+                        repo_path.display(),
+                        e
+                    ),
                 }
             }
         }

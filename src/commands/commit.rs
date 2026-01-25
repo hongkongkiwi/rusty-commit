@@ -1,13 +1,15 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect, Select};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use std::process::Command;
 
 use crate::cli::GlobalOptions;
 use crate::config::Config;
 use crate::git;
+use crate::output::prelude::{OutputFormat, OutputLevel};
+use crate::output::styling::{Palette, Styling, Theme};
+use crate::output::progress;
 use crate::providers;
 use crate::utils;
 use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
@@ -15,7 +17,92 @@ use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
 /// Tokens reserved for prompt overhead when chunking diffs
 const PROMPT_OVERHEAD_TOKENS: usize = 500;
 
+/// Execution context with styling and theme settings.
+struct ExecContext {
+    output_format: OutputFormat,
+    output_level: OutputLevel,
+    theme: Theme,
+    palette: Palette,
+}
+
+impl ExecContext {
+    fn new(options: &GlobalOptions) -> Self {
+        let theme = match options.output_format {
+            OutputFormat::Pretty => Theme::new(),
+            OutputFormat::Json => Theme::json(),
+            OutputFormat::Markdown => Theme::markdown(),
+        };
+
+        let output_level = if options.timing {
+            OutputLevel::Verbose
+        } else {
+            OutputLevel::Normal
+        };
+
+        Self {
+            output_format: options.output_format,
+            output_level,
+            theme,
+            palette: Palette::default(),
+        }
+    }
+
+    /// Print a success message.
+    fn success(&self, message: &str) {
+        println!("{} {}", "✓".green(), message);
+    }
+
+    /// Print an info message.
+    fn info(&self, message: &str) {
+        println!("{} {}", "i".cyan().bold(), message);
+    }
+
+    /// Print a warning message.
+    fn warning(&self, message: &str) {
+        eprintln!("{} {}", "!".yellow().bold(), message);
+    }
+
+    /// Print an error message.
+    fn error(&self, message: &str) {
+        eprintln!("{} {}", "✗".red(), message);
+    }
+
+    /// Print a header.
+    fn header(&self, text: &str) {
+        println!("\n{}", text.bold());
+    }
+
+    /// Print a subheader.
+    fn subheader(&self, text: &str) {
+        println!("{}", text.dimmed());
+    }
+
+    /// Print a divider.
+    fn divider(&self, length: Option<usize>) {
+        let len = length.unwrap_or(50);
+        println!("{}", Styling::divider(len));
+    }
+
+    /// Print a key-value pair.
+    fn key_value(&self, key: &str, value: &str) {
+        println!("{}: {}", key.dimmed(), value);
+    }
+
+    /// Print timing information.
+    fn timing(&self, component: &str, duration_ms: u64) {
+        println!("  {} {}", component.dimmed(), Styling::timing(component, duration_ms));
+    }
+
+    /// Print a section box with title and content.
+    fn section_box(&self, title: &str, content: &str) {
+        let box_content = Styling::section_box(title, content, &self.theme);
+        println!("\n{}", box_content);
+    }
+}
+
 pub async fn execute(options: GlobalOptions) -> Result<()> {
+    let ctx = ExecContext::new(&options);
+
     // Ensure we're in a git repository
     git::assert_git_repo()?;
 
@@ -29,16 +116,11 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         .clamp(1, 5);
 
     // Prepare the diff for processing
-    let (final_diff, token_count) = prepare_diff(&config)?;
+    let (final_diff, token_count) = prepare_diff(&config, &ctx)?;
 
     // If --show-prompt flag is set, just show the prompt and exit
     if options.show_prompt {
-        display_prompt(
-            &config,
-            &final_diff,
-            options.context.as_deref(),
-            options.full_gitmoji,
-        );
+        display_prompt(&config, &final_diff, options.context.as_deref(), &ctx);
         return Ok(());
     }
 
@@ -54,6 +136,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         options.context.as_deref(),
         options.full_gitmoji,
         generate_count,
+        &ctx,
     )
     .await?;
 
@@ -63,7 +146,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 
     // Handle clipboard mode
     if options.clipboard {
-        return handle_clipboard_mode(&messages);
+        return handle_clipboard_mode(&messages, &ctx);
     }
 
     // Handle print mode
@@ -79,8 +162,8 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     }
 
     // Display messages and handle commit action
-    display_commit_messages(&messages);
-    handle_commit_action(&options, &config, &messages, &mut final_message).await
+    display_commit_messages(&messages, &ctx);
+    handle_commit_action(&options, &config, &messages, &mut final_message, &ctx).await
 }
 
 /// Load configuration and apply commitlint rules
@@ -92,7 +175,7 @@ fn load_and_validate_config() -> Result<Config> {
 }
 
 /// Prepare the diff for processing: get staged changes, apply filters, chunk if needed
-fn prepare_diff(config: &Config) -> Result<(String, usize)> {
+fn prepare_diff(config: &Config, ctx: &ExecContext) -> Result<(String, usize)> {
     // Check for staged files or changes
     let staged_files = git::get_staged_files()?;
     let changed_files = if staged_files.is_empty() {
@@ -102,6 +185,8 @@ fn prepare_diff(config: &Config) -> Result<(String, usize)> {
     };
 
     if changed_files.is_empty() {
+        ctx.error("No changes to commit");
+        ctx.subheader("Stage some changes with 'git add' or use 'git add -A' to stage all changes");
         anyhow::bail!("No changes to commit");
     }
 
@@ -120,6 +205,7 @@ fn prepare_diff(config: &Config) -> Result<(String, usize)> {
     // Get the diff of staged changes
     let diff = git::get_staged_diff()?;
     if diff.is_empty() {
+        ctx.error("No staged changes to commit");
         anyhow::bail!("No staged changes to commit");
     }
 
@@ -128,6 +214,7 @@ fn prepare_diff(config: &Config) -> Result<(String, usize)> {
 
     // Check if diff became empty after filtering
     if diff.trim().is_empty() {
+        ctx.error("No changes to commit after applying .rcoignore filters");
         anyhow::bail!("No changes to commit after applying .rcoignore filters");
     }
 
@@ -137,14 +224,10 @@ fn prepare_diff(config: &Config) -> Result<(String, usize)> {
 
     // If diff is too large, chunk it
     let final_diff = if token_count > max_tokens {
-        println!(
-            "{}",
-            format!(
-                "The diff is too large ({} tokens). Splitting into chunks...",
-                token_count
-            )
-            .yellow()
-        );
+        ctx.warning(&format!(
+            "The diff is too large ({} tokens). Splitting into chunks...",
+            token_count
+        ));
         chunk_diff(&diff, max_tokens)?
     } else {
         diff
@@ -161,12 +244,12 @@ fn prepare_diff(config: &Config) -> Result<(String, usize)> {
 }
 
 /// Display the prompt that would be sent to AI
-fn display_prompt(config: &Config, diff: &str, context: Option<&str>, full_gitmoji: bool) {
-    let prompt = config.get_effective_prompt(diff, context, full_gitmoji);
-    println!("\n{}", "Prompt that would be sent to AI:".green().bold());
-    println!("{}", "═".repeat(60).dimmed());
+fn display_prompt(config: &Config, diff: &str, context: Option<&str>, ctx: &ExecContext) {
+    let prompt = config.get_effective_prompt(diff, context, false);
+    ctx.header("Prompt that would be sent to AI");
+    ctx.divider(None);
     println!("{}", prompt);
-    println!("{}", "═".repeat(60).dimmed());
+    ctx.divider(None);
 }
 
 /// Run pre-generation hooks
@@ -198,34 +281,31 @@ fn run_pre_gen_hooks(config: &Config, token_count: usize, context: Option<&str>)
 }
 
 /// Handle clipboard mode - copy message to clipboard and exit
-fn handle_clipboard_mode(messages: &[String]) -> Result<()> {
+fn handle_clipboard_mode(messages: &[String], ctx: &ExecContext) -> Result<()> {
     let selected = if messages.len() == 1 {
         0
     } else {
         select_message_variant(messages)?
     };
     copy_to_clipboard(&messages[selected])?;
-    println!("{}", "✅ Commit message copied to clipboard!".green());
+    ctx.success("Commit message copied to clipboard!");
     Ok(())
 }
 
 /// Display the generated commit message(s)
-fn display_commit_messages(messages: &[String]) {
+fn display_commit_messages(messages: &[String], ctx: &ExecContext) {
     if messages.len() == 1 {
-        println!("\n{}", "Generated commit message:".green().bold());
-        println!("{}", "─".repeat(50).dimmed());
+        ctx.header("Generated Commit Message");
+        ctx.divider(None);
         println!("{}", messages[0]);
-        println!("{}", "─".repeat(50).dimmed());
+        ctx.divider(None);
     } else {
-        println!(
-            "\n{}",
-            "Generated commit message variations:".green().bold()
-        );
-        println!("{}", "─".repeat(50).dimmed());
+        ctx.header("Generated Commit Message Variations");
+        ctx.divider(None);
         for (i, msg) in messages.iter().enumerate() {
             println!("{}. {}", i + 1, msg);
         }
-        println!("{}", "─".repeat(50).dimmed());
+        ctx.divider(None);
     }
 }
 
@@ -235,6 +315,7 @@ async fn handle_commit_action(
     config: &Config,
     messages: &[String],
     final_message: &mut str,
+    ctx: &ExecContext,
 ) -> Result<()> {
     let action = if options.skip_confirmation {
         CommitAction::Commit
@@ -248,13 +329,13 @@ async fn handle_commit_action(
         CommitAction::Commit => {
             perform_commit(final_message)?;
             run_post_commit_hooks(config, final_message).await?;
-            println!("{}", "✅ Changes committed successfully!".green());
+            ctx.success("Changes committed successfully!");
         }
         CommitAction::Edit => {
             let edited_message = edit_commit_message(final_message)?;
             perform_commit(&edited_message)?;
             run_post_commit_hooks(config, &edited_message).await?;
-            println!("{}", "✅ Changes committed successfully!".green());
+            ctx.success("Changes committed successfully!");
         }
         CommitAction::Select { index } => {
             let selected_message = messages[index].clone();
@@ -265,10 +346,10 @@ async fn handle_commit_action(
             };
             perform_commit(&final_msg)?;
             run_post_commit_hooks(config, &final_msg).await?;
-            println!("{}", "✅ Changes committed successfully!".green());
+            ctx.success("Changes committed successfully!");
         }
         CommitAction::Cancel => {
-            println!("{}", "Commit cancelled.".yellow());
+            ctx.warning("Commit cancelled.");
         }
         CommitAction::Regenerate => {
             // Recursive call to regenerate
@@ -433,29 +514,19 @@ async fn generate_commit_messages(
     context: Option<&str>,
     full_gitmoji: bool,
     count: u8,
+    ctx: &ExecContext,
 ) -> Result<Vec<String>> {
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
-    pb.set_message(format!(
+    let pb = progress::spinner(&format!(
         "Generating {} commit message{}...",
         count,
         if count > 1 { "s" } else { "" }
     ));
-    pb.enable_steady_tick(std::time::Duration::from_millis(100));
 
     // Try to use an active account first
     let provider: Box<dyn providers::AIProvider> =
         if let Some(account) = config.get_active_account()? {
             tracing::info!("Using account: {}", account.alias);
-            println!(
-                "{} Using account: {}",
-                "🔐".dimmed(),
-                account.alias.yellow()
-            );
+            ctx.key_value("Using account", &account.alias);
             providers::create_provider_for_account(&account, config)?
         } else {
             providers::create_provider(config)?

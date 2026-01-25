@@ -73,10 +73,11 @@
 //! Use `rco auth login` for OAuth providers or `rco config set RCO_API_KEY=...` for API key providers.
 
 pub mod auth;
-pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod git;
+pub mod output;
+pub mod cli;
 pub mod providers;
 pub mod update;
 pub mod utils;

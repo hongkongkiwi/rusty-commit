@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+use crate::output::prelude::OutputFormat;
+
 #[derive(Parser)]
 #[command(
     name = "rco",
@@ -91,6 +93,10 @@ pub struct GlobalOptions {
     /// Output commit message to stdout instead of committing (for hooks)
     #[arg(long = "print", default_value = "false")]
     pub print_message: bool,
+
+    /// Output format (pretty, json, markdown)
+    #[arg(long = "output-format", default_value = "pretty")]
+    pub output_format: OutputFormat,
 }
 
 #[derive(Parser)]

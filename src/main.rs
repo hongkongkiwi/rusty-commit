@@ -3,6 +3,7 @@ mod cli;
 mod commands;
 mod config;
 mod git;
+mod output;
 mod providers;
 mod update;
 mod utils;

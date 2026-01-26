@@ -139,7 +139,7 @@ zip = "7.1"
 arboard = "3.4"
 
 # MCP (Model Context Protocol) support
-rmcp = { version = "0.13.0", features = ["server"] }
+rmcp = { version = "0.14.0", features = ["server"] }
 serde_urlencoded = "0.7"
 rand = "0.9"
 

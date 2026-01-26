@@ -37,7 +37,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -53,7 +53,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -78,7 +78,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install OpenSSL (macOS)
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
@@ -107,7 +107,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
@@ -122,10 +122,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download all binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: binaries
           pattern: binary-*
@@ -176,7 +176,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release binaries for finalize job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release
           path: release/
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -228,7 +228,7 @@ jobs:
             deb_arch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -246,7 +246,7 @@ jobs:
           tool: cargo-deb
 
       - name: Download release binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release
@@ -255,7 +255,7 @@ jobs:
         run: cargo deb --target ${{ matrix.target }} --no-build
 
       - name: Upload .deb package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.deb-${{ matrix.arch }}
           path: target/${{ matrix.target }}/debian/*_${{ matrix.deb_arch }}.deb
@@ -278,10 +278,10 @@ jobs:
             rpm_arch: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download release binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release
@@ -340,7 +340,7 @@ jobs:
             --target ${{ matrix.rpm_arch }}
 
       - name: Upload .rpm package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.rpm-${{ matrix.arch }}
           path: rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm
@@ -362,7 +362,7 @@ jobs:
             apk_arch: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up QEMU for Docker
         if: matrix.arch == 'amd64'
@@ -397,7 +397,7 @@ jobs:
           cp target/${{ matrix.target }}/release/rco apk-build/bin/
 
       - name: Upload Linux musl binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -448,7 +448,7 @@ jobs:
               su builder -c "export REPODEST=/work/apk-packages PACKAGER= && abuild -r"'
 
       - name: Upload Alpine package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.apk-${{ matrix.arch }}
           path: apk-packages/**/*.apk
@@ -466,7 +466,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download release assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: release
           path: release-assets
@@ -477,7 +477,7 @@ jobs:
           find release-assets -type f -exec ls -la {} \;
 
       - name: Download all packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: packages
           pattern: rusty-commit.*
@@ -507,7 +507,7 @@ jobs:
 
       - name: Setup GPG for signing
         if: env.GPG_PRIVATE_KEY != ''
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gnupg
           key: gpg-key-${{ env.GPG_PRIVATE_KEY }}
@@ -526,7 +526,7 @@ jobs:
           cat SHA256SUMS.txt.asc
 
       - name: Upload SHA256 checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sha256sums
           path: release-packages/SHA256SUMS.txt
@@ -534,7 +534,7 @@ jobs:
 
       - name: Upload GPG signature
         if: env.GPG_PRIVATE_KEY != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sha256sums-asc
           path: release-packages/SHA256SUMS.txt.asc
@@ -554,16 +554,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Linux musl binaries (amd64)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binary-x86_64-unknown-linux-musl
           path: docker-bin/amd64
 
       - name: Download Linux musl binaries (arm64)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binary-aarch64-unknown-linux-musl
           path: docker-bin/arm64
@@ -616,14 +616,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout homebrew-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/homebrew-rusty-commit
           token: ${{ secrets.HOMEBREW_REPO_UPDATE_TOKEN }}
           path: homebrew-tap
 
       - name: Download SHA256 checksums
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: sha256sums
           path: homebrew-tmp
@@ -723,7 +723,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout precommit-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/precommit-rusty-commit
           token: ${{ secrets.PRECOMMIT_REPO_UPDATE_TOKEN }}
@@ -760,7 +760,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout action-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/action-rusty-commit
           token: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN }}

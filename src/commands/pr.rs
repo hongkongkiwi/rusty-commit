@@ -134,7 +134,7 @@ fn browse_pr_page(_repo_root: &str, base_branch: Option<&str>) -> Result<()> {
     let base = base_branch.unwrap_or("main");
 
     // Try to get GitHub remote URL
-    let remote_url = git::get_remote_url()?;
+    let remote_url = git::get_remote_url(None)?;
     let pr_url = convert_to_pr_url(&remote_url, &current_branch, base)?;
 
     println!("{}", format!("Opening PR page: {}", pr_url).green());

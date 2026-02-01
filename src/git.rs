@@ -325,30 +325,97 @@ pub fn get_diff_between(base: &str, head: &str) -> Result<String> {
     Ok(diff_text)
 }
 
-/// Returns the remote URL for the origin remote.
+/// Returns the remote URL for the specified remote.
+///
+/// # Arguments
+///
+/// * `remote_name` - The name of the remote (e.g., "origin", "upstream"). Defaults to "origin" if None.
 ///
 /// # Errors
 ///
-/// Returns an error if no remote named "origin" exists or if the URL cannot be retrieved.
+/// Returns an error if the specified remote does not exist or if the URL cannot be retrieved.
 ///
 /// # Examples
 ///
 /// ```no_run
 /// use rusty_commit::git;
 ///
-/// let url = git::get_remote_url().unwrap();
+/// // Get URL for "origin" remote (default)
+/// let url = git::get_remote_url(None).unwrap();
+///
+/// // Get URL for "upstream" remote
+/// let url = git::get_remote_url(Some("upstream")).unwrap();
 /// println!("Remote URL: {}", url);
 /// ```
-pub fn get_remote_url() -> Result<String> {
+pub fn get_remote_url(remote_name: Option<&str>) -> Result<String> {
     let repo = Repository::open_from_env()?;
-
-    let remote = repo.find_remote("origin")?;
+    let remote = repo.find_remote(remote_name.unwrap_or("origin"))?;
     let url = remote
         .url()
         .context("Could not get remote URL")?
         .to_string();
 
     Ok(url)
+}
+
+/// Pushes the current branch to the remote repository.
+///
+/// # Arguments
+///
+/// * `remote` - The name of the remote to push to (e.g., "origin")
+/// * `branch` - The name of the branch to push
+///
+/// # Errors
+///
+/// Returns an error if the push fails or if the repository cannot be accessed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// git::git_push("origin", "main").unwrap();
+/// ```
+pub fn git_push(remote: &str, branch: &str) -> Result<()> {
+    let output = Command::new("git")
+        .args(["push", remote, branch])
+        .output()
+        .context("Failed to execute git push")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Git push failed: {}", stderr);
+    }
+
+    Ok(())
+}
+
+/// Pushes the current branch to its upstream remote.
+///
+/// # Errors
+///
+/// Returns an error if the push fails, if there is no upstream configured,
+/// or if the repository cannot be accessed.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rusty_commit::git;
+///
+/// git::git_push_upstream().unwrap();
+/// ```
+pub fn git_push_upstream() -> Result<()> {
+    let output = Command::new("git")
+        .args(["push", "--set-upstream"])
+        .output()
+        .context("Failed to execute git push")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Git push failed: {}", stderr);
+    }
+
+    Ok(())
 }
 
 /// Returns recent commit messages for style analysis.

@@ -14,6 +14,8 @@ pub async fn execute(cmd: SkillsCommand) -> Result<()> {
         SkillsAction::Show { name } => show_skill(name).await,
         SkillsAction::Remove { name, force } => remove_skill(name, force).await,
         SkillsAction::Open => open_skills_dir().await,
+        SkillsAction::Import { source, name } => import_skills(source, name).await,
+        SkillsAction::Available { source } => list_available_skills(source).await,
     }
 }
 
@@ -380,6 +382,118 @@ async fn open_skills_dir() -> Result<()> {
 
     println!("{} Opened skills directory: {}", "✓".green(), path.display());
 
+    Ok(())
+}
+
+async fn import_skills(source: String, specific_name: Option<String>) -> Result<()> {
+    use crate::skills::external::{parse_source, import_from_claude_code, import_from_github, import_from_gist, import_from_url};
+    
+    let manager = SkillsManager::new()?;
+    let target_dir = manager.skills_dir();
+    
+    // Ensure skills directory exists
+    if !target_dir.exists() {
+        fs::create_dir_all(target_dir)?;
+    }
+    
+    let source = parse_source(&source)?;
+    
+    println!("{} Importing from {}...", "→".cyan(), source.to_string().cyan());
+    println!();
+    
+    let imported = match source {
+        crate::skills::external::ExternalSource::ClaudeCode => {
+            if let Some(name) = specific_name {
+                // Import specific skill
+                let claude_dir = dirs::home_dir()
+                    .context("Could not find home directory")?
+                    .join(".claude")
+                    .join("skills")
+                    .join(&name);
+                
+                if !claude_dir.exists() {
+                    anyhow::bail!("Claude Code skill '{}' not found at {:?}", name, claude_dir);
+                }
+                
+                let target = target_dir.join(&name);
+                crate::skills::external::convert_claude_skill(&claude_dir, &target, &name)?;
+                vec![name]
+            } else {
+                import_from_claude_code(target_dir)?
+            }
+        }
+        crate::skills::external::ExternalSource::GitHub { owner, repo, path } => {
+            if let Some(name) = specific_name {
+                // Import specific skill from GitHub
+                let specific_path = path.as_ref()
+                    .map(|p| format!("{}/{}", p, name))
+                    .unwrap_or_else(|| format!(".rco/skills/{}", name));
+                
+                import_from_github(&owner, &repo, Some(&specific_path), target_dir)?
+            } else {
+                import_from_github(&owner, &repo, path.as_deref(), target_dir)?
+            }
+        }
+        crate::skills::external::ExternalSource::Gist { id } => {
+            if specific_name.is_some() {
+                println!("{}", "Note: Gist import doesn't support filtering by name. Importing all...".yellow());
+            }
+            let name = import_from_gist(&id, target_dir)?;
+            vec![name]
+        }
+        crate::skills::external::ExternalSource::Url { url } => {
+            let name = import_from_url(&url, specific_name.as_deref(), target_dir)?;
+            vec![name]
+        }
+    };
+    
+    if imported.is_empty() {
+        println!("{}", "No new skills were imported (they may already exist).".yellow());
+    } else {
+        println!("{} Successfully imported {} skill(s):", "✓".green(), imported.len());
+        for name in &imported {
+            println!("  • {}", name.green());
+        }
+        println!();
+        println!("Use {} to see all available skills.", "rco skills list".cyan());
+    }
+    
+    Ok(())
+}
+
+async fn list_available_skills(source: String) -> Result<()> {
+    use crate::skills::external::list_claude_code_skills;
+    
+    match source.as_str() {
+        "claude-code" | "claude" => {
+            let skills = list_claude_code_skills()?;
+            
+            if skills.is_empty() {
+                println!("{}", "No Claude Code skills found.".yellow());
+                println!();
+                println!("Claude Code skills are stored in: ~/.claude/skills/");
+                return Ok(());
+            }
+            
+            println!("{}", "Available Claude Code Skills".bold().underline());
+            println!();
+            println!("{}", "Run 'rco skills import claude-code [name]' to import".dimmed());
+            println!();
+            
+            for (name, description) in skills {
+                println!("{} {}", "•".cyan(), name.green());
+                println!("  {}", description.dimmed());
+            }
+            
+            println!();
+            println!("To import all: {}", "rco skills import claude-code".cyan());
+            println!("To import one: {}", "rco skills import claude-code --name <skill-name>".cyan());
+        }
+        _ => {
+            anyhow::bail!("Unknown source: {}. Currently supported: claude-code", source);
+        }
+    }
+    
     Ok(())
 }
 

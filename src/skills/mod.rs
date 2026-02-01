@@ -13,7 +13,8 @@
 //! Skills are stored in `~/.config/rustycommit/skills/` and are either:
 //! - **Built-in**: Included with rusty-commit
 //! - **Local**: User-created skills in the skills directory
-//! - **Remote**: Downloaded from a registry (future feature)
+//! - **Project**: Team-shared skills in `.rco/skills/`
+//! - **External**: Imported from Claude Code, GitHub, etc.
 //!
 //! # Skill Manifest
 //!
@@ -30,6 +31,14 @@
 //! post_gen = "post_gen.sh"    # Optional: runs after AI generation
 //! format = "format.sh"        # Optional: formats the output
 //! ```
+//!
+//! # External Skills
+//!
+//! rusty-commit can import skills from:
+//! - **Claude Code**: `~/.claude/skills/` - Claude Code custom skills
+//! - **GitHub**: Repositories with `.rco/skills/` directory
+//! - **GitHub Gist**: Single-file skill definitions
+//! - **URL**: Direct download from any HTTP(S) URL
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -502,7 +511,6 @@ impl Default for SkillsManager {
 
 /// Built-in skills that are always available
 pub mod builtin {
-    use super::*;
 
     /// Get the conventional commit skill prompt
     pub fn conventional_prompt(diff: &str, context: Option<&str>, language: &str) -> String {
@@ -609,6 +617,479 @@ Analyze the following git diff and generate a GitMoji commit message.
 Generate ONLY the commit message, no explanation:"#,
             context_str, language, diff
         )
+    }
+}
+
+/// External skill importers
+pub mod external {
+    use super::*;
+    use std::process::Command;
+
+    /// Available external skill sources
+    #[derive(Debug, Clone)]
+    pub enum ExternalSource {
+        /// Claude Code skills directory
+        ClaudeCode,
+        /// GitHub repository
+        GitHub { owner: String, repo: String, path: Option<String> },
+        /// GitHub Gist
+        Gist { id: String },
+        /// Direct URL
+        Url { url: String },
+    }
+
+    impl std::fmt::Display for ExternalSource {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                ExternalSource::ClaudeCode => write!(f, "claude-code"),
+                ExternalSource::GitHub { owner, repo, .. } => write!(f, "github:{}/{}", owner, repo),
+                ExternalSource::Gist { id } => write!(f, "gist:{}", id),
+                ExternalSource::Url { url } => write!(f, "url:{}", url),
+            }
+        }
+    }
+
+    /// Parse an external source string
+    /// 
+    /// Supported formats:
+    /// - `claude-code` - Import from Claude Code skills
+    /// - `github:owner/repo` - Import from GitHub repo (looks for .rco/skills/)
+    /// - `github:owner/repo/path/to/skill` - Import specific skill from repo
+    /// - `gist:abc123` - Import from GitHub Gist
+    /// - `https://...` - Import from direct URL
+    pub fn parse_source(source: &str) -> Result<ExternalSource> {
+        if source == "claude-code" || source == "claude" {
+            Ok(ExternalSource::ClaudeCode)
+        } else if let Some(github_ref) = source.strip_prefix("github:") {
+            // Parse github:owner/repo or github:owner/repo/path
+            let parts: Vec<&str> = github_ref.split('/').collect();
+            if parts.len() < 2 {
+                anyhow::bail!("Invalid GitHub reference. Use format: github:owner/repo or github:owner/repo/path");
+            }
+            let owner = parts[0].to_string();
+            let repo = parts[1].to_string();
+            let path = if parts.len() > 2 {
+                Some(parts[2..].join("/"))
+            } else {
+                None
+            };
+            Ok(ExternalSource::GitHub { owner, repo, path })
+        } else if let Some(gist_id) = source.strip_prefix("gist:") {
+            Ok(ExternalSource::Gist { id: gist_id.to_string() })
+        } else if source.starts_with("http://") || source.starts_with("https://") {
+            Ok(ExternalSource::Url { url: source.to_string() })
+        } else {
+            anyhow::bail!("Unknown source format: {}. Use 'claude-code', 'github:owner/repo', 'gist:id', or a URL", source)
+        }
+    }
+
+    /// Import skills from Claude Code
+    /// 
+    /// Claude Code stores skills in ~/.claude/skills/
+    pub fn import_from_claude_code(target_dir: &Path) -> Result<Vec<String>> {
+        let claude_skills_dir = dirs::home_dir()
+            .context("Could not find home directory")?
+            .join(".claude")
+            .join("skills");
+
+        if !claude_skills_dir.exists() {
+            anyhow::bail!("Claude Code skills directory not found at ~/.claude/skills/");
+        }
+
+        let mut imported = Vec::new();
+
+        for entry in fs::read_dir(&claude_skills_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                let skill_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                // Convert Claude Code skill to rusty-commit format
+                let target_skill_dir = target_dir.join(&skill_name);
+                
+                if target_skill_dir.exists() {
+                    tracing::warn!("Skill '{}' already exists, skipping", skill_name);
+                    continue;
+                }
+
+                fs::create_dir_all(&target_skill_dir)?;
+                
+                // Convert and copy files
+                convert_claude_skill(&path, &target_skill_dir, &skill_name)?;
+                
+                imported.push(skill_name);
+            }
+        }
+
+        Ok(imported)
+    }
+
+    /// Convert a Claude Code skill to rusty-commit format
+    pub fn convert_claude_skill(source: &Path, target: &Path, name: &str) -> Result<()> {
+        // Claude Code skills typically have:
+        // - README.md or INSTRUCTIONS.md
+        // - Various tool definitions
+        
+        // Create skill.toml
+        let description = if source.join("README.md").exists() {
+            // Try to extract first line from README
+            let readme = fs::read_to_string(source.join("README.md"))?;
+            readme.lines().next().unwrap_or("Imported from Claude Code").to_string()
+        } else {
+            format!("Imported from Claude Code: {}", name)
+        };
+
+        let manifest = SkillManifest {
+            skill: SkillMeta {
+                name: name.to_string(),
+                version: "1.0.0".to_string(),
+                description,
+                author: Some("Imported from Claude Code".to_string()),
+                category: SkillCategory::Template,
+                tags: vec!["claude-code".to_string(), "imported".to_string()],
+            },
+            hooks: None,
+            config: None,
+        };
+
+        fs::write(target.join("skill.toml"), toml::to_string_pretty(&manifest)?)?;
+
+        // Try to find and convert instructions to prompt.md
+        let instruction_files = ["INSTRUCTIONS.md", "README.md", "PROMPT.md", "prompt.md"];
+        let mut found_instructions = false;
+        
+        for file in &instruction_files {
+            let source_file = source.join(file);
+            if source_file.exists() {
+                let content = fs::read_to_string(&source_file)?;
+                // Convert to rusty-commit prompt format
+                let prompt = format!(
+                    "# Imported from Claude Code Skill: {}\n\n{}\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                    name,
+                    content
+                );
+                fs::write(target.join("prompt.md"), prompt)?;
+                found_instructions = true;
+                break;
+            }
+        }
+
+        if !found_instructions {
+            // Create a basic prompt template
+            let prompt = format!(
+                "# Skill: {}\n\nThis skill was imported from Claude Code.\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                name
+            );
+            fs::write(target.join("prompt.md"), prompt)?;
+        }
+
+        // Copy any additional files (except tool definitions which are Claude-specific)
+        for entry in fs::read_dir(source)? {
+            let entry = entry?;
+            let file_name = entry.file_name();
+            let file_str = file_name.to_string_lossy();
+            
+            // Skip tool definition files and files we've already handled
+            if file_str.ends_with(".json") && file_str.contains("tool") {
+                continue; // Claude-specific tool definitions
+            }
+            if ["skill.toml", "prompt.md", "README.md", "INSTRUCTIONS.md"].contains(&file_str.as_ref()) {
+                continue;
+            }
+            
+            // Copy other files
+            let target_file = target.join(&file_name);
+            if entry.path().is_file() {
+                fs::copy(entry.path(), target_file)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Import skills from GitHub
+    /// 
+    /// Clones the repo temporarily and copies skills from .rco/skills/
+    pub fn import_from_github(
+        owner: &str,
+        repo: &str,
+        path: Option<&str>,
+        target_dir: &Path,
+    ) -> Result<Vec<String>> {
+        use std::env;
+        
+        // Create temp directory
+        let temp_dir = env::temp_dir().join(format!("rco-github-import-{}-{}", owner, repo));
+        
+        // Clean up any existing temp directory
+        if temp_dir.exists() {
+            let _ = fs::remove_dir_all(&temp_dir);
+        }
+
+        // Clone the repository (shallow clone for speed)
+        println!("Cloning {}/{}...", owner, repo);
+        let status = Command::new("git")
+            .args([
+                "clone",
+                "--depth", "1",
+                &format!("https://github.com/{}/{}", owner, repo),
+                temp_dir.to_string_lossy().as_ref(),
+            ])
+            .status()
+            .context("Failed to run git clone. Is git installed?")?;
+
+        if !status.success() {
+            anyhow::bail!("Failed to clone repository {}/{}", owner, repo);
+        }
+
+        // Determine source path
+        let source_path = if let Some(p) = path {
+            temp_dir.join(p)
+        } else {
+            temp_dir.join(".rco").join("skills")
+        };
+
+        if !source_path.exists() {
+            let _ = fs::remove_dir_all(&temp_dir);
+            anyhow::bail!("No skills found at {} in {}/{}", source_path.display(), owner, repo);
+        }
+
+        // Import skills
+        let mut imported = Vec::new();
+        
+        for entry in fs::read_dir(&source_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                let skill_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                let target_skill_dir = target_dir.join(&skill_name);
+                
+                if target_skill_dir.exists() {
+                    tracing::warn!("Skill '{}' already exists, skipping", skill_name);
+                    continue;
+                }
+
+                // Copy the skill directory
+                copy_dir_all(&path, &target_skill_dir)?;
+                
+                // Update the skill.toml to mark as imported
+                let skill_toml = target_skill_dir.join("skill.toml");
+                if skill_toml.exists() {
+                    if let Ok(content) = fs::read_to_string(&skill_toml) {
+                        if let Ok(mut manifest) = toml::from_str::<SkillManifest>(&content) {
+                            manifest.skill.tags.push("github".to_string());
+                            manifest.skill.tags.push("imported".to_string());
+                            let _ = fs::write(&skill_toml, toml::to_string_pretty(&manifest)?);
+                        }
+                    }
+                }
+                
+                imported.push(skill_name);
+            }
+        }
+
+        // Clean up temp directory
+        let _ = fs::remove_dir_all(&temp_dir);
+
+        Ok(imported)
+    }
+
+    /// Import from GitHub Gist
+    pub fn import_from_gist(gist_id: &str, target_dir: &Path) -> Result<String> {
+        // Fetch gist metadata
+        let gist_url = format!("https://api.github.com/gists/{}", gist_id);
+        
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .get(&gist_url)
+            .header("User-Agent", "rusty-commit")
+            .send()
+            .context("Failed to fetch gist from GitHub API")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Failed to fetch gist: HTTP {}", response.status());
+        }
+
+        let gist_data: serde_json::Value = response.json()
+            .context("Failed to parse gist response")?;
+
+        let files = gist_data["files"].as_object()
+            .ok_or_else(|| anyhow::anyhow!("Invalid gist data: no files"))?;
+
+        if files.is_empty() {
+            anyhow::bail!("Gist contains no files");
+        }
+
+        // Use the first file as the skill name
+        let (filename, file_data) = files.iter().next().unwrap();
+        let skill_name = filename.trim_end_matches(".md").trim_end_matches(".toml");
+        
+        let target_skill_dir = target_dir.join(skill_name);
+        if target_skill_dir.exists() {
+            anyhow::bail!("Skill '{}' already exists", skill_name);
+        }
+
+        fs::create_dir_all(&target_skill_dir)?;
+
+        // Get file content
+        if let Some(content) = file_data["content"].as_str() {
+            // Determine if it's a skill.toml or prompt.md
+            if filename.ends_with(".toml") {
+                fs::write(target_skill_dir.join("skill.toml"), content)?;
+            } else {
+                // Assume it's a prompt template
+                let prompt = format!(
+                    "# Imported from Gist: {}\n\n{}\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                    gist_id,
+                    content
+                );
+                fs::write(target_skill_dir.join("prompt.md"), prompt)?;
+                
+                // Create a basic skill.toml
+                let manifest = SkillManifest {
+                    skill: SkillMeta {
+                        name: skill_name.to_string(),
+                        version: "1.0.0".to_string(),
+                        description: format!("Imported from Gist: {}", gist_id),
+                        author: gist_data["owner"]["login"].as_str().map(|s| s.to_string()),
+                        category: SkillCategory::Template,
+                        tags: vec!["gist".to_string(), "imported".to_string()],
+                    },
+                    hooks: None,
+                    config: None,
+                };
+                fs::write(target_skill_dir.join("skill.toml"), toml::to_string_pretty(&manifest)?)?;
+            }
+        }
+
+        Ok(skill_name.to_string())
+    }
+
+    /// Import from a direct URL
+    pub fn import_from_url(url: &str, name: Option<&str>, target_dir: &Path) -> Result<String> {
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .get(url)
+            .header("User-Agent", "rusty-commit")
+            .send()
+            .context("Failed to download from URL")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Failed to download: HTTP {}", response.status());
+        }
+
+        let content = response.text()?;
+        
+        // Determine skill name from URL or provided name
+        let skill_name = name.map(|s| s.to_string()).unwrap_or_else(|| {
+            url.split('/').last()
+                .and_then(|s| s.split('.').next())
+                .unwrap_or("imported-skill")
+                .to_string()
+        });
+
+        let target_skill_dir = target_dir.join(&skill_name);
+        if target_skill_dir.exists() {
+            anyhow::bail!("Skill '{}' already exists", skill_name);
+        }
+
+        fs::create_dir_all(&target_skill_dir)?;
+
+        // Check if content looks like TOML (skill.toml) or Markdown (prompt.md)
+        if content.trim().starts_with('[') && content.contains("[skill]") {
+            fs::write(target_skill_dir.join("skill.toml"), content)?;
+        } else {
+            // Assume it's a prompt template
+            let prompt = format!(
+                "# Imported from URL\n\n{}\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                content
+            );
+            fs::write(target_skill_dir.join("prompt.md"), prompt)?;
+            
+            // Create a basic skill.toml
+            let manifest = SkillManifest {
+                skill: SkillMeta {
+                    name: skill_name.clone(),
+                    version: "1.0.0".to_string(),
+                    description: format!("Imported from {}", url),
+                    author: None,
+                    category: SkillCategory::Template,
+                    tags: vec!["url".to_string(), "imported".to_string()],
+                },
+                hooks: None,
+                config: None,
+            };
+            fs::write(target_skill_dir.join("skill.toml"), toml::to_string_pretty(&manifest)?)?;
+        }
+
+        Ok(skill_name)
+    }
+
+    /// Copy directory recursively
+    fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+        fs::create_dir_all(dst)?;
+        
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let path = entry.path();
+            let file_name = path.file_name().unwrap();
+            let dst_path = dst.join(file_name);
+            
+            if path.is_dir() {
+                copy_dir_all(&path, &dst_path)?;
+            } else {
+                fs::copy(&path, &dst_path)?;
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// List available Claude Code skills without importing
+    pub fn list_claude_code_skills() -> Result<Vec<(String, String)>> {
+        let claude_skills_dir = dirs::home_dir()
+            .context("Could not find home directory")?
+            .join(".claude")
+            .join("skills");
+
+        if !claude_skills_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut skills = Vec::new();
+        
+        for entry in fs::read_dir(&claude_skills_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                let name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                // Try to get description from README
+                let description = if path.join("README.md").exists() {
+                    let readme = fs::read_to_string(path.join("README.md")).unwrap_or_default();
+                    readme.lines().next().unwrap_or("No description").to_string()
+                } else {
+                    "Claude Code skill".to_string()
+                };
+                
+                skills.push((name, description));
+            }
+        }
+        
+        Ok(skills)
     }
 }
 

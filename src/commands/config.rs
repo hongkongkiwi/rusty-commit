@@ -183,6 +183,7 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             println!("  RCO_TOKENS_MAX_INPUT   Max input tokens (default: 4096)");
             println!("  RCO_TOKENS_MAX_OUTPUT  Max output tokens (default: 500)");
             println!("  RCO_GITPUSH      Auto-push after commit: true/false");
+            println!("  RCO_REMOTE       Remote to push to (default: origin)");
             println!("  RCO_ONE_LINE_COMMIT    One-line format: true/false");
 
             println!("\n{}", "Hooks:".bold().green());

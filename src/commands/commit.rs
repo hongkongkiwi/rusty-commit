@@ -335,6 +335,28 @@ fn display_commit_messages(messages: &[String], ctx: &ExecContext) {
     }
 }
 
+/// Push the current branch to remote after commit
+fn push_after_commit(config: &Config, ctx: &ExecContext) -> Result<()> {
+    ctx.subheader("Pushing to remote...");
+
+    let current_branch = git::get_current_branch()?;
+    let remote = config
+        .remote
+        .as_deref()
+        .unwrap_or("origin");
+
+    match git::git_push(remote, &current_branch) {
+        Ok(_) => {
+            ctx.success(&format!("Pushed '{}' to '{}'", current_branch, remote));
+        }
+        Err(e) => {
+            ctx.warning(&format!("Push failed: {}. Try running 'git push' manually.", e));
+        }
+    }
+
+    Ok(())
+}
+
 /// Handle the commit action (commit, edit, select, cancel, regenerate)
 async fn handle_commit_action(
     options: &GlobalOptions,
@@ -359,12 +381,22 @@ async fn handle_commit_action(
             perform_commit(final_message)?;
             run_post_commit_hooks(config, final_message).await?;
             ctx.success("Changes committed successfully!");
+
+            // Push to remote if gitpush is enabled
+            if config.gitpush.unwrap_or(false) {
+                push_after_commit(config, ctx)?;
+            }
         }
         CommitAction::Edit => {
             let edited_message = edit_commit_message(final_message)?;
             perform_commit(&edited_message)?;
             run_post_commit_hooks(config, &edited_message).await?;
             ctx.success("Changes committed successfully!");
+
+            // Push to remote if gitpush is enabled
+            if config.gitpush.unwrap_or(false) {
+                push_after_commit(config, ctx)?;
+            }
         }
         CommitAction::EditExternal => {
             // Open in $EDITOR (e.g., vim, nano, code, etc.)
@@ -376,6 +408,11 @@ async fn handle_commit_action(
             perform_commit(&edited_message)?;
             run_post_commit_hooks(config, &edited_message).await?;
             ctx.success("Changes committed successfully!");
+
+            // Push to remote if gitpush is enabled
+            if config.gitpush.unwrap_or(false) {
+                push_after_commit(config, ctx)?;
+            }
         }
         CommitAction::Select { index } => {
             let selected_message = messages[index].clone();
@@ -387,6 +424,11 @@ async fn handle_commit_action(
             perform_commit(&final_msg)?;
             run_post_commit_hooks(config, &final_msg).await?;
             ctx.success("Changes committed successfully!");
+
+            // Push to remote if gitpush is enabled
+            if config.gitpush.unwrap_or(false) {
+                push_after_commit(config, ctx)?;
+            }
         }
         CommitAction::Cancel => {
             ctx.warning("Commit cancelled.");

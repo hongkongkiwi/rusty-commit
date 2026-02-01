@@ -96,9 +96,24 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 
 ### Interactive Setup Wizard
 
+The easiest way to get started with Rusty Commit:
+
 ```bash
-rco setup          # Configure everything interactively
+rco setup                   # Interactive wizard (recommended)
+rco setup --advanced        # Full configuration with all options
+rco setup --defaults        # Non-interactive with sensible defaults
 ```
+
+**Quick Setup** will ask you:
+1. **AI Provider** - Choose from 15+ providers (OpenAI, Anthropic, Gemini, Ollama, etc.)
+2. **API Key** - Securely stored in your system's keychain
+3. **Commit Format** - Conventional commits, GitMoji, or simple
+
+**Advanced Setup** additionally includes:
+- Custom model selection and API endpoints
+- Commit message style (capitalization, max length, language)
+- Behavior settings (auto-push, commit body, variations)
+- Token limits and hook configuration
 
 ### Generate Your First Commit
 
@@ -173,7 +188,9 @@ RUST_LOG=debug rco          # Enable debug logging
 
 ## 🤖 Providers
 
-Rusty Commit works with **18+ AI providers** out of the box:
+Rusty Commit works with **18+ AI providers** out of the box. Configure them interactively with `rco setup` or manually as shown below:
+
+> 💡 **Tip**: Use `rco setup` for interactive provider configuration with step-by-step guidance.
 
 ### 🔑 OAuth-Enabled (No API Key Required)
 
@@ -220,13 +237,22 @@ Falls back to config file if keychain is unavailable.
 
 ## ⚙️ Configuration
 
+### Interactive Configuration
+
+The easiest way to configure Rusty Commit is through the setup wizard:
+
+```bash
+rco setup                   # Quick setup (essential settings only)
+rco setup --advanced        # Advanced setup (all settings)
+```
+
 ### Configuration Priority
 
 ```
 Per-repo config > Global config > Environment variables > Defaults
 ```
 
-### Quick Config Commands
+### Manual Config Commands
 
 ```bash
 rco config status                          # Check secure storage status

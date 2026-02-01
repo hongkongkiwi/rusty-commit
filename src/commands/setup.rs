@@ -1,125 +1,864 @@
 use anyhow::Result;
 use colored::Colorize;
-use dialoguer::{Input, Select};
+use dialoguer::{Confirm, Input, Select};
 
 use crate::cli::SetupCommand;
 use crate::config::Config;
 
-pub async fn execute(_cmd: SetupCommand) -> Result<()> {
+
+/// Provider option for the setup wizard
+struct ProviderOption {
+    name: &'static str,
+    display: &'static str,
+    default_model: &'static str,
+    requires_key: bool,
+    category: ProviderCategory,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum ProviderCategory {
+    Popular,
+    Local,
+    Cloud,
+    Enterprise,
+}
+
+impl ProviderOption {
+    fn all() -> Vec<Self> {
+        vec![
+            // Popular providers
+            ProviderOption {
+                name: "openai",
+                display: "OpenAI (GPT-4o, GPT-4o-mini)",
+                default_model: "gpt-4o-mini",
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            ProviderOption {
+                name: "anthropic",
+                display: "Anthropic (Claude 3.5 Sonnet, Haiku)",
+                default_model: "claude-3-5-haiku-20241022",
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            ProviderOption {
+                name: "gemini",
+                display: "Google Gemini (Flash, Pro)",
+                default_model: "gemini-1.5-flash",
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            // Local/Self-hosted
+            ProviderOption {
+                name: "ollama",
+                display: "Ollama (Local models - free, private)",
+                default_model: "llama3.2",
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            // Cloud providers
+            ProviderOption {
+                name: "xai",
+                display: "xAI (Grok)",
+                default_model: "grok-2",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "deepseek",
+                display: "DeepSeek (V3, Coder)",
+                default_model: "deepseek-chat",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "groq",
+                display: "Groq (Fast inference)",
+                default_model: "llama-3.1-8b-instant",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "openrouter",
+                display: "OpenRouter (Access many models)",
+                default_model: "anthropic/claude-3.5-haiku",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "mistral",
+                display: "Mistral AI",
+                default_model: "mistral-small-latest",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "perplexity",
+                display: "Perplexity AI",
+                default_model: "sonar",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            // Enterprise
+            ProviderOption {
+                name: "azure",
+                display: "Azure OpenAI",
+                default_model: "gpt-4o",
+                requires_key: true,
+                category: ProviderCategory::Enterprise,
+            },
+            ProviderOption {
+                name: "bedrock",
+                display: "AWS Bedrock",
+                default_model: "anthropic.claude-3-haiku-20240307-v1:0",
+                requires_key: true,
+                category: ProviderCategory::Enterprise,
+            },
+            ProviderOption {
+                name: "vertex",
+                display: "Google Vertex AI",
+                default_model: "gemini-1.5-flash-001",
+                requires_key: true,
+                category: ProviderCategory::Enterprise,
+            },
+        ]
+    }
+
+    fn by_name(name: &str) -> Option<Self> {
+        Self::all().into_iter().find(|p| p.name == name)
+    }
+}
+
+/// Commit format options
+#[derive(Clone, Copy)]
+enum CommitFormat {
+    Conventional,
+    Gitmoji,
+    Simple,
+}
+
+impl CommitFormat {
+    fn display(&self) -> &'static str {
+        match self {
+            CommitFormat::Conventional => "Conventional Commits (feat:, fix:, docs:, etc.)",
+            CommitFormat::Gitmoji => "GitMoji (✨ feat:, 🐛 fix:, 📝 docs:, etc.)",
+            CommitFormat::Simple => "Simple (no prefix)",
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            CommitFormat::Conventional => "conventional",
+            CommitFormat::Gitmoji => "gitmoji",
+            CommitFormat::Simple => "simple",
+        }
+    }
+
+    fn all() -> Vec<Self> {
+        vec![
+            CommitFormat::Conventional,
+            CommitFormat::Gitmoji,
+            CommitFormat::Simple,
+        ]
+    }
+}
+
+/// Language options
+struct LanguageOption {
+    code: &'static str,
+    display: &'static str,
+}
+
+impl LanguageOption {
+    fn all() -> Vec<Self> {
+        vec![
+            LanguageOption {
+                code: "en",
+                display: "English",
+            },
+            LanguageOption {
+                code: "zh",
+                display: "Chinese (中文)",
+            },
+            LanguageOption {
+                code: "es",
+                display: "Spanish (Español)",
+            },
+            LanguageOption {
+                code: "fr",
+                display: "French (Français)",
+            },
+            LanguageOption {
+                code: "de",
+                display: "German (Deutsch)",
+            },
+            LanguageOption {
+                code: "ja",
+                display: "Japanese (日本語)",
+            },
+            LanguageOption {
+                code: "ko",
+                display: "Korean (한국어)",
+            },
+            LanguageOption {
+                code: "ru",
+                display: "Russian (Русский)",
+            },
+            LanguageOption {
+                code: "pt",
+                display: "Portuguese (Português)",
+            },
+            LanguageOption {
+                code: "it",
+                display: "Italian (Italiano)",
+            },
+            LanguageOption {
+                code: "other",
+                display: "Other (specify)",
+            },
+        ]
+    }
+}
+
+pub async fn execute(cmd: SetupCommand) -> Result<()> {
+    print_welcome_header();
+
+    // Determine if we're doing quick or advanced setup
+    let is_advanced = if cmd.defaults {
+        // Non-interactive defaults mode
+        return apply_defaults().await;
+    } else if cmd.advanced {
+        true
+    } else {
+        // Ask user which mode they prefer
+        println!();
+        println!("{}", "Choose your setup mode:".bold());
+        println!();
+
+        let modes = vec![
+            "🚀 Quick Setup - Just the essentials (recommended)",
+            "⚙️  Advanced Setup - Full configuration options",
+        ];
+
+        let selection = Select::new()
+            .with_prompt("Select mode")
+            .items(&modes)
+            .default(0)
+            .interact()?;
+
+        selection == 1
+    };
+
+    if is_advanced {
+        run_advanced_setup().await
+    } else {
+        run_quick_setup().await
+    }
+}
+
+fn print_welcome_header() {
     println!();
     println!(
         "{} {}",
         "🚀".green(),
-        "Rusty Commit Setup Wizard".bold().white()
+        "Welcome to Rusty Commit Setup!".bold().white()
     );
     println!();
-
-    // Step 1: Select AI Provider
-    let providers = [
-        "OpenAI (GPT-4, GPT-3.5)",
-        "Anthropic (Claude)",
-        "Google Gemini",
-        "Ollama (local)",
-    ];
-
-    let provider_selection = Select::new()
-        .with_prompt("1. Select your AI provider")
-        .items(providers)
-        .default(0)
-        .interact()?;
-
-    let (provider, default_model) = match provider_selection {
-        0 => ("openai", "gpt-4o-mini"),
-        1 => ("anthropic", "claude-3-5-haiku-20241022"),
-        2 => ("gemini", "gemini-1.5-flash"),
-        3 => ("ollama", "llama3.2"),
-        _ => ("openai", "gpt-4o-mini"),
-    };
-
+    println!(
+        "{}",
+        "   Let's get you set up with AI-powered commit messages.".dimmed()
+    );
     println!();
-    println!("{} Selected: {}", "✓".green(), provider.yellow());
+}
 
-    // Step 2: Enter API Key (skip for Ollama)
-    let api_key = if provider_selection == 3 {
+async fn run_quick_setup() -> Result<()> {
+    let mut config = Config::load()?;
+
+    // Step 1: Provider selection
+    let provider = select_provider_quick()?;
+    config.ai_provider = Some(provider.name.to_string());
+    config.model = Some(provider.default_model.to_string());
+
+    // Step 2: API key (if needed)
+    if provider.requires_key {
+        let api_key = prompt_for_api_key(provider.name)?;
+        if !api_key.is_empty() {
+            config.api_key = Some(api_key);
+        }
+    } else {
         println!();
         println!(
-            "{} Local Ollama detected - API key not required",
-            "ℹ".blue()
+            "{} {} doesn't require an API key - great for privacy!",
+            "ℹ️".blue(),
+            provider.name.bright_cyan()
         );
-        None
-    } else {
-        println!();
-        let input: String = Input::new()
-            .with_prompt(format!("2. Enter your {} API key", provider))
-            .interact()?;
-        if input.trim().is_empty() {
-            println!(
-                "{} No API key entered - you'll need to set it later",
-                "⚠".yellow()
-            );
-        }
-        Some(input)
-    };
+    }
 
-    // Step 3: Select commit format
-    let commit_formats = ["Conventional (feat, fix, etc.)", "GitMoji (🎉, 🐛, ✨)"];
-    let format_selection = Select::new()
-        .with_prompt("3. Select commit message format")
-        .items(commit_formats)
-        .default(0)
-        .interact()?;
-
-    let commit_type = if format_selection == 0 {
-        "conventional"
-    } else {
-        "gitmoji"
-    };
-
-    println!();
-    println!("{} Selected format: {}", "✓".green(), commit_type.yellow());
+    // Step 3: Commit format
+    let format = select_commit_format()?;
+    config.commit_type = Some(format.as_str().to_string());
+    config.emoji = Some(matches!(format, CommitFormat::Gitmoji));
 
     // Save configuration
-    let mut config = Config::load()?;
-    config.ai_provider = Some(provider.to_string());
-    config.model = Some(default_model.to_string());
-    config.commit_type = Some(commit_type.to_string());
-    config.description_capitalize = Some(true);
-    config.description_add_period = Some(false);
-    config.generate_count = Some(1);
+    config.save()?;
 
-    if let Some(key) = api_key {
-        if !key.trim().is_empty() {
-            config.api_key = Some(key);
+    print_completion_message(&config, false);
+    Ok(())
+}
+
+async fn run_advanced_setup() -> Result<()> {
+    let mut config = Config::load()?;
+
+    // Section 1: AI Provider Configuration
+    print_section_header("🤖 AI Provider Configuration");
+
+    let provider = select_provider_advanced()?;
+    config.ai_provider = Some(provider.name.to_string());
+
+    // Custom model selection
+    let default_model = provider.default_model;
+    let use_custom_model = Confirm::new()
+        .with_prompt(format!(
+            "Use default model ({}), or specify a custom one?",
+            default_model.bright_cyan()
+        ))
+        .default(true)
+        .interact()?;
+
+    if use_custom_model {
+        config.model = Some(default_model.to_string());
+    } else {
+        let custom_model: String = Input::new()
+            .with_prompt("Enter model name")
+            .default(default_model.to_string())
+            .interact()?;
+        config.model = Some(custom_model);
+    }
+
+    // API key or custom endpoint
+    if provider.requires_key {
+        let api_key = prompt_for_api_key(provider.name)?;
+        if !api_key.is_empty() {
+            config.api_key = Some(api_key);
+        }
+
+        // Custom API URL option
+        let use_custom_url = Confirm::new()
+            .with_prompt("Use a custom API endpoint URL?")
+            .default(false)
+            .interact()?;
+
+        if use_custom_url {
+            let custom_url: String = Input::new()
+                .with_prompt("Enter custom API URL")
+                .default(format!("https://api.{}.com/v1", provider.name))
+                .interact()?;
+            config.api_url = Some(custom_url);
         }
     }
 
+    // Section 2: Commit Message Style
+    print_section_header("📝 Commit Message Style");
+
+    let format = select_commit_format()?;
+    config.commit_type = Some(format.as_str().to_string());
+    config.emoji = Some(matches!(format, CommitFormat::Gitmoji));
+
+    // Capitalization
+    config.description_capitalize = Some(
+        Confirm::new()
+            .with_prompt("Capitalize the first letter of commit messages?")
+            .default(true)
+            .interact()?,
+    );
+
+    // Period at end
+    config.description_add_period = Some(
+        Confirm::new()
+            .with_prompt("Add period at the end of commit messages?")
+            .default(false)
+            .interact()?,
+    );
+
+    // Max length
+    let max_length: usize = Input::new()
+        .with_prompt("Maximum commit message length")
+        .default(100)
+        .validate_with(|input: &usize| -> Result<(), &str> {
+            if *input >= 50 && *input <= 200 {
+                Ok(())
+            } else {
+                Err("Please enter a value between 50 and 200")
+            }
+        })
+        .interact()?;
+    config.description_max_length = Some(max_length);
+
+    // Language selection
+    let language = select_language()?;
+    config.language = Some(language.to_string());
+
+    // Section 3: Behavior Settings
+    print_section_header("⚙️  Behavior Settings");
+
+    // Generate count
+    let generate_count: u8 = Input::new()
+        .with_prompt("Number of commit variations to generate (1-5)")
+        .default(1)
+        .validate_with(|input: &u8| -> Result<(), &str> {
+            if *input >= 1 && *input <= 5 {
+                Ok(())
+            } else {
+                Err("Please enter a value between 1 and 5")
+            }
+        })
+        .interact()?;
+    config.generate_count = Some(generate_count);
+
+    // Git push option
+    config.gitpush = Some(
+        Confirm::new()
+            .with_prompt("Automatically push commits to remote?")
+            .default(false)
+            .interact()?,
+    );
+
+    // One-line commits
+    config.one_line_commit = Some(
+        Confirm::new()
+            .with_prompt("Always use one-line commits (no body)?")
+            .default(false)
+            .interact()?,
+    );
+
+    // Enable commit body
+    config.enable_commit_body = Some(
+        Confirm::new()
+            .with_prompt("Allow multi-line commit messages with body?")
+            .default(false)
+            .interact()?,
+    );
+
+    // Section 4: Advanced Features
+    print_section_header("🔧 Advanced Features");
+
+    // Learn from history
+    config.learn_from_history = Some(
+        Confirm::new()
+            .with_prompt("Learn commit style from repository history?")
+            .default(false)
+            .interact()?,
+    );
+
+    if config.learn_from_history == Some(true) {
+        let history_count: usize = Input::new()
+            .with_prompt("Number of commits to analyze for style")
+            .default(50)
+            .validate_with(|input: &usize| -> Result<(), &str> {
+                if *input >= 10 && *input <= 200 {
+                    Ok(())
+                } else {
+                    Err("Please enter a value between 10 and 200")
+                }
+            })
+            .interact()?;
+        config.history_commits_count = Some(history_count);
+    }
+
+    // Clipboard on timeout
+    config.clipboard_on_timeout = Some(
+        Confirm::new()
+            .with_prompt("Copy commit message to clipboard on timeout/error?")
+            .default(true)
+            .interact()?,
+    );
+
+    // Hook settings
+    config.hook_strict = Some(
+        Confirm::new()
+            .with_prompt("Strict hook mode (fail on hook errors)?")
+            .default(true)
+            .interact()?,
+    );
+
+    let hook_timeout: u64 = Input::new()
+        .with_prompt("Hook timeout (milliseconds)")
+        .default(30000)
+        .validate_with(|input: &u64| -> Result<(), &str> {
+            if *input >= 1000 && *input <= 300000 {
+                Ok(())
+            } else {
+                Err("Please enter a value between 1000 and 300000")
+            }
+        })
+        .interact()?;
+    config.hook_timeout_ms = Some(hook_timeout);
+
+    // Section 5: Token Limits (for advanced users)
+    print_section_header("🎯 Token Limits (Optional)");
+
+    let configure_tokens = Confirm::new()
+        .with_prompt("Configure token limits? (Most users can skip this)")
+        .default(false)
+        .interact()?;
+
+    if configure_tokens {
+        let max_input: usize = Input::new()
+            .with_prompt("Maximum input tokens")
+            .default(4096)
+            .interact()?;
+        config.tokens_max_input = Some(max_input);
+
+        let max_output: u32 = Input::new()
+            .with_prompt("Maximum output tokens")
+            .default(500)
+            .interact()?;
+        config.tokens_max_output = Some(max_output);
+    }
+
+    // Save configuration
     config.save()?;
 
-    // Completion message
+    print_completion_message(&config, true);
+    Ok(())
+}
+
+fn select_provider_quick() -> Result<ProviderOption> {
+    println!();
+    println!("{}", "Select your AI provider:".bold());
+    println!("{}", "   This determines which AI will generate your commit messages.".dimmed());
+    println!();
+
+    let providers = ProviderOption::all();
+    let popular: Vec<_> = providers
+        .iter()
+        .filter(|p| p.category == ProviderCategory::Popular)
+        .map(|p| p.display)
+        .collect();
+
+    let local: Vec<_> = providers
+        .iter()
+        .filter(|p| p.category == ProviderCategory::Local)
+        .map(|p| p.display)
+        .collect();
+
+    let others: Vec<_> = providers
+        .iter()
+        .filter(|p| {
+            p.category == ProviderCategory::Cloud || p.category == ProviderCategory::Enterprise
+        })
+        .map(|p| p.display)
+        .collect();
+
+    let mut all_displays = Vec::new();
+    all_displays.push("─── Popular Providers ───".dimmed().to_string());
+    all_displays.extend(popular.iter().map(|s| s.to_string()));
+    all_displays.push("─── Local/Private ───".dimmed().to_string());
+    all_displays.extend(local.iter().map(|s| s.to_string()));
+    all_displays.push("─── More Cloud Providers ───".dimmed().to_string());
+    all_displays.extend(others.iter().map(|s| s.to_string()));
+
+    let selection = Select::new()
+        .with_prompt("AI Provider")
+        .items(&all_displays)
+        .default(1) // First real item (after header)
+        .interact()?;
+
+    // Map selection back to provider (accounting for headers)
+    let provider_name = match selection {
+        1 => "openai",
+        2 => "anthropic",
+        3 => "gemini",
+        5 => "ollama",
+        7 => "xai",
+        8 => "deepseek",
+        9 => "groq",
+        10 => "openrouter",
+        11 => "mistral",
+        12 => "perplexity",
+        13 => "azure",
+        14 => "bedrock",
+        15 => "vertex",
+        _ => "openai",
+    };
+
+    let provider = ProviderOption::by_name(provider_name).unwrap();
+
+    println!();
+    println!(
+        "{} Selected: {} {}",
+        "✓".green(),
+        provider.name.bright_cyan(),
+        format!("(model: {})", provider.default_model).dimmed()
+    );
+
+    Ok(provider)
+}
+
+fn select_provider_advanced() -> Result<ProviderOption> {
+    println!();
+    println!("{}", "Select your AI provider:".bold());
+    println!();
+
+    let providers = ProviderOption::all();
+    let items: Vec<_> = providers.iter().map(|p| p.display).collect();
+
+    let selection = Select::new()
+        .with_prompt("AI Provider")
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    let provider = providers.into_iter().nth(selection).unwrap();
+
+    println!();
+    println!(
+        "{} Selected: {}",
+        "✓".green(),
+        provider.name.bright_cyan()
+    );
+
+    Ok(provider)
+}
+
+fn prompt_for_api_key(provider_name: &str) -> Result<String> {
+    println!();
+    println!("{}", "API Key Configuration".bold());
+    println!(
+        "{}",
+        format!(
+            "   Get your API key from the {} dashboard",
+            provider_name.bright_cyan()
+        )
+        .dimmed()
+    );
+    println!(
+        "{}",
+        "   Your key will be stored securely in your system's keychain.".dimmed()
+    );
+    println!();
+
+    let api_key: String = Input::new()
+        .with_prompt(format!("Enter your {} API key", provider_name.bright_cyan()))
+        .allow_empty(true)
+        .interact()?;
+
+    let trimmed = api_key.trim();
+
+    if trimmed.is_empty() {
+        println!();
+        println!(
+            "{} No API key provided. You can set it later with: {}",
+            "⚠️".yellow(),
+            format!("rco config set RCO_API_KEY=<your_key>").bright_cyan()
+        );
+    } else {
+        // Show last 4 characters for confirmation
+        let masked = if trimmed.len() > 4 {
+            format!("{}****", &trimmed[trimmed.len() - 4..])
+        } else {
+            "****".to_string()
+        };
+        println!();
+        println!("{} API key saved: {}", "✓".green(), masked.dimmed());
+    }
+
+    Ok(trimmed.to_string())
+}
+
+fn select_commit_format() -> Result<CommitFormat> {
+    println!();
+    println!("{}", "Commit Message Format".bold());
+    println!(
+        "{}",
+        "   Choose how your commit messages should be formatted.".dimmed()
+    );
+    println!();
+
+    let formats = CommitFormat::all();
+    let items: Vec<_> = formats.iter().map(|f| f.display()).collect();
+
+    let selection = Select::new()
+        .with_prompt("Commit format")
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    let format = formats.into_iter().nth(selection).unwrap();
+
+    println!();
+    println!(
+        "{} Selected: {}",
+        "✓".green(),
+        format.as_str().bright_cyan()
+    );
+
+    // Show example
+    let example = match format {
+        CommitFormat::Conventional => "feat(auth): Add login functionality",
+        CommitFormat::Gitmoji => "✨ feat(auth): Add login functionality",
+        CommitFormat::Simple => "Add login functionality",
+    };
+    println!("  Example: {}", example.dimmed());
+
+    Ok(format)
+}
+
+fn select_language() -> Result<String> {
+    println!();
+    println!("{}", "Output Language".bold());
+    println!(
+        "{}",
+        "   What language should commit messages be generated in?".dimmed()
+    );
+    println!();
+
+    let languages = LanguageOption::all();
+    let items: Vec<_> = languages.iter().map(|l| l.display).collect();
+
+    let selection = Select::new()
+        .with_prompt("Language")
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    let lang = &languages[selection];
+
+    if lang.code == "other" {
+        let custom: String = Input::new()
+            .with_prompt("Enter language code (e.g., 'nl' for Dutch)")
+            .interact()?;
+        Ok(custom)
+    } else {
+        Ok(lang.code.to_string())
+    }
+}
+
+fn print_section_header(title: &str) {
+    println!();
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
+    );
+    println!("{}", title.bold());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
+    );
+}
+
+fn print_completion_message(config: &Config, is_advanced: bool) {
     println!();
     println!(
         "{}",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
     );
     println!();
-    println!("{} Setup complete!", "✓".green().bold());
+    println!("{} Setup complete! 🎉", "✓".green().bold());
     println!();
-    println!("{} You can now run: {}", "→".cyan(), "rco".bold().white());
+
+    // Show summary
+    println!("{}", "Configuration Summary:".bold());
+    println!();
+
+    if let Some(ref provider) = config.ai_provider {
+        println!("  {} Provider: {}", "•".cyan(), provider.bright_white());
+    }
+    if let Some(ref model) = config.model {
+        println!("  {} Model: {}", "•".cyan(), model.bright_white());
+    }
+    if let Some(ref commit_type) = config.commit_type {
+        println!(
+            "  {} Commit format: {}",
+            "•".cyan(),
+            commit_type.bright_white()
+        );
+    }
+    if let Some(ref language) = config.language {
+        if language != "en" {
+            println!(
+                "  {} Language: {}",
+                "•".cyan(),
+                language.bright_white()
+            );
+        }
+    }
+
+    println!();
+    println!("{} You're ready to go!", "→".cyan());
     println!();
     println!(
-        "{} To change settings later, use: {}",
-        "→".cyan(),
-        "rco config set <key>=<value>".bold().white()
+        "   Try it now:  {}",
+        "rco".bold().bright_cyan().underline()
     );
-    println!(
-        "    Or run this setup again: {}",
-        "rco setup".bold().white()
-    );
+    println!();
+
+    if is_advanced {
+        println!(
+            "   Make a commit:  {}",
+            "git add . && rco".dimmed()
+        );
+        println!();
+        println!(
+            "{} Modify settings anytime: {}",
+            "→".cyan(),
+            "rco setup --advanced".bright_cyan()
+        );
+        println!(
+            "{} Or use: {}",
+            "→".cyan(),
+            "rco config set <key>=<value>".bright_cyan()
+        );
+    } else {
+        println!(
+            "   Want more options? Run: {}",
+            "rco setup --advanced".bright_cyan()
+        );
+    }
+
     println!();
     println!(
         "{}",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".dimmed()
     );
+}
+
+async fn apply_defaults() -> Result<()> {
+    let mut config = Config::load()?;
+
+    // Apply sensible defaults without prompting
+    config.ai_provider = Some("openai".to_string());
+    config.model = Some("gpt-4o-mini".to_string());
+    config.commit_type = Some("conventional".to_string());
+    config.description_capitalize = Some(true);
+    config.description_add_period = Some(false);
+    config.description_max_length = Some(100);
+    config.language = Some("en".to_string());
+    config.generate_count = Some(1);
+    config.emoji = Some(false);
+    config.gitpush = Some(false);
+    config.one_line_commit = Some(false);
+    config.enable_commit_body = Some(false);
+    config.learn_from_history = Some(false);
+    config.clipboard_on_timeout = Some(true);
+    config.hook_strict = Some(true);
+    config.hook_timeout_ms = Some(30000);
+    config.tokens_max_input = Some(4096);
+    config.tokens_max_output = Some(500);
+
+    config.save()?;
+
+    println!();
+    println!("{} Default configuration applied!", "✓".green().bold());
+    println!();
+    println!("   Provider: openai (gpt-4o-mini)");
+    println!("   Format: conventional commits");
+    println!();
+    println!(
+        "   Set your API key: {}",
+        "rco config set RCO_API_KEY=<your_key>".bright_cyan()
+    );
+    println!();
 
     Ok(())
 }

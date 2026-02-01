@@ -37,6 +37,7 @@ pub struct Config {
 
     // Behavior
     pub gitpush: Option<bool>,
+    pub remote: Option<String>,
     pub one_line_commit: Option<bool>,
     pub why: Option<bool>,
     pub omit_scope: Option<bool>,
@@ -90,6 +91,7 @@ impl Default for Config {
             message_template_placeholder: Some("$msg".to_string()),
             prompt_module: Some("conventional-commit".to_string()),
             gitpush: Some(false),
+            remote: None,
             one_line_commit: Some(false),
             why: Some(false),
             omit_scope: Some(false),
@@ -244,6 +246,7 @@ impl Config {
             "RCO_GITPUSH" => {
                 self.gitpush = Some(value.parse().context("Invalid boolean for GITPUSH")?);
             }
+            "RCO_REMOTE" => self.remote = Some(value.to_string()),
             "RCO_ONE_LINE_COMMIT" => {
                 self.one_line_commit = Some(
                     value
@@ -395,6 +398,7 @@ impl Config {
                 .as_ref()
                 .map(|s| s.to_string()),
             "RCO_GITPUSH" => self.gitpush.map(|v| v.to_string()),
+            "RCO_REMOTE" => self.remote.as_ref().map(|s| s.to_string()),
             "RCO_ONE_LINE_COMMIT" => self.one_line_commit.map(|v| v.to_string()),
             "RCO_ACTION_ENABLED" => self.action_enabled.map(|v| v.to_string()),
             "RCO_COMMITLINT_CONFIG" => self.commitlint_config.as_ref().map(|s| s.to_string()),
@@ -440,6 +444,7 @@ impl Config {
                             default.message_template_placeholder.clone()
                     }
                     "RCO_GITPUSH" => self.gitpush = default.gitpush,
+                    "RCO_REMOTE" => self.remote = default.remote.clone(),
                     "RCO_ONE_LINE_COMMIT" => self.one_line_commit = default.one_line_commit,
                     "RCO_ACTION_ENABLED" => self.action_enabled = default.action_enabled,
                     "RCO_PRE_GEN_HOOK" => self.pre_gen_hook = default.pre_gen_hook.clone(),
@@ -658,6 +663,7 @@ impl Config {
         merge_field!(message_template_placeholder);
         merge_field!(prompt_module);
         merge_field!(gitpush);
+        merge_field!(remote);
         merge_field!(one_line_commit);
         merge_field!(why);
         merge_field!(omit_scope);
@@ -717,6 +723,7 @@ impl Config {
         load_env_var!(message_template_placeholder, "MESSAGE_TEMPLATE_PLACEHOLDER");
         load_env_var!(prompt_module, "PROMPT_MODULE");
         load_env_var_parse!(gitpush, "GITPUSH", bool);
+        load_env_var!(remote, "REMOTE");
         load_env_var_parse!(one_line_commit, "ONE_LINE_COMMIT", bool);
         load_env_var_parse!(why, "WHY", bool);
         load_env_var_parse!(omit_scope, "OMIT_SCOPE", bool);

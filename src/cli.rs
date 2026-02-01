@@ -138,6 +138,10 @@ pub struct SetupCommand {
     /// Skip interactive prompts and use defaults
     #[arg(long, default_value = "false")]
     pub defaults: bool,
+
+    /// Run advanced setup with all configuration options
+    #[arg(long, default_value = "false")]
+    pub advanced: bool,
 }
 
 #[derive(Subcommand)]
@@ -396,4 +400,18 @@ pub enum SkillsAction {
     },
     /// Open skill directory in default editor/file manager
     Open,
+    /// Import skills from external sources (claude-code, github, gist, url)
+    Import {
+        /// Source to import from (claude-code, github:owner/repo, gist:id, or URL)
+        source: String,
+        /// Specific skill name to import (optional, imports all if not specified)
+        #[arg(short, long)]
+        name: Option<String>,
+    },
+    /// List available external skills without importing
+    Available {
+        /// External source to check (claude-code)
+        #[arg(default_value = "claude-code")]
+        source: String,
+    },
 }

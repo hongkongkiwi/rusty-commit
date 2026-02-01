@@ -49,6 +49,7 @@ default = [
     # Dedicated providers
     "mlx",
     "nvidia",
+    "flowise",
 ]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
@@ -84,6 +85,7 @@ dashscope = ["openai"]
 # Dedicated providers with special implementations
 mlx = []
 nvidia = []
+flowise = []
 cerebras = ["openai"]
 
 [dependencies]

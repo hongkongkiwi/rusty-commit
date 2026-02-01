@@ -66,6 +66,9 @@ pub struct Config {
     pub learn_from_history: Option<bool>,
     pub history_commits_count: Option<usize>,
     pub style_profile: Option<String>,
+
+    // Commit body support
+    pub enable_commit_body: Option<bool>,
 }
 
 impl Default for Config {
@@ -104,8 +107,9 @@ impl Default for Config {
             custom_prompt: None,
             prompt_file: None,
             learn_from_history: Some(false),
-            history_commits_count: Some(10),
+            history_commits_count: Some(50),
             style_profile: None,
+            enable_commit_body: Some(false),
         }
     }
 }
@@ -347,6 +351,13 @@ impl Config {
             "RCO_STYLE_PROFILE" => {
                 self.style_profile = Some(value.to_string());
             }
+            "RCO_ENABLE_COMMIT_BODY" => {
+                self.enable_commit_body = Some(
+                    value
+                        .parse()
+                        .context("Invalid boolean for ENABLE_COMMIT_BODY")?,
+                );
+            }
             // Ignore unsupported keys
             "RCO_API_CUSTOM_HEADERS" => {
                 // Silently ignore these legacy keys
@@ -534,13 +545,21 @@ impl Config {
         if let Some(template) = custom_prompt_template {
             // Security warning: custom prompts receive diff content
             tracing::warn!(
-                "Using custom prompt template - diff content will be included in the prompt. \
-                Ensure your custom prompt does not exfiltrate or log sensitive code."
+                "SECURITY: Using custom prompt template - full diff content will be included in the prompt. \
+                Only use custom prompts from trusted sources. Malicious prompts could exfiltrate code."
             );
             eprintln!(
                 "{}",
-                "Warning: Using custom prompt template. Your diff content will be sent to the AI provider."
+                "⚠️  SECURITY WARNING: Using custom prompt template.".yellow().bold()
+            );
+            eprintln!(
+                "{}",
+                "   Your diff content (potentially including sensitive code) will be sent to the AI provider."
                     .yellow()
+            );
+            eprintln!(
+                "{}",
+                "   Only use custom prompts from trusted sources.".yellow()
             );
 
             // Replace placeholders in custom prompt
@@ -712,6 +731,7 @@ impl Config {
         load_env_var_parse!(learn_from_history, "LEARN_FROM_HISTORY", bool);
         load_env_var_parse!(history_commits_count, "HISTORY_COMMITS_COUNT", usize);
         load_env_var!(style_profile, "STYLE_PROFILE");
+        load_env_var_parse!(enable_commit_body, "ENABLE_COMMIT_BODY", bool);
     }
 }
 

@@ -79,5 +79,6 @@ pub mod config;
 pub mod git;
 pub mod output;
 pub mod providers;
+pub mod skills;
 pub mod update;
 pub mod utils;

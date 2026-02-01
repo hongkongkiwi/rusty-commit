@@ -9,6 +9,8 @@ pub mod bedrock;
 pub mod gemini;
 #[cfg(feature = "huggingface")]
 pub mod huggingface;
+#[cfg(feature = "flowise")]
+pub mod flowise;
 #[cfg(feature = "mlx")]
 pub mod mlx;
 #[cfg(feature = "nvidia")]
@@ -226,6 +228,11 @@ pub static PROVIDER_REGISTRY: Lazy<registry::ProviderRegistry> = Lazy::new(|| {
         let _ = reg.register(Box::new(nvidia::NvidiaProviderBuilder));
     }
 
+    #[cfg(feature = "flowise")]
+    {
+        let _ = reg.register(Box::new(flowise::FlowiseProviderBuilder));
+    }
+
     reg
 });
 
@@ -300,6 +307,8 @@ pub fn available_providers() -> Vec<&'static str> {
             "fireworks",
             "moonshot",
             "dashscope",
+            // From OpenCommit
+            "aimlapi",
             // From OpenCode
             "cohere",
             "ai21",
@@ -392,7 +401,7 @@ pub fn split_prompt(
     full_gitmoji: bool,
 ) -> (String, String) {
     let system_prompt = build_system_prompt(config, full_gitmoji);
-    let user_prompt = build_user_prompt(diff, context, full_gitmoji);
+    let user_prompt = build_user_prompt(diff, context, full_gitmoji, config);
     (system_prompt, user_prompt)
 }
 
@@ -403,14 +412,11 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     prompt.push_str("You are an expert at writing clear, concise git commit messages.\n\n");
 
     // Core constraints
-    prompt.push_str("CONSTRAINTS:\n");
+    prompt.push_str("OUTPUT RULES:\n");
     prompt.push_str("- Return ONLY the commit message, with no additional explanation, markdown formatting, or code blocks\n");
-    prompt.push_str(
-        "- Do not include any reasoning, thinking, analysis, or <thinking> tags in your response\n",
-    );
-    prompt.push_str(
-        "- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n",
-    );
+    prompt.push_str("- Do not include any reasoning, thinking, analysis, <thinking> tags, or XML-like tags in your response\n");
+    prompt.push_str("- Never explain your choices or provide commentary\n");
+    prompt.push_str("- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n");
 
     // Add style guidance from history if enabled
     if config.learn_from_history.unwrap_or(false) {
@@ -444,11 +450,11 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
         "gitmoji" => {
             if full_gitmoji {
                 prompt.push_str("- Use GitMoji format with full emoji specification from https://gitmoji.dev/\n");
+                prompt.push_str("- Common emojis: ✨(feat), 🐛(fix), 📝(docs), 🚀(deploy), ♻️(refactor), ✅(test), 🔧(chore), ⚡(perf), 🎨(style), 📦(build), 👷(ci)\n");
+                prompt.push_str("- For breaking changes, add 💥 after the type\n");
             } else {
                 prompt.push_str("- Use GitMoji format: <emoji> <type>: <description>\n");
-                prompt.push_str(
-                    "- Emojis: 🐛(fix), ✨(feat), 📝(docs), 🚀(deploy), ✅(test), ♻️(refactor)\n",
-                );
+                prompt.push_str("- Common emojis: 🐛(fix), ✨(feat), 📝(docs), 🚀(deploy), ✅(test), ♻️(refactor), 🔧(chore), ⚡(perf), 🎨(style), 📦(build), 👷(ci)\n");
             }
         }
         _ => {}
@@ -469,6 +475,15 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
         prompt.push_str("- Do not end the description with a period\n");
     }
 
+    // Add commit body guidance if enabled
+    if config.enable_commit_body.unwrap_or(false) {
+        prompt.push_str("\nCOMMIT BODY (optional):\n");
+        prompt.push_str("- Add a blank line after the description, then explain WHY the change was made\n");
+        prompt.push_str("- Use bullet points for multiple changes\n");
+        prompt.push_str("- Wrap body text at 72 characters\n");
+        prompt.push_str("- Focus on motivation and context, not what changed (that's in the diff)\n");
+    }
+
     prompt
 }
 
@@ -483,8 +498,8 @@ fn get_style_guidance(config: &Config) -> Option<String> {
         return Some(cached.clone());
     }
 
-    // Analyze recent commits
-    let count = config.history_commits_count.unwrap_or(10);
+    // Analyze recent commits - default now 50 for better learning
+    let count = config.history_commits_count.unwrap_or(50);
 
     match git::get_recent_commit_messages(count) {
         Ok(commits) => {
@@ -494,7 +509,9 @@ fn get_style_guidance(config: &Config) -> Option<String> {
 
             let profile = CommitStyleProfile::analyze_from_commits(&commits);
 
-            if profile.is_empty() {
+            // Only use profile if we have enough confident data (at least 10 commits with patterns)
+            // Increased from 5 to 10 for better confidence
+            if profile.is_empty() || commits.len() < 10 {
                 return None;
             }
 
@@ -508,8 +525,32 @@ fn get_style_guidance(config: &Config) -> Option<String> {
 }
 
 /// Build the user prompt part (actual task + diff)
-fn build_user_prompt(diff: &str, context: Option<&str>, _full_gitmoji: bool) -> String {
+fn build_user_prompt(diff: &str, context: Option<&str>, _full_gitmoji: bool, _config: &Config) -> String {
     let mut prompt = String::new();
+
+    // Add project context if available
+    if let Some(project_context) = get_project_context() {
+        prompt.push_str(&format!("Project Context: {}\n\n", project_context));
+    }
+
+    // Add file type summary with detailed extension info
+    let file_summary = extract_file_summary(diff);
+    if !file_summary.is_empty() {
+        prompt.push_str(&format!("Files Changed: {}\n\n", file_summary));
+    }
+
+    // Add chunk indicator with more detail if diff was chunked
+    if diff.contains("---CHUNK") {
+        let chunk_count = diff.matches("---CHUNK").count();
+        if chunk_count > 1 {
+            prompt.push_str(&format!(
+                "Note: This diff was split into {} chunks due to size. Focus on the overall purpose of the changes across all chunks.\n\n",
+                chunk_count
+            ));
+        } else {
+            prompt.push_str("Note: The diff was split into chunks due to size. Focus on the overall purpose of the changes.\n\n");
+        }
+    }
 
     // Add context if provided
     if let Some(ctx) = context {
@@ -521,7 +562,208 @@ fn build_user_prompt(diff: &str, context: Option<&str>, _full_gitmoji: bool) -> 
     prompt.push_str(diff);
     prompt.push_str("\n```\n");
 
+    // Add reminder about output format
+    prompt.push_str("\nRemember: Return ONLY the commit message, no explanations or markdown.");
+
     prompt
+}
+
+/// Extract file type summary from diff
+fn extract_file_summary(diff: &str) -> String {
+    let mut files: Vec<String> = Vec::new();
+    let mut extensions: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut file_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    
+    for line in diff.lines() {
+        if line.starts_with("+++ b/") {
+            let path = line.strip_prefix("+++ b/").unwrap_or(line);
+            if path != "/dev/null" {
+                files.push(path.to_string());
+                // Extract extension and categorize
+                if let Some(ext) = std::path::Path::new(path).extension() {
+                    if let Some(ext_str) = ext.to_str() {
+                        let ext_lower = ext_str.to_lowercase();
+                        extensions.insert(ext_lower.clone());
+                        
+                        // Categorize file type
+                        let category = categorize_file_type(&ext_lower);
+                        *file_types.entry(category).or_insert(0) += 1;
+                    }
+                } else {
+                    // No extension - might be a config file or script
+                    if path.contains("Makefile") || path.contains("Dockerfile") || path.contains("LICENSE") {
+                        *file_types.entry("config".to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+    }
+    
+    if files.is_empty() {
+        return String::new();
+    }
+    
+    // Build summary
+    let mut summary = format!("{} file(s)", files.len());
+    
+    // Add file type categories
+    if !file_types.is_empty() {
+        let mut type_list: Vec<_> = file_types.into_iter().collect();
+        type_list.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by count descending
+        
+        let type_str: Vec<_> = type_list.iter()
+            .map(|(t, c)| format!("{} {}", c, t))
+            .collect();
+        summary.push_str(&format!(" ({})", type_str.join(", ")));
+    }
+    
+    // Add extension info if not too many
+    if !extensions.is_empty() && extensions.len() <= 5 {
+        let ext_list: Vec<_> = extensions.into_iter().collect();
+        summary.push_str(&format!(" [.{}]", ext_list.join(", .")));
+    }
+    
+    // Add first few file names if small number
+    if files.len() <= 3 {
+        summary.push_str(&format!(": {}", files.join(", ")));
+    }
+    
+    summary
+}
+
+/// Categorize file extension into a type
+fn categorize_file_type(ext: &str) -> String {
+    match ext {
+        // Programming languages
+        "rs" => "Rust",
+        "py" => "Python",
+        "js" => "JavaScript",
+        "ts" => "TypeScript",
+        "jsx" | "tsx" => "React",
+        "go" => "Go",
+        "java" => "Java",
+        "kt" => "Kotlin",
+        "swift" => "Swift",
+        "c" | "cpp" | "cc" | "h" | "hpp" => "C/C++",
+        "rb" => "Ruby",
+        "php" => "PHP",
+        "cs" => "C#",
+        "scala" => "Scala",
+        "r" => "R",
+        "m" => "Objective-C",
+        "lua" => "Lua",
+        "pl" => "Perl",
+        
+        // Web
+        "html" | "htm" => "HTML",
+        "css" | "scss" | "sass" | "less" => "CSS",
+        "vue" => "Vue",
+        "svelte" => "Svelte",
+        
+        // Data/Config
+        "json" => "JSON",
+        "yaml" | "yml" => "YAML",
+        "toml" => "TOML",
+        "xml" => "XML",
+        "csv" => "CSV",
+        "sql" => "SQL",
+        
+        // Documentation
+        "md" | "markdown" => "Markdown",
+        "rst" => "reStructuredText",
+        "txt" => "Text",
+        
+        // Build/Config
+        "sh" | "bash" | "zsh" | "fish" => "Shell",
+        "ps1" => "PowerShell",
+        "bat" | "cmd" => "Batch",
+        "dockerfile" => "Docker",
+        "makefile" | "mk" => "Make",
+        "cmake" => "CMake",
+        
+        // Other
+        _ => "Other",
+    }.to_string()
+}
+
+/// Get project context from .rco/context.txt or README
+fn get_project_context() -> Option<String> {
+    use std::path::Path;
+    
+    // Try .rco/context.txt first
+    if let Ok(repo_root) = crate::git::get_repo_root() {
+        let context_path = Path::new(&repo_root).join(".rco").join("context.txt");
+        if context_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&context_path) {
+                let trimmed = content.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
+        
+        // Try README.md - extract first paragraph
+        let readme_path = Path::new(&repo_root).join("README.md");
+        if readme_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&readme_path) {
+                // Find first non-empty line that's not a header
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                        // Return first sentence or up to 100 chars
+                        let context = if let Some(idx) = trimmed.find('.') {
+                            trimmed[..idx + 1].to_string()
+                        } else {
+                            trimmed.chars().take(100).collect()
+                        };
+                        if !context.is_empty() {
+                            return Some(context);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Try Cargo.toml for Rust projects
+        let cargo_path = Path::new(&repo_root).join("Cargo.toml");
+        if cargo_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&cargo_path) {
+                // Extract description from Cargo.toml
+                let mut in_package = false;
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if trimmed == "[package]" {
+                        in_package = true;
+                    } else if trimmed.starts_with('[') && trimmed != "[package]" {
+                        in_package = false;
+                    } else if in_package && trimmed.starts_with("description") {
+                        if let Some(idx) = trimmed.find('=') {
+                            let desc = trimmed[idx+1..].trim().trim_matches('"');
+                            if !desc.is_empty() {
+                                return Some(format!("Rust project: {}", desc));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Try package.json for Node projects
+        let package_path = Path::new(&repo_root).join("package.json");
+        if package_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&package_path) {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(desc) = json.get("description").and_then(|d| d.as_str()) {
+                        if !desc.is_empty() {
+                            return Some(format!("Node.js project: {}", desc));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    None
 }
 
 /// Build the combined prompt for providers without system message support
@@ -532,7 +774,7 @@ pub fn build_prompt(
     full_gitmoji: bool,
 ) -> String {
     let (system, user) = split_prompt(diff, context, config, full_gitmoji);
-    format!("{}\\n\\n---\\n\\n{}", system, user)
+    format!("{}\n\n---\n\n{}", system, user)
 }
 
 /// Create an AI provider from an account configuration
@@ -675,6 +917,16 @@ pub fn create_provider_for_account(
                 )?))
             } else {
                 Ok(Box::new(nvidia::NvidiaProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "flowise")]
+        "flowise" | "flowise-ai" => {
+            if let Some(_key) = credentials.as_ref() {
+                Ok(Box::new(flowise::FlowiseProvider::from_account(
+                    account, "", config,
+                )?))
+            } else {
+                Ok(Box::new(flowise::FlowiseProvider::new(config)?))
             }
         }
         _ => {

@@ -113,10 +113,15 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         return handle_clipboard_mode(&messages, &ctx);
     }
 
-    // Handle print mode
+    // Handle print mode (for hooks compatibility)
     if options.print_message {
         print!("{}", messages[0]);
         return Ok(());
+    }
+
+    // Handle dry-run mode - preview without committing
+    if options.dry_run {
+        return handle_dry_run_mode(&messages, &ctx);
     }
 
     // Run pre-commit hooks on first message
@@ -139,9 +144,38 @@ fn load_and_validate_config(options: &GlobalOptions) -> Result<Config> {
         config.set_prompt_file(Some(prompt_file.clone()));
     }
 
+    // Apply skill if specified
+    if let Some(ref skill_name) = options.skill {
+        apply_skill_to_config(&mut config, skill_name)?;
+    }
+
     config.load_with_commitlint()?;
     config.apply_commitlint_rules()?;
     Ok(config)
+}
+
+/// Apply a skill's configuration to the config
+fn apply_skill_to_config(config: &mut Config, skill_name: &str) -> Result<()> {
+    use crate::skills::SkillsManager;
+
+    let mut manager = SkillsManager::new()?;
+    manager.discover()?;
+
+    let skill = manager
+        .find(skill_name)
+        .ok_or_else(|| anyhow::anyhow!(
+            "Skill '{}' not found. Run 'rco skills list' to see available skills.",
+            skill_name
+        ))?;
+
+    // Load prompt template from skill if available
+    if let Some(prompt_template) = skill.load_prompt_template()? {
+        config.custom_prompt = Some(prompt_template);
+        tracing::info!("Loaded prompt template from skill: {}", skill_name);
+    }
+
+    println!("{} Using skill: {}", "→".cyan(), skill_name.green());
+    Ok(())
 }
 
 /// Prepare the diff for processing: get staged changes, apply filters, chunk if needed
@@ -262,6 +296,28 @@ fn handle_clipboard_mode(messages: &[String], ctx: &ExecContext) -> Result<()> {
     Ok(())
 }
 
+/// Handle dry-run mode - preview message without committing
+fn handle_dry_run_mode(messages: &[String], ctx: &ExecContext) -> Result<()> {
+    ctx.header("Dry Run Mode - Preview");
+    ctx.divider(None);
+    ctx.subheader("The following commit message would be generated:");
+    println!();
+    
+    if messages.len() == 1 {
+        println!("{}", messages[0].green());
+    } else {
+        ctx.subheader("Multiple variations available:");
+        for (i, msg) in messages.iter().enumerate() {
+            println!("\n{}. {}", i + 1, format!("Option {}", i + 1).cyan().bold());
+            println!("{}", msg.green());
+        }
+    }
+    
+    ctx.divider(None);
+    ctx.subheader("No commit was made. Remove --dry-run to commit.");
+    Ok(())
+}
+
 /// Display the generated commit message(s)
 fn display_commit_messages(messages: &[String], ctx: &ExecContext) {
     if messages.len() == 1 {
@@ -289,6 +345,9 @@ async fn handle_commit_action(
 ) -> Result<()> {
     let action = if options.skip_confirmation {
         CommitAction::Commit
+    } else if options.edit {
+        // --edit flag: go straight to editor with the first message
+        CommitAction::EditExternal
     } else if messages.len() > 1 {
         select_commit_action_with_variants(messages.len())?
     } else {
@@ -303,6 +362,17 @@ async fn handle_commit_action(
         }
         CommitAction::Edit => {
             let edited_message = edit_commit_message(final_message)?;
+            perform_commit(&edited_message)?;
+            run_post_commit_hooks(config, &edited_message).await?;
+            ctx.success("Changes committed successfully!");
+        }
+        CommitAction::EditExternal => {
+            // Open in $EDITOR (e.g., vim, nano, code, etc.)
+            let edited_message = edit_in_external_editor(final_message)?;
+            if edited_message.trim().is_empty() {
+                ctx.warning("Commit cancelled - empty message.");
+                return Ok(());
+            }
             perform_commit(&edited_message)?;
             run_post_commit_hooks(config, &edited_message).await?;
             ctx.success("Changes committed successfully!");
@@ -343,6 +413,7 @@ fn select_files_to_stage(files: &[String]) -> Result<Vec<String>> {
 enum CommitAction {
     Commit,
     Edit,
+    EditExternal, // Open in $EDITOR
     Cancel,
     Regenerate,
     Select { index: usize },
@@ -409,6 +480,57 @@ fn edit_commit_message(original: &str) -> Result<String> {
         .with_initial_text(original)
         .interact_text()
         .context("Failed to read edited commit message")
+}
+
+/// Open commit message in $EDITOR for editing
+fn edit_in_external_editor(original: &str) -> Result<String> {
+    use std::env;
+    use tempfile::NamedTempFile;
+    use std::io::Write;
+    use std::process::Command;
+
+    // Get the editor from environment
+    let editor = env::var("EDITOR")
+        .or_else(|_| env::var("VISUAL"))
+        .unwrap_or_else(|_| {
+            // Default editors by platform
+            if cfg!(target_os = "windows") {
+                "notepad".to_string()
+            } else {
+                "vi".to_string()
+            }
+        });
+
+    // Create a temporary file with the commit message
+    let mut temp_file = NamedTempFile::with_suffix(".txt")
+        .context("Failed to create temporary file for editing")?;
+    
+    // Write the original message to the temp file
+    temp_file
+        .write_all(original.as_bytes())
+        .context("Failed to write to temporary file")?;
+    temp_file.flush().context("Failed to flush temporary file")?;
+    
+    let temp_path = temp_file.path().to_path_buf();
+    
+    // Keep the temp file from being deleted when dropped
+    let _temp_file = temp_file.into_temp_path();
+    
+    // Open the editor
+    let status = Command::new(&editor)
+        .arg(&temp_path)
+        .status()
+        .with_context(|| format!("Failed to open editor '{}'. Make sure $EDITOR is set correctly.", editor))?;
+    
+    if !status.success() {
+        anyhow::bail!("Editor exited with error status");
+    }
+    
+    // Read the edited message back
+    let edited = std::fs::read_to_string(&temp_path)
+        .context("Failed to read edited commit message from temporary file")?;
+    
+    Ok(edited)
 }
 
 fn perform_commit(message: &str) -> Result<()> {

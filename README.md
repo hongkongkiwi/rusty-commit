@@ -253,6 +253,9 @@ rco config reset --all                     # Reset to defaults
 | `RCO_LANGUAGE` | Output language | `en` |
 | `RCO_MAX_TOKENS` | Max response tokens | `1024` |
 | `RCO_TEMPERATURE` | Response creativity | `0.7` |
+| `RCO_ENABLE_COMMIT_BODY` | Add commit body with context | `false` |
+| `RCO_LEARN_FROM_HISTORY` | Learn style from git history | `false` |
+| `RCO_HISTORY_COMMITS_COUNT` | Commits to analyze for style | `50` |
 
 ---
 
@@ -289,6 +292,132 @@ rco config set RCO_HOOK_TIMEOUT_MS=60000   # Timeout in ms
 ```bash
 rco --no-pre-hooks      # Skip pre-gen + pre-commit hooks
 rco --no-post-hooks     # Skip post-commit hooks
+```
+
+---
+
+## 🧠 Advanced Features
+
+### Repository Context Awareness
+
+Rusty Commit automatically detects and includes project context for better commit messages:
+
+```bash
+# Create custom context file
+echo "Payment processing microservice using Stripe API" > .rco/context.txt
+```
+
+**Auto-detected context sources:**
+- `.rco/context.txt` - Custom project description
+- `README.md` - First paragraph
+- `Cargo.toml` - Rust project description
+- `package.json` - Node.js project description
+
+### Commit Body Generation
+
+Enable detailed commit messages with body explaining the "why":
+
+```bash
+rco config set RCO_ENABLE_COMMIT_BODY=true
+```
+
+**Output:**
+```
+feat(auth): implement OAuth2 PKCE flow
+
+- Add secure token storage with automatic refresh
+- Support GitHub, GitLab, and generic OAuth2 providers
+- Handle token expiration gracefully
+```
+
+### Style Learning from History
+
+Automatically learn and match your team's commit style:
+
+```bash
+rco config set RCO_LEARN_FROM_HISTORY=true
+```
+
+Analyzes last 50 commits to detect:
+- Common commit types and scopes
+- Average description length
+- Capitalization preferences
+- Gitmoji usage patterns
+
+### Enhanced GitMoji Support
+
+25+ emojis from [gitmoji.dev](https://gitmoji.dev) specification:
+
+| Emoji | Meaning | Use Case |
+|-------|---------|----------|
+| ✨ | `:sparkles:` | New feature |
+| 🐛 | `:bug:` | Bug fix |
+| 📝 | `:memo:` | Documentation |
+| 🎨 | `:art:` | Code structure/format |
+| ♻️ | `:recycle:` | Refactoring |
+| ⚡ | `:zap:` | Performance |
+| ✅ | `:white_check_mark:` | Tests |
+| 🔒 | `:lock:` | Security fix |
+| ⬆️ | `:arrow_up:` | Upgrade dependencies |
+| 🔥 | `:fire:` | Remove code/files |
+| 🚀 | `:rocket:` | Deployment |
+| 💥 | `:boom:` | Breaking changes |
+
+---
+
+## 🎨 Custom Skills
+
+Create reusable commit message templates and prompt customizations:
+
+```bash
+# List available skills
+rco skills list
+
+# Create a new skill
+rco skills create conventional-with-scope --category template
+
+# Create project-specific skill
+rco skills create my-team-style --project
+
+# Show skill details
+rco skills show my-team-style
+
+# Remove a skill
+rco skills remove my-team-style
+```
+
+### Skill Structure
+
+Skills are stored in `~/.config/rustycommit/skills/` (or `.rco/skills/` for project-specific):
+
+```
+my-skill/
+├── skill.toml      # Skill manifest
+├── prompt.md       # Custom prompt template
+└── hooks/          # Optional hooks
+    ├── pre_gen.sh
+    └── post_gen.sh
+```
+
+### Custom Prompt Template
+
+Create `prompt.md` with placeholders:
+
+```markdown
+# Custom Commit Prompt
+
+Analyze this {language} code change:
+
+{diff}
+
+Context: {context}
+Format: {commit_type}
+Max length: {max_length}
+
+Generate a commit message following our team conventions:
+- Use present tense
+- Include ticket number if obvious from branch name
+- Reference related components
 ```
 
 ---

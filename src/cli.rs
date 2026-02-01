@@ -24,6 +24,12 @@ use crate::output::prelude::OutputFormat;
     # Use a custom prompt file
     rco --prompt-file ~/.rco/prompts/my-prompt.md
 
+    # Preview commit message without committing (dry-run)
+    rco --dry-run
+
+    # Open generated message in $EDITOR before committing
+    rco --edit
+
     # Authenticate with Anthropic
     rco auth login
 
@@ -32,6 +38,15 @@ use crate::output::prelude::OutputFormat;
 
     # Generate PR description
     rco pr generate --base main
+
+    # List available skills
+    rco skills list
+
+    # Create a new skill
+    rco skills create my-template --category template
+
+    # Use a skill for commit generation
+    rco --skill my-template
 
     # Generate shell completions
     rco completions bash
@@ -104,6 +119,18 @@ pub struct GlobalOptions {
     /// Use a custom prompt template file
     #[arg(long = "prompt-file")]
     pub prompt_file: Option<String>,
+
+    /// Preview the generated commit message without committing (dry-run mode)
+    #[arg(long = "dry-run", default_value = "false")]
+    pub dry_run: bool,
+
+    /// Open the generated message in $EDITOR before committing
+    #[arg(short = 'e', long = "edit", default_value = "false")]
+    pub edit: bool,
+
+    /// Use a specific skill for commit generation
+    #[arg(long = "skill")]
+    pub skill: Option<String>,
 }
 
 #[derive(Parser)]
@@ -145,6 +172,9 @@ pub enum Commands {
 
     /// Generate shell completions
     Completions(CompletionsCommand),
+
+    /// Manage skills (custom templates, analyzers, formatters)
+    Skills(SkillsCommand),
 }
 
 #[derive(Parser)]
@@ -324,4 +354,46 @@ pub struct CompletionsCommand {
     /// Shell to generate completions for
     #[arg(value_enum)]
     pub shell: clap_complete::Shell,
+}
+
+#[derive(Parser)]
+pub struct SkillsCommand {
+    #[command(subcommand)]
+    pub action: SkillsAction,
+}
+
+#[derive(Subcommand)]
+pub enum SkillsAction {
+    /// List all available skills
+    List {
+        /// Filter by category
+        #[arg(short, long)]
+        category: Option<String>,
+    },
+    /// Create a new skill from template
+    Create {
+        /// Skill name
+        name: String,
+        /// Skill category
+        #[arg(short, long, default_value = "template")]
+        category: String,
+        /// Create as a project-level skill (in .rco/skills/)
+        #[arg(short, long, default_value = "false")]
+        project: bool,
+    },
+    /// Show skill details
+    Show {
+        /// Skill name
+        name: String,
+    },
+    /// Remove a skill
+    Remove {
+        /// Skill name
+        name: String,
+        /// Force removal without confirmation
+        #[arg(short, long)]
+        force: bool,
+    },
+    /// Open skill directory in default editor/file manager
+    Open,
 }

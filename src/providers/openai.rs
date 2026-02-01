@@ -226,6 +226,9 @@ impl OpenAICompatibleProvider {
         compat.insert("zhipu", "https://open.bigmodel.cn/api/paas/v4");
         compat.insert("minimax", "https://api.minimax.chat/v1");
         compat.insert("glm", "https://open.bigmodel.cn/api/paas/v4");
+        
+        // Additional providers from OpenCommit
+        compat.insert("aimlapi", "https://api.aimlapi.com/v1");
 
         Self {
             name: "openai",

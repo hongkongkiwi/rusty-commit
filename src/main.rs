@@ -5,6 +5,7 @@ mod config;
 mod git;
 mod output;
 mod providers;
+mod skills;
 mod update;
 mod utils;
 
@@ -49,6 +50,7 @@ async fn main() -> Result<()> {
         Some(cli::Commands::Model(cmd)) => commands::model::execute(cmd).await,
         Some(cli::Commands::Setup(cmd)) => commands::setup::execute(cmd).await,
         Some(cli::Commands::Completions(cmd)) => commands::completions::execute(cmd).await,
+        Some(cli::Commands::Skills(cmd)) => commands::skills::execute(cmd).await,
         None => {
             // Default to commit command
             commands::commit::execute(cli.global).await

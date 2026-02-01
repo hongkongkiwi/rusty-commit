@@ -320,7 +320,11 @@ pub fn styled_progress(message: &str, palette: &Palette) -> ProgressBar {
             _ => "green",
         }
     );
-    pb.set_style(ProgressStyle::default_spinner().template(&template).unwrap());
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template(&template)
+            .unwrap(),
+    );
     pb.set_message(message.to_string());
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
     pb

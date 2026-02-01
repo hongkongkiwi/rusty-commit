@@ -34,11 +34,7 @@ impl OpenAIProvider {
         );
 
         let client = Client::with_config(openai_config);
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("gpt-4o-mini")
-            .to_string();
+        let model = config.model.as_deref().unwrap_or("gpt-4o-mini").to_string();
 
         Ok(Self { client, model })
     }

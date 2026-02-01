@@ -240,10 +240,7 @@ fn parse_diff_into_files(diff: &str) -> Vec<FileDiff> {
 ///
 /// This is the first level of chunking - it groups whole files together
 /// to maximize context while staying under the token limit.
-fn merge_diffs_into_chunks(
-    files: &[FileDiff],
-    max_tokens: usize,
-) -> Vec<DiffChunk> {
+fn merge_diffs_into_chunks(files: &[FileDiff], max_tokens: usize) -> Vec<DiffChunk> {
     let mut chunks = Vec::new();
     let mut current_chunk = DiffChunk {
         content: String::new(),
@@ -273,7 +270,7 @@ fn merge_diffs_into_chunks(
 
         // Add file to current chunk
         if !current_chunk.content.is_empty() {
-            current_chunk.content.push_str("\n");
+            current_chunk.content.push('\n');
         }
         current_chunk
             .content
@@ -307,12 +304,10 @@ fn split_file_by_hunks(content: &str, max_tokens: usize) -> Vec<String> {
         let line_tokens = estimate_tokens(line).unwrap_or(1) + 1; // +1 for newline
 
         // Check if this is the start of a new hunk
-        if hunk_header_pattern.is_match(line) {
-            if !current_hunk.is_empty() {
-                hunks.push(current_hunk);
-                current_hunk = String::new();
-                current_tokens = 0;
-            }
+        if hunk_header_pattern.is_match(line) && !current_hunk.is_empty() {
+            hunks.push(current_hunk);
+            current_hunk = String::new();
+            current_tokens = 0;
         }
 
         if current_tokens + line_tokens > max_tokens && !current_hunk.is_empty() {
@@ -380,7 +375,14 @@ pub fn chunk_diff(diff: &str, max_tokens: usize) -> String {
                 return hunk_chunks
                     .into_iter()
                     .enumerate()
-                    .map(|(i, hunk)| format!("---CHUNK {} OF {}---\n{}\n---END CHUNK---", i + 1, total_hunks, hunk.trim()))
+                    .map(|(i, hunk)| {
+                        format!(
+                            "---CHUNK {} OF {}---\n{}\n---END CHUNK---",
+                            i + 1,
+                            total_hunks,
+                            hunk.trim()
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join("\n\n");
             }
@@ -394,7 +396,12 @@ pub fn chunk_diff(diff: &str, max_tokens: usize) -> String {
         .enumerate()
         .map(|(i, chunk)| {
             let file_list = chunk.files.join(", ");
-            format!("---CHUNK {} OF MULTIPLE FILES---\nFiles: {}\n\n{}\n---END CHUNK---", i + 1, file_list, chunk.content.trim())
+            format!(
+                "---CHUNK {} OF MULTIPLE FILES---\nFiles: {}\n\n{}\n---END CHUNK---",
+                i + 1,
+                file_list,
+                chunk.content.trim()
+            )
         })
         .collect::<Vec<_>>()
         .join("\n\n")

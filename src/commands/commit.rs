@@ -7,8 +7,8 @@ use std::process::Command;
 use crate::cli::GlobalOptions;
 use crate::config::Config;
 use crate::git;
-use crate::output::styling::Styling;
 use crate::output::progress;
+use crate::output::styling::Styling;
 use crate::providers;
 use crate::utils;
 use crate::utils::hooks::{run_hooks, write_temp_commit_file, HookOptions};
@@ -61,7 +61,6 @@ impl ExecContext {
     fn key_value(&self, key: &str, value: &str) {
         println!("{}: {}", key.dimmed(), value);
     }
-
 }
 
 pub async fn execute(options: GlobalOptions) -> Result<()> {

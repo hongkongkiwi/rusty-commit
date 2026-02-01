@@ -866,7 +866,10 @@ async fn status() -> Result<()> {
     // Check for API key
     if config.api_key.is_some() {
         out.success("API Key configured");
-        out.key_value("Provider", config.ai_provider.as_deref().unwrap_or("openai"));
+        out.key_value(
+            "Provider",
+            config.ai_provider.as_deref().unwrap_or("openai"),
+        );
         return Ok(());
     }
 
@@ -908,8 +911,14 @@ async fn status() -> Result<()> {
     } else {
         out.error("Not authenticated");
         out.subheader("To authenticate, run one of:");
-        println!("  • {} - Use Claude OAuth (recommended for Pro/Max users)", "rco auth login".cyan());
-        println!("  • {} - Use API key", "rco config set RCO_API_KEY=<your_key>".cyan());
+        println!(
+            "  • {} - Use Claude OAuth (recommended for Pro/Max users)",
+            "rco auth login".cyan()
+        );
+        println!(
+            "  • {} - Use API key",
+            "rco config set RCO_API_KEY=<your_key>".cyan()
+        );
     }
 
     println!("\n{}", "Storage Information:".bold());

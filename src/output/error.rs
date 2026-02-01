@@ -409,8 +409,7 @@ mod tests {
 
     #[test]
     fn test_error_to_json() {
-        let error = StructuredError::new("Test")
-            .with_hint("Hint 1");
+        let error = StructuredError::new("Test").with_hint("Hint 1");
         let json = error.to_json();
         assert!(json.contains("Test"));
         assert!(json.contains("Hint 1"));
@@ -431,8 +430,7 @@ mod tests {
     #[test]
     fn test_structured_error_display() {
         let theme = Theme::new();
-        let error = StructuredError::new("Test error")
-            .with_hint("Test hint");
+        let error = StructuredError::new("Test error").with_hint("Test hint");
         let display = error.display(&theme);
         assert!(display.contains("Test error"));
         assert!(display.contains("Suggestions"));

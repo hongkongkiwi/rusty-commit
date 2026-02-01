@@ -462,7 +462,6 @@ jobs:
       - build-rpm
       - build-apk
       - publish-docker
-      - update-actions
     runs-on: ubuntu-latest
     steps:
       - name: Download release assets

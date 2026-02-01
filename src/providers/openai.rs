@@ -161,80 +161,166 @@ impl OpenAICompatibleProvider {
         );
         compat.insert("codex", "https://api.openai.com/v1");
 
-        // From OpenCode (Enterprise & Cloud)
+        // ═══════════════════════════════════════════════════════════════════════
+        // OpenAI-Compatible Providers - Comprehensive list from OpenCode
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ───────────────────────────────────────────────────────────────────────
+        // 1. Major Cloud Providers (Enterprise)
+        // ───────────────────────────────────────────────────────────────────────
         compat.insert("cohere", "https://api.cohere.com/v1");
+        compat.insert("cohere-ai", "https://api.cohere.com/v1");
         compat.insert("ai21", "https://api.ai21.com/studio/v1");
         compat.insert("ai21-labs", "https://api.ai21.com/studio/v1");
         compat.insert("upstage", "https://api.upstage.ai/v1/solar");
+        compat.insert("upstage-ai", "https://api.upstage.ai/v1/solar");
         compat.insert("solar", "https://api.upstage.ai/v1/solar");
+        compat.insert("solar-pro", "https://api.upstage.ai/v1/solar");
 
-        // From OpenCode (GPU Cloud & Inference)
+        // ───────────────────────────────────────────────────────────────────────
+        // 2. GPU Cloud & Inference Providers
+        // ───────────────────────────────────────────────────────────────────────
         compat.insert("nebius", "https://api.studio.nebius.ai/v1");
-        compat.insert("ovh", "https://api.ovhcloud.com/v1");
-        compat.insert("ovhcloud", "https://api.ovhcloud.com/v1");
+        compat.insert("nebius-ai", "https://api.studio.nebius.ai/v1");
+        compat.insert("nebius-studio", "https://api.studio.nebius.ai/v1");
+        compat.insert("ovh", "https://api.ovh.com/v1");
+        compat.insert("ovhcloud", "https://api.ovh.com/v1");
+        compat.insert("ovh-ai", "https://api.ovh.com/v1");
         compat.insert("scaleway", "https://api.scaleway.ai/v1");
+        compat.insert("scaleway-ai", "https://api.scaleway.ai/v1");
         compat.insert("friendli", "https://api.friendli.ai/v1");
+        compat.insert("friendli-ai", "https://api.friendli.ai/v1");
         compat.insert("baseten", "https://api.baseten.co/v1");
+        compat.insert("baseten-ai", "https://api.baseten.co/v1");
         compat.insert("chutes", "https://api.chutes.ai/v1");
+        compat.insert("chutes-ai", "https://api.chutes.ai/v1");
         compat.insert("ionet", "https://api.io.net/v1");
+        compat.insert("io-net", "https://api.io.net/v1");
         compat.insert("modelscope", "https://api.modelscope.cn/v1");
         compat.insert("requesty", "https://api.requesty.ai/v1");
         compat.insert("morph", "https://api.morph.so/v1");
+        compat.insert("morph-labs", "https://api.morph.so/v1");
         compat.insert("synthetic", "https://api.syntheticai.com/v1");
         compat.insert("nano-gpt", "https://api.nano-gpt.com/v1");
+        compat.insert("nanogpt", "https://api.nano-gpt.com/v1");
         compat.insert("zenmux", "https://api.zenmux.com/v1");
         compat.insert("v0", "https://api.v0.dev/v1");
+        compat.insert("v0-vercel", "https://api.v0.dev/v1");
         compat.insert("iflowcn", "https://api.iflow.cn/v1");
         compat.insert("venice", "https://api.venice.ai/v1");
+        compat.insert("venice-ai", "https://api.venice.ai/v1");
         compat.insert("cortecs", "https://api.cortecs.ai/v1");
+        compat.insert("cortecs-ai", "https://api.cortecs.ai/v1");
         compat.insert("kimi-coding", "https://api.moonshot.cn/v1");
         compat.insert("abacus", "https://api.abacus.ai/v1");
+        compat.insert("abacus-ai", "https://api.abacus.ai/v1");
         compat.insert("bailing", "https://api.bailing.ai/v1");
         compat.insert("fastrouter", "https://api.fastrouter.ai/v1");
         compat.insert("inference", "https://api.inference.net/v1");
+        compat.insert("inference-net", "https://api.inference.net/v1");
         compat.insert("submodel", "https://api.submodel.ai/v1");
         compat.insert("zai", "https://api.z.ai/v1");
         compat.insert("zai-coding", "https://api.z.ai/v1");
         compat.insert("zhipu-coding", "https://open.bigmodel.cn/api/paas/v4");
         compat.insert("poe", "https://api.poe.com/v1");
+        compat.insert("poe-ai", "https://api.poe.com/v1");
         compat.insert("cerebras", "https://api.cerebras.ai/v1");
-        compat.insert("lmstudio", "http://localhost:1234/v1");
+        compat.insert("cerebras-ai", "https://api.cerebras.ai/v1");
         compat.insert("sambanova", "https://api.sambanova.ai/v1");
+        compat.insert("sambanova-ai", "https://api.sambanova.ai/v1");
         compat.insert("novita", "https://api.novita.ai/v3/openai");
+        compat.insert("novita-ai", "https://api.novita.ai/v3/openai");
         compat.insert("predibase", "https://api.predibase.com/v1");
         compat.insert("tensorops", "https://api.tensorops.ai/v1");
         compat.insert("hyperbolic", "https://api.hyperbolic.ai/v1");
+        compat.insert("hyperbolic-ai", "https://api.hyperbolic.ai/v1");
         compat.insert("kluster", "https://api.kluster.ai/v1");
+        compat.insert("kluster-ai", "https://api.kluster.ai/v1");
         compat.insert("lambda", "https://api.lambda.ai/v1");
+        compat.insert("lambda-labs", "https://api.lambda.ai/v1");
         compat.insert("replicate", "https://api.replicate.com/v1");
         compat.insert("targon", "https://api.targon.com/v1");
         compat.insert("corcel", "https://api.corcel.io/v1");
         compat.insert("cybernative", "https://api.cybernative.ai/v1");
+        compat.insert("cybernative-ai", "https://api.cybernative.ai/v1");
         compat.insert("edgen", "https://api.edgen.co/v1");
         compat.insert("gigachat", "https://api.gigachat.ru/v1");
+        compat.insert("gigachat-ai", "https://api.gigachat.ru/v1");
         compat.insert("hydra", "https://api.hydraai.com/v1");
+        compat.insert("hydra-ai", "https://api.hydraai.com/v1");
         compat.insert("jina", "https://api.jina.ai/v1");
+        compat.insert("jina-ai", "https://api.jina.ai/v1");
         compat.insert("lingyi", "https://api.lingyiwanwu.com/v1");
+        compat.insert("lingyiwanwu", "https://api.lingyiwanwu.com/v1");
         compat.insert("monica", "https://api.monica.ai/v1");
+        compat.insert("monica-ai", "https://api.monica.ai/v1");
         compat.insert("pollinations", "https://api.pollinations.ai/v1");
+        compat.insert("pollinations-ai", "https://api.pollinations.ai/v1");
         compat.insert("rawechat", "https://api.rawe.chat/v1");
         compat.insert("shuttleai", "https://api.shuttleai.com/v1");
+        compat.insert("shuttle-ai", "https://api.shuttleai.com/v1");
         compat.insert("teknium", "https://api.teknium.ai/v1");
         compat.insert("theb", "https://api.theb.ai/v1");
+        compat.insert("theb-ai", "https://api.theb.ai/v1");
         compat.insert("tryleap", "https://api.tryleap.ai/v1");
+        compat.insert("leap-ai", "https://api.tryleap.ai/v1");
+
+        // ───────────────────────────────────────────────────────────────────────
+        // 3. Local/Self-hosted Providers
+        // ───────────────────────────────────────────────────────────────────────
+        compat.insert("lmstudio", "http://localhost:1234/v1");
+        compat.insert("lm-studio", "http://localhost:1234/v1");
+        compat.insert("llamacpp", "http://localhost:8080/v1");
+        compat.insert("llama-cpp", "http://localhost:8080/v1");
+        compat.insert("kobold", "http://localhost:5000/v1");
+        compat.insert("koboldcpp", "http://localhost:5000/v1");
+        compat.insert("textgen", "http://localhost:5000/v1");
+        compat.insert("text-generation", "http://localhost:5000/v1");
+        compat.insert("tabby", "http://localhost:8080/v1");
+
+        // ───────────────────────────────────────────────────────────────────────
+        // 4. China-based Providers
+        // ───────────────────────────────────────────────────────────────────────
+        compat.insert("siliconflow", "https://api.siliconflow.cn/v1");
+        compat.insert("silicon-flow", "https://api.siliconflow.cn/v1");
+        compat.insert("zhipu", "https://open.bigmodel.cn/api/paas/v4");
+        compat.insert("zhipu-ai", "https://open.bigmodel.cn/api/paas/v4");
+        compat.insert("bigmodel", "https://open.bigmodel.cn/api/paas/v4");
+        compat.insert("minimax", "https://api.minimax.chat/v1");
+        compat.insert("minimax-ai", "https://api.minimax.chat/v1");
+        compat.insert("glm", "https://open.bigmodel.cn/api/paas/v4");
+        compat.insert("chatglm", "https://open.bigmodel.cn/api/paas/v4");
+        compat.insert("baichuan", "https://api.baichuan-ai.com/v1");
+        compat.insert("01-ai", "https://api.01.ai/v1");
+        compat.insert("yi", "https://api.01.ai/v1");
+
+        // ───────────────────────────────────────────────────────────────────────
+        // 5. Additional Providers from OpenCommit & Others
+        // ───────────────────────────────────────────────────────────────────────
+        compat.insert("aimlapi", "https://api.aimlapi.com/v1");
+        compat.insert("ai-ml-api", "https://api.aimlapi.com/v1");
+
+        // ───────────────────────────────────────────────────────────────────────
+        // 6. AI Gateway & Proxy Services
+        // ───────────────────────────────────────────────────────────────────────
+        compat.insert("helicone", "https://gateway.helicone.ai/v1");
+        compat.insert("helicone-ai", "https://gateway.helicone.ai/v1");
         compat.insert(
             "workers-ai",
             "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
         );
+        compat.insert("cloudflare-ai", "https://gateway.ai.cloudflare.com/v1");
+        compat.insert("cloudflare-gateway", "https://gateway.ai.cloudflare.com/v1");
+        compat.insert("vercel-ai", "https://api.vercel.ai/v1");
+        compat.insert("vercel-gateway", "https://api.vercel.ai/v1");
 
-        // China-based providers
-        compat.insert("siliconflow", "https://api.siliconflow.cn/v1");
-        compat.insert("zhipu", "https://open.bigmodel.cn/api/paas/v4");
-        compat.insert("minimax", "https://api.minimax.chat/v1");
-        compat.insert("glm", "https://open.bigmodel.cn/api/paas/v4");
-
-        // Additional providers from OpenCommit
-        compat.insert("aimlapi", "https://api.aimlapi.com/v1");
+        // ───────────────────────────────────────────────────────────────────────
+        // 7. Specialized Providers
+        // ───────────────────────────────────────────────────────────────────────
+        compat.insert("302ai", "https://api.302.ai/v1");
+        compat.insert("302-ai", "https://api.302.ai/v1");
+        compat.insert("sap-ai", "https://api.ai.sap.com/v1");
+        compat.insert("sap-ai-core", "https://api.ai.sap.com/v1");
 
         Self {
             name: "openai",

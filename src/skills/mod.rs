@@ -150,6 +150,7 @@ pub struct Skill {
     pub source: SkillSource,
 }
 
+#[allow(dead_code)]
 impl Skill {
     /// Get the skill name
     pub fn name(&self) -> &str {
@@ -231,6 +232,7 @@ impl Skill {
 
 /// Skill source/origin
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum SkillSource {
     /// Built-in skill shipped with rusty-commit
     Builtin,
@@ -260,6 +262,7 @@ pub struct SkillsManager {
     skills: Vec<Skill>,
 }
 
+#[allow(dead_code)]
 impl SkillsManager {
     /// Create a new skills manager
     pub fn new() -> Result<Self> {
@@ -524,6 +527,7 @@ impl Default for SkillsManager {
 }
 
 /// Built-in skills that are always available
+#[allow(dead_code)]
 pub mod builtin {
 
     /// Get the conventional commit skill prompt
@@ -1063,7 +1067,7 @@ pub mod external {
         // Determine skill name from URL or provided name
         let skill_name = name.map(|s| s.to_string()).unwrap_or_else(|| {
             url.split('/')
-                .last()
+                .next_back()
                 .and_then(|s| s.split('.').next())
                 .unwrap_or("imported-skill")
                 .to_string()

@@ -20,34 +20,39 @@ enum ProviderCategory {
     Local,
     Cloud,
     Enterprise,
+    Specialized,
 }
 
 impl ProviderOption {
     fn all() -> Vec<Self> {
         vec![
+            // ═════════════════════════════════════════════════════════════════
             // Popular providers
+            // ═════════════════════════════════════════════════════════════════
             ProviderOption {
                 name: "openai",
-                display: "OpenAI (GPT-4o, GPT-4o-mini)",
+                display: "OpenAI (GPT-4o, GPT-4o-mini, GPT-5)",
                 default_model: "gpt-4o-mini",
                 requires_key: true,
                 category: ProviderCategory::Popular,
             },
             ProviderOption {
                 name: "anthropic",
-                display: "Anthropic (Claude 3.5 Sonnet, Haiku)",
+                display: "Anthropic (Claude 3.5/4 Sonnet, Haiku, Opus)",
                 default_model: "claude-3-5-haiku-20241022",
                 requires_key: true,
                 category: ProviderCategory::Popular,
             },
             ProviderOption {
                 name: "gemini",
-                display: "Google Gemini (Flash, Pro)",
-                default_model: "gemini-1.5-flash",
+                display: "Google Gemini (2.5 Flash, 2.5 Pro)",
+                default_model: "gemini-2.5-flash",
                 requires_key: true,
                 category: ProviderCategory::Popular,
             },
+            // ═════════════════════════════════════════════════════════════════
             // Local/Self-hosted
+            // ═════════════════════════════════════════════════════════════════
             ProviderOption {
                 name: "ollama",
                 display: "Ollama (Local models - free, private)",
@@ -55,7 +60,54 @@ impl ProviderOption {
                 requires_key: false,
                 category: ProviderCategory::Local,
             },
-            // Cloud providers
+            ProviderOption {
+                name: "lmstudio",
+                display: "LM Studio (Local GUI for LLMs)",
+                default_model: "local-model",
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            ProviderOption {
+                name: "llamacpp",
+                display: "llama.cpp (Local inference)",
+                default_model: "local-model",
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // Cloud providers - Fast Inference
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "groq",
+                display: "Groq (Ultra-fast inference)",
+                default_model: "llama-3.3-70b-versatile",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "cerebras",
+                display: "Cerebras (Fast inference)",
+                default_model: "llama-3.3-70b",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "sambanova",
+                display: "SambaNova (Fast inference)",
+                default_model: "Meta-Llama-3.3-70B-Instruct",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "nebius",
+                display: "Nebius (GPU cloud inference)",
+                default_model: "meta-llama/Llama-3.3-70B-Instruct",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // Cloud providers - General
+            // ═════════════════════════════════════════════════════════════════
             ProviderOption {
                 name: "xai",
                 display: "xAI (Grok)",
@@ -65,21 +117,14 @@ impl ProviderOption {
             },
             ProviderOption {
                 name: "deepseek",
-                display: "DeepSeek (V3, Coder)",
+                display: "DeepSeek (V3, R1 Reasoner)",
                 default_model: "deepseek-chat",
                 requires_key: true,
                 category: ProviderCategory::Cloud,
             },
             ProviderOption {
-                name: "groq",
-                display: "Groq (Fast inference)",
-                default_model: "llama-3.1-8b-instant",
-                requires_key: true,
-                category: ProviderCategory::Cloud,
-            },
-            ProviderOption {
                 name: "openrouter",
-                display: "OpenRouter (Access many models)",
+                display: "OpenRouter (Access 100+ models)",
                 default_model: "anthropic/claude-3.5-haiku",
                 requires_key: true,
                 category: ProviderCategory::Cloud,
@@ -98,7 +143,30 @@ impl ProviderOption {
                 requires_key: true,
                 category: ProviderCategory::Cloud,
             },
+            ProviderOption {
+                name: "together",
+                display: "Together AI",
+                default_model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "fireworks",
+                display: "Fireworks AI",
+                default_model: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "replicate",
+                display: "Replicate",
+                default_model: "meta/meta-llama-3-70b-instruct",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            // ═════════════════════════════════════════════════════════════════
             // Enterprise
+            // ═════════════════════════════════════════════════════════════════
             ProviderOption {
                 name: "azure",
                 display: "Azure OpenAI",
@@ -116,13 +184,69 @@ impl ProviderOption {
             ProviderOption {
                 name: "vertex",
                 display: "Google Vertex AI",
-                default_model: "gemini-1.5-flash-001",
+                default_model: "gemini-2.5-flash-001",
                 requires_key: true,
                 category: ProviderCategory::Enterprise,
+            },
+            ProviderOption {
+                name: "cohere",
+                display: "Cohere",
+                default_model: "command-r",
+                requires_key: true,
+                category: ProviderCategory::Enterprise,
+            },
+            ProviderOption {
+                name: "ai21",
+                display: "AI21 Labs (Jamba)",
+                default_model: "jamba-1.5-mini",
+                requires_key: true,
+                category: ProviderCategory::Enterprise,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // China-based Providers
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "siliconflow",
+                display: "SiliconFlow (China)",
+                default_model: "deepseek-ai/DeepSeek-V3",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "zhipu",
+                display: "Zhipu AI / ChatGLM (China)",
+                default_model: "glm-4-flash",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "moonshot",
+                display: "Moonshot AI / Kimi (China)",
+                default_model: "moonshot-v1-8k",
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // Specialized Providers
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "jina",
+                display: "Jina AI (Embeddings & LLMs)",
+                default_model: "jina-embeddings-v3",
+                requires_key: true,
+                category: ProviderCategory::Specialized,
+            },
+            ProviderOption {
+                name: "helicone",
+                display: "Helicone (LLM Observability)",
+                default_model: "gpt-4o-mini",
+                requires_key: true,
+                category: ProviderCategory::Specialized,
             },
         ]
     }
 
+    #[allow(dead_code)]
     fn by_name(name: &str) -> Option<Self> {
         Self::all().into_iter().find(|p| p.name == name)
     }
@@ -532,33 +656,85 @@ fn select_provider_quick() -> Result<ProviderOption> {
     println!();
 
     let providers = ProviderOption::all();
-    let popular: Vec<_> = providers
+    let _popular: Vec<_> = providers
         .iter()
         .filter(|p| p.category == ProviderCategory::Popular)
         .map(|p| p.display)
         .collect();
 
-    let local: Vec<_> = providers
+    let _local: Vec<_> = providers
         .iter()
         .filter(|p| p.category == ProviderCategory::Local)
         .map(|p| p.display)
         .collect();
 
-    let others: Vec<_> = providers
+    let _cloud: Vec<_> = providers
         .iter()
-        .filter(|p| {
-            p.category == ProviderCategory::Cloud || p.category == ProviderCategory::Enterprise
-        })
+        .filter(|p| p.category == ProviderCategory::Cloud)
+        .map(|p| p.display)
+        .collect();
+
+    let _enterprise: Vec<_> = providers
+        .iter()
+        .filter(|p| p.category == ProviderCategory::Enterprise)
+        .map(|p| p.display)
+        .collect();
+
+    let specialized: Vec<_> = providers
+        .iter()
+        .filter(|p| p.category == ProviderCategory::Specialized)
         .map(|p| p.display)
         .collect();
 
     let mut all_displays = Vec::new();
+    let mut provider_indices: Vec<usize> = Vec::new();
+
+    // Popular section
     all_displays.push("─── Popular Providers ───".dimmed().to_string());
-    all_displays.extend(popular.iter().map(|s| s.to_string()));
+    for (idx, p) in providers.iter().enumerate() {
+        if p.category == ProviderCategory::Popular {
+            all_displays.push(p.display.to_string());
+            provider_indices.push(idx);
+        }
+    }
+
+    // Local section
     all_displays.push("─── Local/Private ───".dimmed().to_string());
-    all_displays.extend(local.iter().map(|s| s.to_string()));
-    all_displays.push("─── More Cloud Providers ───".dimmed().to_string());
-    all_displays.extend(others.iter().map(|s| s.to_string()));
+    for (idx, p) in providers.iter().enumerate() {
+        if p.category == ProviderCategory::Local {
+            all_displays.push(p.display.to_string());
+            provider_indices.push(idx);
+        }
+    }
+
+    // Cloud section
+    all_displays.push("─── Cloud Providers ───".dimmed().to_string());
+    for (idx, p) in providers.iter().enumerate() {
+        if p.category == ProviderCategory::Cloud {
+            all_displays.push(p.display.to_string());
+            provider_indices.push(idx);
+        }
+    }
+
+    // Enterprise section
+    all_displays.push("─── Enterprise ───".dimmed().to_string());
+    for (idx, p) in providers.iter().enumerate() {
+        if p.category == ProviderCategory::Enterprise {
+            all_displays.push(p.display.to_string());
+            provider_indices.push(idx);
+        }
+    }
+
+    // Specialized section
+    if !specialized.is_empty() {
+        all_displays.push("─── Specialized ───".dimmed().to_string());
+        for (idx, p) in providers.iter().enumerate() {
+            if p.category == ProviderCategory::Specialized {
+                all_displays.push(p.display.to_string());
+                provider_indices.push(idx);
+            }
+        }
+    }
 
     let selection = Select::new()
         .with_prompt("AI Provider")
@@ -566,25 +742,23 @@ fn select_provider_quick() -> Result<ProviderOption> {
         .default(1) // First real item (after header)
         .interact()?;
 
-    // Map selection back to provider (accounting for headers)
-    let provider_name = match selection {
-        1 => "openai",
-        2 => "anthropic",
-        3 => "gemini",
-        5 => "ollama",
-        7 => "xai",
-        8 => "deepseek",
-        9 => "groq",
-        10 => "openrouter",
-        11 => "mistral",
-        12 => "perplexity",
-        13 => "azure",
-        14 => "bedrock",
-        15 => "vertex",
-        _ => "openai",
+    // Count headers before the selected item to determine actual provider index
+    let header_count = all_displays[..=selection].iter()
+        .filter(|s| s.starts_with('─'))
+        .count();
+    
+    let provider_idx = if selection > 0 {
+        selection.saturating_sub(header_count)
+    } else {
+        0
     };
 
-    let provider = ProviderOption::by_name(provider_name).unwrap();
+    let provider = if provider_idx < provider_indices.len() {
+        providers.into_iter().nth(provider_indices[provider_idx]).unwrap()
+    } else {
+        // Fallback to first popular provider
+        providers.into_iter().find(|p| p.category == ProviderCategory::Popular).unwrap()
+    };
 
     println!();
     println!(
@@ -651,7 +825,7 @@ fn prompt_for_api_key(provider_name: &str) -> Result<String> {
         println!(
             "{} No API key provided. You can set it later with: {}",
             "⚠️".yellow(),
-            format!("rco config set RCO_API_KEY=<your_key>").bright_cyan()
+            "rco config set RCO_API_KEY=<your_key>".bright_cyan()
         );
     } else {
         // Show last 4 characters for confirmation

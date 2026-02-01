@@ -21,6 +21,9 @@ use crate::output::prelude::OutputFormat;
     # Use GitMoji format
     rco --fgm
 
+    # Use a custom prompt file
+    rco --prompt-file ~/.rco/prompts/my-prompt.md
+
     # Authenticate with Anthropic
     rco auth login
 
@@ -97,6 +100,10 @@ pub struct GlobalOptions {
     /// Output format (pretty, json, markdown)
     #[arg(long = "output-format", default_value = "pretty")]
     pub output_format: OutputFormat,
+
+    /// Use a custom prompt template file
+    #[arg(long = "prompt-file")]
+    pub prompt_file: Option<String>,
 }
 
 #[derive(Parser)]
@@ -195,7 +202,7 @@ pub enum ConfigAction {
     Describe,
     /// Add a new provider account
     AddProvider {
-        /// Provider to add (openai, anthropic, claude-code, qwen, ollama, xai, gemini, perplexity, azure)
+        /// Provider to add (openai, anthropic, claude-code, qwen, ollama, xai, gemini, perplexity, azure, mlx, nvidia, and many more)
         #[arg(short, long)]
         provider: Option<String>,
         /// Account alias (e.g., "work", "personal")

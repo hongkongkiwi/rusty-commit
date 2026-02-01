@@ -70,7 +70,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     git::assert_git_repo()?;
 
     // Load and validate configuration
-    let config = load_and_validate_config()?;
+    let config = load_and_validate_config(&options)?;
 
     // Determine effective generate count (CLI > config > default), clamped to 1-5
     let generate_count = options
@@ -131,8 +131,14 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
 }
 
 /// Load configuration and apply commitlint rules
-fn load_and_validate_config() -> Result<Config> {
+fn load_and_validate_config(options: &GlobalOptions) -> Result<Config> {
     let mut config = Config::load()?;
+
+    // Apply CLI prompt-file override if provided
+    if let Some(ref prompt_file) = options.prompt_file {
+        config.set_prompt_file(Some(prompt_file.clone()));
+    }
+
     config.load_with_commitlint()?;
     config.apply_commitlint_rules()?;
     Ok(config)

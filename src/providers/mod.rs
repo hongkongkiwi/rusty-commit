@@ -9,6 +9,10 @@ pub mod bedrock;
 pub mod gemini;
 #[cfg(feature = "huggingface")]
 pub mod huggingface;
+#[cfg(feature = "mlx")]
+pub mod mlx;
+#[cfg(feature = "nvidia")]
+pub mod nvidia;
 #[cfg(feature = "ollama")]
 pub mod ollama;
 #[cfg(feature = "openai")]
@@ -212,6 +216,16 @@ pub static PROVIDER_REGISTRY: Lazy<registry::ProviderRegistry> = Lazy::new(|| {
         let _ = reg.register(Box::new(vertex::VertexProviderBuilder));
     }
 
+    #[cfg(feature = "mlx")]
+    {
+        let _ = reg.register(Box::new(mlx::MlxProviderBuilder));
+    }
+
+    #[cfg(feature = "nvidia")]
+    {
+        let _ = reg.register(Box::new(nvidia::NvidiaProviderBuilder));
+    }
+
     reg
 });
 
@@ -275,6 +289,7 @@ pub fn available_providers() -> Vec<&'static str> {
     #[cfg(feature = "openai")]
     {
         providers.extend_from_slice(&[
+            // Major providers
             "deepseek",
             "groq",
             "openrouter",
@@ -285,6 +300,67 @@ pub fn available_providers() -> Vec<&'static str> {
             "fireworks",
             "moonshot",
             "dashscope",
+            // From OpenCode
+            "cohere",
+            "ai21",
+            "cloudflare",
+            "siliconflow",
+            "zhipu",
+            "minimax",
+            "upstage",
+            "nebius",
+            "ovh",
+            "scaleway",
+            "friendli",
+            "baseten",
+            "chutes",
+            "ionet",
+            "modelscope",
+            "requesty",
+            "morph",
+            "synthetic",
+            "nano-gpt",
+            "zenmux",
+            "v0",
+            "iflowcn",
+            "venice",
+            "cortecs",
+            "kimi-coding",
+            "abacus",
+            "bailing",
+            "fastrouter",
+            "inference",
+            "submodel",
+            "zai",
+            "zai-coding",
+            "zhipu-coding",
+            "poe",
+            "cerebras",
+            "lmstudio",
+            "sambanova",
+            "novita",
+            "predibase",
+            "tensorops",
+            "hyperbolic",
+            "kluster",
+            "lambda",
+            "replicate",
+            "targon",
+            "corcel",
+            "cybernative",
+            "edgen",
+            "gigachat",
+            "hydra",
+            "jina",
+            "lingyi",
+            "monica",
+            "pollinations",
+            "rawechat",
+            "shuttleai",
+            "teknium",
+            "theb",
+            "tryleap",
+            "workers-ai",
         ]);
     }
 
@@ -581,6 +657,26 @@ pub fn create_provider_for_account(
         "vertex" | "vertex-ai" | "google-vertex" | "gcp-vertex" => Ok(Box::new(
             vertex::VertexProvider::from_account(account, "", config)?,
         )),
+        #[cfg(feature = "mlx")]
+        "mlx" | "mlx-lm" | "apple-mlx" => {
+            if let Some(_key) = credentials.as_ref() {
+                Ok(Box::new(mlx::MlxProvider::from_account(
+                    account, "", config,
+                )?))
+            } else {
+                Ok(Box::new(mlx::MlxProvider::new(config)?))
+            }
+        }
+        #[cfg(feature = "nvidia")]
+        "nvidia" | "nvidia-nim" | "nim" | "nvidia-ai" => {
+            if let Some(key) = credentials.as_ref() {
+                Ok(Box::new(nvidia::NvidiaProvider::from_account(
+                    account, key, config,
+                )?))
+            } else {
+                Ok(Box::new(nvidia::NvidiaProvider::new(config)?))
+            }
+        }
         _ => {
             anyhow::bail!(
                 "Unsupported AI provider for account: {}\n\n\

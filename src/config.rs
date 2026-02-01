@@ -60,6 +60,7 @@ pub struct Config {
     // Global commitlint configuration
     pub commitlint_config: Option<String>,
     pub custom_prompt: Option<String>,
+    pub prompt_file: Option<String>,
 
     // Commit style learning from history
     pub learn_from_history: Option<bool>,
@@ -101,6 +102,7 @@ impl Default for Config {
             hook_timeout_ms: Some(30000),
             commitlint_config: None,
             custom_prompt: None,
+            prompt_file: None,
             learn_from_history: Some(false),
             history_commits_count: Some(10),
             style_profile: None,
@@ -311,6 +313,9 @@ impl Config {
             "RCO_CUSTOM_PROMPT" => {
                 self.custom_prompt = Some(value.to_string());
             }
+            "RCO_PROMPT_FILE" => {
+                self.prompt_file = Some(value.to_string());
+            }
             "RCO_GENERATE_COUNT" => {
                 self.generate_count = Some(
                     value
@@ -383,6 +388,7 @@ impl Config {
             "RCO_ACTION_ENABLED" => self.action_enabled.map(|v| v.to_string()),
             "RCO_COMMITLINT_CONFIG" => self.commitlint_config.as_ref().map(|s| s.to_string()),
             "RCO_CUSTOM_PROMPT" => self.custom_prompt.as_ref().map(|s| s.to_string()),
+            "RCO_PROMPT_FILE" => self.prompt_file.as_ref().map(|s| s.to_string()),
             "RCO_GENERATE_COUNT" => self.generate_count.map(|v| v.to_string()),
             "RCO_CLIPBOARD_ON_TIMEOUT" => self.clipboard_on_timeout.map(|v| v.to_string()),
             _ => None,
@@ -505,7 +511,27 @@ impl Config {
         context: Option<&str>,
         full_gitmoji: bool,
     ) -> String {
-        if let Some(ref custom_prompt) = self.custom_prompt {
+        // Try to load prompt from file first, then fall back to inline custom_prompt
+        let custom_prompt_template = if let Some(ref prompt_file) = self.prompt_file {
+            match Self::load_prompt_file(prompt_file) {
+                Ok(content) => {
+                    tracing::info!("Loaded custom prompt from file: {}", prompt_file);
+                    Some(content)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{}",
+                        format!("Warning: Failed to load prompt file '{}': {}. Using fallback.", prompt_file, e)
+                            .yellow()
+                    );
+                    self.custom_prompt.clone()
+                }
+            }
+        } else {
+            self.custom_prompt.clone()
+        };
+
+        if let Some(template) = custom_prompt_template {
             // Security warning: custom prompts receive diff content
             tracing::warn!(
                 "Using custom prompt template - diff content will be included in the prompt. \
@@ -518,16 +544,73 @@ impl Config {
             );
 
             // Replace placeholders in custom prompt
-            let mut prompt = custom_prompt.clone();
-            prompt = prompt.replace("$diff", diff);
-            if let Some(ctx) = context {
-                prompt = prompt.replace("$context", ctx);
-            }
-            prompt
+            Self::replace_placeholders(&template, diff, context, self)
         } else {
             // Use the standard prompt generation
             super::providers::build_prompt(diff, context, self, full_gitmoji)
         }
+    }
+
+    /// Load prompt content from a file, expanding ~ to home directory
+    fn load_prompt_file(path: &str) -> Result<String> {
+        let expanded_path = if path.starts_with("~") {
+            if let Some(home) = home_dir() {
+                home.join(path.strip_prefix("~/").unwrap_or(path))
+            } else {
+                PathBuf::from(path)
+            }
+        } else {
+            PathBuf::from(path)
+        };
+
+        std::fs::read_to_string(&expanded_path)
+            .with_context(|| format!("Failed to read prompt file: {}", expanded_path.display()))
+    }
+
+    /// Replace placeholders in a prompt template
+    /// Supports both {var} and $var syntax
+    fn replace_placeholders(
+        template: &str,
+        diff: &str,
+        context: Option<&str>,
+        config: &Config,
+    ) -> String {
+        let mut result = template.to_string();
+
+        // Get values from config with defaults
+        let language = config.language.as_deref().unwrap_or("en");
+        let commit_type = config.commit_type.as_deref().unwrap_or("conventional");
+        let max_length = config.description_max_length.unwrap_or(100).to_string();
+        let emoji = config.emoji.unwrap_or(false).to_string();
+        let description = config.description.unwrap_or(false).to_string();
+
+        // Context value (empty string if None)
+        let context_str = context.unwrap_or("");
+
+        // Replace {var} style placeholders
+        result = result.replace("{diff}", diff);
+        result = result.replace("{context}", context_str);
+        result = result.replace("{language}", language);
+        result = result.replace("{commit_type}", commit_type);
+        result = result.replace("{max_length}", &max_length);
+        result = result.replace("{emoji}", &emoji);
+        result = result.replace("{description}", &description);
+
+        // Replace $var style placeholders (legacy support)
+        result = result.replace("$diff", diff);
+        result = result.replace("$context", context_str);
+        result = result.replace("$language", language);
+        result = result.replace("$commit_type", commit_type);
+        result = result.replace("$max_length", &max_length);
+        result = result.replace("$emoji", &emoji);
+        result = result.replace("$description", &description);
+
+        result
+    }
+
+    /// Set the prompt file path (for CLI override)
+    pub fn set_prompt_file(&mut self, path: Option<String>) {
+        self.prompt_file = path;
     }
 
     /// Merge another config into this one (other takes priority over self)
@@ -569,6 +652,7 @@ impl Config {
         merge_field!(hook_timeout_ms);
         merge_field!(commitlint_config);
         merge_field!(custom_prompt);
+        merge_field!(prompt_file);
         merge_field!(generate_count);
         merge_field!(clipboard_on_timeout);
         merge_field!(learn_from_history);
@@ -622,6 +706,7 @@ impl Config {
         load_env_var_parse!(hook_auto_uncomment, "HOOK_AUTO_UNCOMMENT", bool);
         load_env_var!(commitlint_config, "COMMITLINT_CONFIG");
         load_env_var!(custom_prompt, "CUSTOM_PROMPT");
+        load_env_var!(prompt_file, "PROMPT_FILE");
         load_env_var_parse!(generate_count, "GENERATE_COUNT", u8);
         load_env_var_parse!(clipboard_on_timeout, "CLIPBOARD_ON_TIMEOUT", bool);
         load_env_var_parse!(learn_from_history, "LEARN_FROM_HISTORY", bool);

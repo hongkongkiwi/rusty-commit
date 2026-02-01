@@ -23,21 +23,16 @@ pub struct CommitStyleProfile {
     pub capitalizes_description: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[allow(dead_code)]
 pub enum PrefixFormat {
-    Conventional,        // feat(scope): description
+    #[default]
+    Conventional, // feat(scope): description
     ConventionalNoScope, // feat: description
     GitMoji,             // ✨ feat: description
     GitMojiDev,          // Full gitmoji.dev format
     Simple,              // Just type: description
     Other,
-}
-
-impl Default for PrefixFormat {
-    fn default() -> Self {
-        Self::Conventional
-    }
 }
 
 impl CommitStyleProfile {

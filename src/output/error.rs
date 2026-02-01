@@ -349,8 +349,8 @@ pub fn exit_with_error(error: &StructuredError) -> ! {
 pub fn context<T, E: std::error::Error + Send + Sync>(
     result: Result<T, E>,
     message: &str,
-) -> Result<T, StructuredError> {
-    result.map_err(|e| StructuredError::new(message).with_underlying(&e.to_string()))
+) -> Result<T, Box<StructuredError>> {
+    result.map_err(|e| Box::new(StructuredError::new(message).with_underlying(&e.to_string())))
 }
 
 #[cfg(test)]

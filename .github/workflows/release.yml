@@ -37,7 +37,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -78,7 +78,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install OpenSSL (macOS)
         if: matrix.target == 'x86_64-apple-darwin' || matrix.target == 'aarch64-apple-darwin'
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download all binaries
         uses: actions/download-artifact@v4
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -228,7 +228,7 @@ jobs:
             deb_arch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -278,7 +278,7 @@ jobs:
             rpm_arch: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download release binary
         uses: actions/download-artifact@v4
@@ -362,7 +362,7 @@ jobs:
             apk_arch: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up QEMU for Docker
         if: matrix.arch == 'amd64'
@@ -553,7 +553,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Linux musl binaries (amd64)
         uses: actions/download-artifact@v4
@@ -615,7 +615,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout homebrew-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/homebrew-rusty-commit
           token: ${{ secrets.HOMEBREW_REPO_UPDATE_TOKEN }}
@@ -722,7 +722,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout precommit-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/precommit-rusty-commit
           token: ${{ secrets.PRECOMMIT_REPO_UPDATE_TOKEN }}
@@ -759,7 +759,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout action-rusty-commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: hongkongkiwi/action-rusty-commit
           token: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN }}

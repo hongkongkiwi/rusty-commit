@@ -25,7 +25,7 @@ jobs:
        github.event.comment.user.login == github.repository_owner)
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -506,7 +506,7 @@ jobs:
 
       - name: Setup GPG for signing
         if: env.GPG_PRIVATE_KEY != ''
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gnupg
           key: gpg-key-${{ env.GPG_PRIVATE_KEY }}

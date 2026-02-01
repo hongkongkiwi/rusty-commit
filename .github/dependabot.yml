@@ -3,6 +3,7 @@
 
 version: 2
 updates:
+  # GitHub Actions updates
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -12,17 +13,49 @@ updates:
       timezone: "Asia/Hong_Kong"
     # Group related updates together
     groups:
-      # All GitHub Actions updates
-      - patterns:
+      github-actions:
+        patterns:
           - "*"
         update-types:
           - "minor"
           - "patch"
-    # Automatically squash merge when all checks pass
-    merge-method: "squash"
-    # Allow these labels on auto-merged PRs
     labels:
       - "dependencies"
       - "github-actions"
-    # Target branch for updates (main by default)
     target-branch: "main"
+
+  # Rust/Cargo updates
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Hong_Kong"
+    # Group related updates to reduce PR noise
+    groups:
+      # Production dependencies - minor/patch updates
+      cargo-production:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "tokio*"
+          - "clap*"
+          - "reqwest*"
+      # Major updates - separate PRs for review
+      cargo-major:
+        dependency-type: "production"
+        update-types:
+          - "major"
+    labels:
+      - "dependencies"
+      - "rust"
+    target-branch: "main"
+    # Allow up to 10 open PRs (to avoid overwhelming)
+    open-pull-requests-limit: 10
+    # Auto-rebase when base branch changes
+    rebase-strategy: "auto"
+    # Versioning strategy for Cargo
+    versioning-strategy: "lockfile-only"

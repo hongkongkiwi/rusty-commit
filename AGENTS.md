@@ -495,6 +495,32 @@ just all                # Run fmt, clippy, and test
 - **Rust Versions**: stable, beta, nightly (Linux only)
 - **Features**: with and without `secure-storage`
 
+### Dependabot Automation
+
+The repository has automated workflows for managing Dependabot PRs:
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| **Auto-Merge** | `.github/workflows/dependabot-auto-merge.yml` | Auto-merges Dependabot PRs when CI passes (minor/patch only) |
+| **Rebase** | `.github/workflows/dependabot-rebase.yml` | Auto-rebases conflicted PRs every 6 hours, closes if unresolvable |
+| **Commands** | `.github/workflows/dependabot-commands.yml` | Enables PR comment commands (`@dependabot rebase`, `recreate`, `merge`, `close`) |
+| **Auto-Close** | `.github/workflows/auto-close-conflicted-prs.yml` | Hourly cleanup of unresolvable conflicted PRs |
+
+#### Supported Comment Commands
+
+On Dependabot PRs, maintainers can comment:
+- `@dependabot rebase` - Rebase the PR on the latest base branch
+- `@dependabot recreate` - Close and let Dependabot create a fresh PR
+- `@dependabot merge` - Enable auto-merge for the PR
+- `@dependabot close` - Close the PR manually
+
+#### Dependabot Configuration
+
+See `.github/dependabot.yml`:
+- **GitHub Actions**: Weekly updates (Monday 9am HKT)
+- **Cargo**: Weekly updates with grouped PRs for minor/patch, separate PRs for major
+- **Auto-rebase**: Enabled for all PRs
+
 ---
 
 ## Common Tasks

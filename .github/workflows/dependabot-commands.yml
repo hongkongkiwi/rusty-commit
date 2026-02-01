@@ -1,0 +1,123 @@
+name: Dependabot PR Commands
+
+# Allows manual triggering of Dependabot actions via PR comments
+# Usage:
+#   @dependabot rebase    - Rebase the PR
+#   @dependabot recreate  - Recreate the PR from scratch
+#   @dependabot merge     - Merge the PR (if checks pass)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  handle-command:
+    runs-on: ubuntu-latest
+    # Only process comments on Dependabot PRs by repo owner/maintainer
+    if: |
+      github.event.issue.pull_request && 
+      contains(github.event.comment.body, '@dependabot') &&
+      (github.event.comment.user.login == 'hongkongkiwi' || 
+       github.event.comment.user.login == github.repository_owner)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse command
+        id: parse
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          COMMENT="$COMMENT_BODY"
+          if [[ "$COMMENT" =~ @dependabot[[:space:]]+rebase ]]; then
+            echo "command=rebase" >> "$GITHUB_OUTPUT"
+          elif [[ "$COMMENT" =~ @dependabot[[:space:]]+recreate ]]; then
+            echo "command=recreate" >> "$GITHUB_OUTPUT"
+          elif [[ "$COMMENT" =~ @dependabot[[:space:]]+merge ]]; then
+            echo "command=merge" >> "$GITHUB_OUTPUT"
+          elif [[ "$COMMENT" =~ @dependabot[[:space:]]+close ]]; then
+            echo "command=close" >> "$GITHUB_OUTPUT"
+          else
+            echo "command=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get PR info
+        id: pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            // Check if this is a Dependabot PR
+            if (pr.user.login !== 'dependabot[bot]') {
+              core.setFailed('This is not a Dependabot PR');
+              return;
+            }
+            
+            core.setOutput('branch', pr.head.ref);
+            core.setOutput('base', pr.base.ref);
+            core.setOutput('title', pr.title);
+
+      - name: Execute rebase command
+        if: steps.parse.outputs.command == 'rebase'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git fetch origin ${{ steps.pr.outputs.branch }}:${{ steps.pr.outputs.branch }}
+          git fetch origin ${{ steps.pr.outputs.base }}:${{ steps.pr.outputs.base }}
+          
+          git checkout ${{ steps.pr.outputs.branch }}
+          git rebase ${{ steps.pr.outputs.base }}
+          git push --force-with-lease origin ${{ steps.pr.outputs.branch }}
+          
+          gh pr comment ${{ github.event.issue.number }} --body "🤖 **Rebase completed** - PR has been rebased on \`${{ steps.pr.outputs.base }}\`."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Execute recreate command
+        if: steps.parse.outputs.command == 'recreate'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Close the current PR
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: 'closed'
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🤖 **Recreate requested** - This PR has been closed. Dependabot will create a fresh PR with the latest updates.'
+            });
+
+      - name: Execute merge command
+        if: steps.parse.outputs.command == 'merge'
+        run: |
+          # Enable auto-merge
+          gh pr merge ${{ github.event.issue.number }} --auto --squash
+          gh pr comment ${{ github.event.issue.number }} --body "🤖 **Auto-merge enabled** - This PR will be merged automatically when all checks pass."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Execute close command
+        if: steps.parse.outputs.command == 'close'
+        run: |
+          gh pr close ${{ github.event.issue.number }} --comment "🤖 **Closed via command** - This Dependabot PR has been closed as requested."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

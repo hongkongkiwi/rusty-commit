@@ -1,0 +1,137 @@
+name: Dependabot Rebase & Conflict Resolution
+
+on:
+  # Run when PRs are marked as having conflicts
+  pull_request:
+    types: [opened, synchronize, labeled]
+  # Run on schedule to catch stale PRs
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to rebase (leave empty for all)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  rebase-dependabot-prs:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'hongkongkiwi/rusty-commit' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Rebase conflicted Dependabot PRs
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get PR number from input or process all
+            const specificPR = context.payload.inputs?.pr_number;
+            
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            for (const pr of prs) {
+              // Skip non-Dependabot PRs unless specific PR requested
+              if (pr.user?.login !== 'dependabot[bot]' && !specificPR) continue;
+              if (specificPR && pr.number !== parseInt(specificPR)) continue;
+
+              console.log(`Processing PR #${pr.number}: ${pr.title}`);
+
+              // Check mergeable state
+              // mergeable: null = calculating, true = clean, false = conflicts
+              if (pr.mergeable === null) {
+                console.log(`  Skipping PR #${pr.number}: mergeable state still calculating`);
+                continue;
+              }
+
+              if (pr.mergeable === true) {
+                console.log(`  PR #${pr.number} is clean, no action needed`);
+                continue;
+              }
+
+              console.log(`  PR #${pr.number} has merge conflicts`);
+
+              try {
+                // Fetch the PR branch
+                const prBranch = pr.head.ref;
+                const baseBranch = pr.base.ref;
+                
+                console.log(`  Attempting to rebase ${prBranch} onto ${baseBranch}`);
+
+                // Fetch all branches
+                execSync(`git fetch origin ${baseBranch}:${baseBranch}`, { stdio: 'inherit' });
+                execSync(`git fetch origin ${prBranch}:${prBranch}`, { stdio: 'inherit' });
+
+                // Checkout PR branch
+                execSync(`git checkout ${prBranch}`, { stdio: 'inherit' });
+
+                // Attempt rebase
+                try {
+                  execSync(`git rebase ${baseBranch}`, { stdio: 'inherit' });
+                  
+                  // Force push the rebased branch
+                  execSync(`git push --force-with-lease origin ${prBranch}`, { stdio: 'inherit' });
+                  
+                  console.log(`  Successfully rebased PR #${pr.number}`);
+                  
+                  // Add a comment
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: '🤖 **Auto-rebase successful**\n\nThis PR has been automatically rebased to resolve merge conflicts.'
+                  });
+                  
+                } catch (rebaseError) {
+                  // Rebase failed, abort and close the PR
+                  console.log(`  Rebase failed for PR #${pr.number}, aborting rebase`);
+                  
+                  try {
+                    execSync('git rebase --abort', { stdio: 'ignore' });
+                  } catch (e) {
+                    // Ignore abort errors
+                  }
+
+                  // Close the PR
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.number,
+                    state: 'closed'
+                  });
+
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: `🤖 **Auto-rebase failed**\n\nThis Dependabot PR has merge conflicts that could not be automatically resolved. The PR has been closed.\n\n**Next steps:**\n- Dependabot will automatically create a new PR with updated dependencies\n- Or you can manually update dependencies and resolve conflicts\n\n<details><summary>Debug Info</summary>\n\n\`\`\`\n${rebaseError.message}\n\`\`\`\n</details>`
+                  });
+
+                  console.log(`  Closed PR #${pr.number} due to unresolvable conflicts`);
+                }
+              } catch (error) {
+                console.error(`  Error processing PR #${pr.number}:`, error.message);
+              }
+            }

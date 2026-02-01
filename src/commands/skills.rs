@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use colored::Colorize;
+use dirs;
 use std::fs;
 
 use crate::cli::{SkillsAction, SkillsCommand};

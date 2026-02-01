@@ -100,6 +100,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
         options.context.as_deref(),
         options.full_gitmoji,
         generate_count,
+        options.strip_thinking,
         &ctx,
     )
     .await?;
@@ -478,6 +479,7 @@ async fn generate_commit_messages(
     context: Option<&str>,
     full_gitmoji: bool,
     count: u8,
+    strip_thinking: bool,
     ctx: &ExecContext,
 ) -> Result<Vec<String>> {
     let pb = progress::spinner(&format!(
@@ -496,9 +498,16 @@ async fn generate_commit_messages(
             providers::create_provider(config)?
         };
 
-    let messages = provider
+    let mut messages = provider
         .generate_commit_messages(diff, context, full_gitmoji, config, count)
         .await?;
+
+    // Strip thinking tags if requested
+    if strip_thinking {
+        for message in &mut messages {
+            *message = utils::strip_thinking(message);
+        }
+    }
 
     pb.finish_with_message("Commit message(s) generated!");
     Ok(messages)
@@ -568,46 +577,16 @@ fn filter_diff_by_rcoignore(diff: &str) -> Result<String> {
 
 /// Chunk a large diff into smaller pieces that fit within token limit
 fn chunk_diff(diff: &str, max_tokens: usize) -> Result<String> {
-    let mut chunks = Vec::new();
-    let mut current_chunk = String::with_capacity(diff.len().min(4096));
-    let mut current_tokens = 0;
-
-    // Reserve some tokens for the prompt
+    // Use the enhanced multi-level chunking from utils
     let effective_max = max_tokens.saturating_sub(PROMPT_OVERHEAD_TOKENS);
+    let chunked = utils::chunk_diff(diff, effective_max);
 
-    for line in diff.lines() {
-        let line_tokens = utils::token::estimate_tokens(line)?;
-
-        if current_tokens + line_tokens > effective_max && !current_chunk.is_empty() {
-            chunks.push(current_chunk);
-            current_chunk = String::new();
-            current_tokens = 0;
-        }
-
-        current_chunk.push_str(line);
-        current_chunk.push('\n');
-        current_tokens += line_tokens;
+    // Log if chunking occurred
+    if chunked.contains("---CHUNK") {
+        tracing::info!("Diff was chunked for token limit");
     }
 
-    if !current_chunk.is_empty() {
-        chunks.push(current_chunk);
-    }
-
-    if chunks.is_empty() {
-        return Ok(diff.to_string());
-    }
-
-    // If we have multiple chunks, combine them with a summary header
-    if chunks.len() > 1 {
-        tracing::info!("Split diff into {} chunks", chunks.len());
-
-        // Generate a combined diff by concatenating all chunks
-        // The AI will understand the full context
-        let combined = chunks.join("\n\n---CHUNK SEPARATOR---\n\n");
-        Ok(combined)
-    } else {
-        Ok(chunks.into_iter().next().unwrap_or_default())
-    }
+    Ok(chunked)
 }
 
 /// Copy text to clipboard with proper error handling

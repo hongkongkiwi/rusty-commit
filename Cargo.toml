@@ -20,8 +20,10 @@ name = "rco"
 path = "src/main.rs"
 
 [features]
-# Default features - common providers enabled by default for convenience
+# ═══════════════════════════════════════════════════════════════════════════════
+# Default Features - Common providers enabled by default for convenience
 # Users can disable individual providers to reduce binary size
+# ═══════════════════════════════════════════════════════════════════════════════
 default = [
     # Core providers
     "openai",
@@ -31,7 +33,7 @@ default = [
     "azure",
     "perplexity",
     "xai",
-    # OpenAI-compatible providers
+    # Major OpenAI-compatible providers
     "openrouter",
     "groq",
     "deepseek",
@@ -42,6 +44,28 @@ default = [
     "fireworks",
     "moonshot",
     "dashscope",
+    # Enterprise providers
+    "cohere",
+    "ai21",
+    "upstage",
+    # Popular GPU/Inference providers
+    "cerebras",
+    "sambanova",
+    "novita",
+    "nebius",
+    "replicate",
+    "lambda",
+    "hyperbolic",
+    "kluster",
+    # Local providers
+    "lmstudio",
+    "llamacpp",
+    # China-based providers
+    "siliconflow",
+    "zhipu",
+    "minimax",
+    # AI Gateways
+    "helicone",
     # Cloud providers
     "huggingface",
     "bedrock",
@@ -50,6 +74,10 @@ default = [
     "mlx",
     "nvidia",
     "flowise",
+    # Additional popular providers
+    "jina",
+    "poe",
+    "venice",
 ]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
@@ -69,8 +97,12 @@ huggingface = []
 bedrock = []
 vertex = ["chrono"]
 
-# OpenAI-compatible provider presets - enable all for maximum compatibility
+# ═══════════════════════════════════════════════════════════════════════════════
+# OpenAI-Compatible Provider Presets
 # These don't need extra dependencies, they use the openai module
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Major Cloud Providers
 openrouter = ["openai"]
 groq = ["openai"]
 deepseek = ["openai"]
@@ -82,11 +114,91 @@ fireworks = ["openai"]
 moonshot = ["openai"]
 dashscope = ["openai"]
 
-# Dedicated providers with special implementations
+# Enterprise & Specialized
+cohere = ["openai"]
+ai21 = ["openai"]
+upstage = ["openai"]
+
+# GPU Cloud & Inference Providers (Comprehensive list from OpenCode)
+nebius = ["openai"]
+ovh = ["openai"]
+scaleway = ["openai"]
+friendli = ["openai"]
+baseten = ["openai"]
+chutes = ["openai"]
+ionet = ["openai"]
+modelscope = ["openai"]
+requesty = ["openai"]
+morph = ["openai"]
+synthetic = ["openai"]
+nano-gpt = ["openai"]
+zenmux = ["openai"]
+v0 = ["openai"]
+venice = ["openai"]
+cortecs = ["openai"]
+abacus = ["openai"]
+bailing = ["openai"]
+fastrouter = ["openai"]
+inference = ["openai"]
+submodel = ["openai"]
+zai = ["openai"]
+poe = ["openai"]
+cerebras = ["openai"]
+sambanova = ["openai"]
+novita = ["openai"]
+predibase = ["openai"]
+tensorops = ["openai"]
+hyperbolic = ["openai"]
+kluster = ["openai"]
+lambda = ["openai"]
+replicate = ["openai"]
+targon = ["openai"]
+corcel = ["openai"]
+cybernative = ["openai"]
+edgen = ["openai"]
+gigachat = ["openai"]
+hydra = ["openai"]
+jina = ["openai"]
+lingyi = ["openai"]
+monica = ["openai"]
+pollinations = ["openai"]
+shuttleai = ["openai"]
+teknium = ["openai"]
+theb = ["openai"]
+tryleap = ["openai"]
+
+# Local/Self-hosted Providers
+lmstudio = ["openai"]
+llamacpp = ["openai"]
+kobold = ["openai"]
+textgen = ["openai"]
+tabby = ["openai"]
+
+# China-based Providers
+siliconflow = ["openai"]
+zhipu = ["openai"]
+minimax = ["openai"]
+baichuan = ["openai"]
+
+# AI Gateway & Proxy Services
+helicone = ["openai"]
+workers-ai = ["openai"]
+cloudflare-ai = ["openai"]
+vercel-ai = ["openai"]
+
+# Specialized Providers
+302ai = ["openai"]
+sap-ai = ["openai"]
+
+# Additional Providers from OpenCommit
+aimlapi = ["openai"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dedicated Providers with Special Implementations
+# ═══════════════════════════════════════════════════════════════════════════════
 mlx = []
 nvidia = []
 flowise = []
-cerebras = ["openai"]
 
 [dependencies]
 # CLI and UI

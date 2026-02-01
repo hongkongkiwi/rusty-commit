@@ -4,7 +4,7 @@
 
 **Project**: Rusty Commit (`rco`) - AI-powered commit message generator in Rust  
 **Repository**: https://github.com/hongkongkiwi/rusty-commit  
-**Version**: 1.0.21 | **Last Updated**: 2026-02-02
+**Version**: 1.0.24 | **Last Updated**: 2026-02-02
 
 ---
 
@@ -81,31 +81,60 @@ tests/             # 10 integration test files
 
 ## Provider System
 
-| Provider | Config Value | Feature | OAuth |
-|----------|--------------|---------|-------|
-| Anthropic | `anthropic` | `anthropic` | ✅ |
-| OpenAI | `openai` | `openai` | ❌ |
-| OpenRouter | `openrouter` | `openrouter` | ❌ |
-| Groq | `groq` | `groq` | ❌ |
-| DeepSeek | `deepseek` | `deepseek` | ❌ |
-| GitHub Copilot | `github-copilot` | - | ✅ |
-| Ollama | `ollama` | `ollama` | ❌ |
-| Gemini | `gemini` | `gemini` | ❌ |
-| Azure | `azure` | `azure` | ❌ |
-| Perplexity | `perplexity` | `perplexity` | ❌ |
-| XAI | `xai` | `xai` | ❌ |
-| Fireworks | `fireworks` | `fireworks` | ❌ |
-| Moonshot | `moonshot` | `moonshot` | ❌ |
-| DashScope | `dashscope` | `dashscope` | ❌ |
-| Together | `together` | `together` | ❌ |
-| DeepInfra | `deepinfra` | `deepinfra` | ❌ |
-| Mistral | `mistral` | `mistral` | ❌ |
-| Hugging Face | `huggingface` | `huggingface` | ❌ |
-| AWS Bedrock | `bedrock` | `bedrock` | ❌ |
-| Vertex AI | `vertex` | `vertex` | ❌ |
-| Apple MLX | `mlx` | `mlx` | ❌ |
-| NVIDIA NIM | `nvidia` | `nvidia` | ❌ |
-| Flowise | `flowise` | `flowise` | ❌ |
+| Provider | Config Value | Feature | OAuth | Category |
+|----------|--------------|---------|-------|----------|
+| **Core Providers** |||||
+| Anthropic | `anthropic` | `anthropic` | ✅ | Popular |
+| OpenAI | `openai` | `openai` | ❌ | Popular |
+| Gemini | `gemini` | `gemini` | ❌ | Popular |
+| xAI/Grok | `xai` | `xai` | ❌ | Popular |
+| **Fast Inference** |||||
+| Groq | `groq` | `groq` | ❌ | Fast |
+| Cerebras | `cerebras` | `cerebras` | ❌ | Fast |
+| SambaNova | `sambanova` | `sambanova` | ❌ | Fast |
+| Nebius | `nebius` | `nebius` | ❌ | GPU Cloud |
+| **Multi-Model Aggregators** |||||
+| OpenRouter | `openrouter` | `openrouter` | ❌ | Aggregator |
+| Together AI | `together` | `together` | ❌ | Aggregator |
+| Fireworks | `fireworks` | `fireworks` | ❌ | Aggregator |
+| Replicate | `replicate` | `replicate` | ❌ | Aggregator |
+| DeepInfra | `deepinfra` | `deepinfra` | ❌ | Aggregator |
+| Novita | `novita` | `novita` | ❌ | Aggregator |
+| **Enterprise** |||||
+| Azure OpenAI | `azure` | `azure` | ❌ | Enterprise |
+| AWS Bedrock | `bedrock` | `bedrock` | ❌ | Enterprise |
+| Google Vertex AI | `vertex` | `vertex` | ❌ | Enterprise |
+| Mistral | `mistral` | `mistral` | ❌ | Enterprise |
+| Cohere | `cohere` | `cohere` | ❌ | Enterprise |
+| AI21 Labs | `ai21` | `ai21` | ❌ | Enterprise |
+| Perplexity | `perplexity` | `perplexity` | ❌ | Enterprise |
+| **Local/Self-hosted** |||||
+| Ollama | `ollama` | `ollama` | ❌ | Local |
+| LM Studio | `lmstudio` | `lmstudio` | ❌ | Local |
+| llama.cpp | `llamacpp` | `llamacpp` | ❌ | Local |
+| Apple MLX | `mlx` | `mlx` | ❌ | Local |
+| **China-based** |||||
+| Moonshot/Kimi | `moonshot` | `moonshot` | ❌ | China |
+| SiliconFlow | `siliconflow` | `siliconflow` | ❌ | China |
+| Zhipu AI | `zhipu` | `zhipu` | ❌ | China |
+| MiniMax | `minimax` | `minimax` | ❌ | China |
+| DashScope | `dashscope` | `dashscope` | ❌ | China |
+| **GPU Cloud Providers** |||||
+| Lambda | `lambda` | `lambda` | ❌ | GPU Cloud |
+| Hyperbolic | `hyperbolic` | `hyperbolic` | ❌ | GPU Cloud |
+| Kluster | `kluster` | `kluster` | ❌ | GPU Cloud |
+| Scaleway | `scaleway` | `scaleway` | ❌ | GPU Cloud |
+| OVHcloud | `ovh` | `ovh` | ❌ | GPU Cloud |
+| **AI Gateways** |||||
+| Helicone | `helicone` | `helicone` | ❌ | Gateway |
+| Cloudflare Workers AI | `workers-ai` | `workers-ai` | ❌ | Gateway |
+| **Other Dedicated Providers** |||||
+| Hugging Face | `huggingface` | `huggingface` | ❌ | Platform |
+| NVIDIA NIM | `nvidia` | `nvidia` | ❌ | Platform |
+| Flowise | `flowise` | `flowise` | ❌ | Platform |
+| GitHub Copilot | `github-copilot` | - | ✅ | Copilot |
+
+**Plus 70+ additional OpenAI-compatible providers** including: Upstage, Baseten, Chutes, IO.Net, ModelScope, Requesty, Morph, Synthetic, NanoGPT, ZenMux, V0, Venice, Cortecs, Abacus, Bailing, FastRouter, Inference.net, Submodel, Z.AI, Zhipu Coding, Poe, Predibase, TensorOps, Targon, Corcel, CyberNative, Edgen, GigaChat, Hydra, Jina AI, Lingyi, Monica, Pollinations, ShuttleAI, Teknium, TheB, TryLeap, SAP AI Core, 302.AI, and more.
 
 **Adding a Provider:**
 1. Create `src/providers/newprovider.rs`

@@ -296,7 +296,9 @@ pub fn available_providers() -> Vec<&'static str> {
     #[cfg(feature = "openai")]
     {
         providers.extend_from_slice(&[
-            // Major providers
+            // ═════════════════════════════════════════════════════════════════
+            // Major Cloud Providers
+            // ═════════════════════════════════════════════════════════════════
             "deepseek",
             "groq",
             "openrouter",
@@ -307,69 +309,154 @@ pub fn available_providers() -> Vec<&'static str> {
             "fireworks",
             "moonshot",
             "dashscope",
-            // From OpenCommit
-            "aimlapi",
-            // From OpenCode
+            "perplexity",
+            // ═════════════════════════════════════════════════════════════════
+            // Enterprise & Specialized
+            // ═════════════════════════════════════════════════════════════════
             "cohere",
+            "cohere-ai",
             "ai21",
-            "cloudflare",
-            "siliconflow",
-            "zhipu",
-            "minimax",
+            "ai21-labs",
             "upstage",
+            "upstage-ai",
+            "solar",
+            "solar-pro",
+            // ═════════════════════════════════════════════════════════════════
+            // GPU Cloud & Inference Providers
+            // ═════════════════════════════════════════════════════════════════
             "nebius",
+            "nebius-ai",
+            "nebius-studio",
             "ovh",
+            "ovhcloud",
+            "ovh-ai",
             "scaleway",
+            "scaleway-ai",
             "friendli",
+            "friendli-ai",
             "baseten",
+            "baseten-ai",
             "chutes",
+            "chutes-ai",
             "ionet",
+            "io-net",
             "modelscope",
             "requesty",
             "morph",
+            "morph-labs",
             "synthetic",
             "nano-gpt",
+            "nanogpt",
             "zenmux",
             "v0",
+            "v0-vercel",
             "iflowcn",
             "venice",
+            "venice-ai",
             "cortecs",
+            "cortecs-ai",
             "kimi-coding",
             "abacus",
+            "abacus-ai",
             "bailing",
             "fastrouter",
             "inference",
+            "inference-net",
             "submodel",
             "zai",
             "zai-coding",
             "zhipu-coding",
             "poe",
+            "poe-ai",
             "cerebras",
-            "lmstudio",
+            "cerebras-ai",
             "sambanova",
+            "sambanova-ai",
             "novita",
+            "novita-ai",
             "predibase",
             "tensorops",
             "hyperbolic",
+            "hyperbolic-ai",
             "kluster",
+            "kluster-ai",
             "lambda",
+            "lambda-labs",
             "replicate",
             "targon",
             "corcel",
             "cybernative",
+            "cybernative-ai",
             "edgen",
             "gigachat",
+            "gigachat-ai",
             "hydra",
+            "hydra-ai",
             "jina",
+            "jina-ai",
             "lingyi",
+            "lingyiwanwu",
             "monica",
+            "monica-ai",
             "pollinations",
+            "pollinations-ai",
             "rawechat",
             "shuttleai",
+            "shuttle-ai",
             "teknium",
             "theb",
+            "theb-ai",
             "tryleap",
+            "leap-ai",
+            // ═════════════════════════════════════════════════════════════════
+            // Local/Self-hosted Providers
+            // ═════════════════════════════════════════════════════════════════
+            "lmstudio",
+            "lm-studio",
+            "llamacpp",
+            "llama-cpp",
+            "kobold",
+            "koboldcpp",
+            "textgen",
+            "text-generation",
+            "tabby",
+            // ═════════════════════════════════════════════════════════════════
+            // China-based Providers
+            // ═════════════════════════════════════════════════════════════════
+            "siliconflow",
+            "silicon-flow",
+            "zhipu",
+            "zhipu-ai",
+            "bigmodel",
+            "minimax",
+            "minimax-ai",
+            "glm",
+            "chatglm",
+            "baichuan",
+            "01-ai",
+            "yi",
+            // ═════════════════════════════════════════════════════════════════
+            // AI Gateway & Proxy Services
+            // ═════════════════════════════════════════════════════════════════
+            "helicone",
+            "helicone-ai",
             "workers-ai",
+            "cloudflare-ai",
+            "cloudflare-gateway",
+            "vercel-ai",
+            "vercel-gateway",
+            // ═════════════════════════════════════════════════════════════════
+            // Specialized Providers
+            // ═════════════════════════════════════════════════════════════════
+            "302ai",
+            "302-ai",
+            "sap-ai",
+            "sap-ai-core",
+            // ═════════════════════════════════════════════════════════════════
+            // Additional Providers from OpenCommit
+            // ═════════════════════════════════════════════════════════════════
+            "aimlapi",
+            "ai-ml-api",
         ]);
     }
 

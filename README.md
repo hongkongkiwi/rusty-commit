@@ -4,7 +4,7 @@
 
 ### **AI-powered commit message generator written in Rust**
 
-**Generate conventional commits, GitMoji messages, and PR descriptions using 18+ AI providers**
+**Generate conventional commits, GitMoji messages, and PR descriptions using 100+ AI providers**
 
 [![CI](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/hongkongkiwi/rusty-commit/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/rusty-commit.svg)](https://crates.io/crates/rusty-commit)
@@ -13,7 +13,7 @@
 
 **🚀 Fast · 🔒 Secure · 🏠 Local-first · 🔌 Editor integrations via MCP**
 
-[Installation](#installation) · [Quick Start](#quick-start) · [Features](#features) · [Providers](#providers) · [Configuration](#configuration) · [Git Hooks](#git-hooks)
+[Installation](#-installation) · [Quick Start](#-quick-start) · [Features](#-features) · [Providers](#-providers) · [Configuration](#-configuration)
 
 </div>
 
@@ -29,9 +29,9 @@
 
 Native Rust binary with instant startup time. No Node.js bloat, no waiting.
 
-**🤖 18+ AI Providers**
+**🤖 100+ AI Providers**
 
-Works with OpenAI, Claude, OpenRouter, Groq, DeepSeek, GitHub Copilot, Ollama, and more.
+Works with OpenAI, Claude, Groq, Cerebras, DeepSeek, GitHub Copilot, Ollama, and 90+ more.
 
 **🔐 Secure by Default**
 
@@ -67,7 +67,7 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 ```
 
 <details>
-<summary>🔐 Security-conscious? Verify the install script first</summary>
+<summary>🔐 Security-conscious? Verify first</summary>
 
 ```bash
 # Download and inspect
@@ -78,7 +78,8 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 
 </details>
 
-### Package Managers
+<details>
+<summary>📦 Package Managers</summary>
 
 | Platform | Command |
 |----------|---------|
@@ -90,49 +91,54 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 | **Windows (Scoop)** | `scoop install rusty-commit` |
 | **Windows (Binary)** | [Download from releases](https://github.com/hongkongkiwi/rusty-commit/releases) |
 
+</details>
+
 ---
 
 ## 🚀 Quick Start
 
-### Interactive Setup Wizard
-
-The easiest way to get started with Rusty Commit:
+### Interactive Setup
 
 ```bash
-rco setup                   # Interactive wizard (recommended)
-rco setup --advanced        # Full configuration with all options
-rco setup --defaults        # Non-interactive with sensible defaults
+rco setup              # Quick interactive wizard (recommended)
+rco setup --advanced   # Full configuration
+rco setup --defaults   # Non-interactive with sensible defaults
 ```
 
-**Quick Setup** will ask you:
-1. **AI Provider** - Choose from 15+ providers (OpenAI, Anthropic, Gemini, Ollama, etc.)
+**Quick Setup** asks for:
+1. **AI Provider** - Choose from 30+ providers (100+ total supported)
 2. **API Key** - Securely stored in your system's keychain
 3. **Commit Format** - Conventional commits, GitMoji, or simple
-
-**Advanced Setup** additionally includes:
-- Custom model selection and API endpoints
-- Commit message style (capitalization, max length, language)
-- Behavior settings (auto-push, commit body, variations)
-- Token limits and hook configuration
 
 ### Generate Your First Commit
 
 ```bash
-# 1. Stage your changes
 git add .
-
-# 2. Generate commit message
-rco
-
-# 3. Review, edit, or regenerate interactively
+rco                    # Interactive mode with review
 ```
 
-### Multi-Account Workflow (Recommended)
+<details>
+<summary>⚡ Common Options</summary>
+
+```bash
+rco --dry-run          # Preview without committing
+rco --edit             # Open in $EDITOR before committing
+rco --clipboard        # Copy to clipboard instead
+rco --generate 3       # Generate 3 variations
+rco --fgm              # Full GitMoji specification
+rco -y                 # Auto-commit without confirmation
+rco -c "context"       # Add extra context
+```
+
+</details>
+
+<details>
+<summary>🔄 Multi-Account Workflow</summary>
 
 ```bash
 # Add multiple provider accounts
-rco config add-provider    # Add work-openai
-rco config add-provider    # Add personal-anthropic
+rco config add-provider                    # Interactive wizard
+rco config add-provider --provider openai --alias work-openai
 
 # Switch between them
 rco config use-account work-openai
@@ -142,84 +148,140 @@ rco config use-account personal-anthropic
 git add . && rco
 ```
 
+</details>
+
 ---
 
 ## 🎯 Features
 
-### 📝 Commit Message Generation
-
-```bash
-rco                         # Interactive mode with review
-rco -y                      # Auto-commit without confirmation
-rco -g 3                    # Generate 3 variations to choose from
-rco -c "Fix OAuth flow"     # Add extra context
-```
-
-### 😄 GitMoji Support
-
-```bash
-rco --fgm                   # Full GitMoji specification
-rco -fgm -y                 # GitMoji + auto-commit
-```
-
-**Output:**
-```
-✨ feat(auth): implement OAuth2 PKCE flow
-
-🔐 Add secure authentication with automatic token refresh.
-Supports GitHub, GitLab, and generic OAuth2 providers.
-```
-
-### 📋 Clipboard Mode
-
-```bash
-rco -C                      # Copy to clipboard instead of committing
-```
-
-### 🔍 Debug Tools
-
-```bash
-rco --show-prompt           # See the exact prompt sent to AI
-rco --timing                # Show detailed timing information
-RUST_LOG=debug rco          # Enable debug logging
-```
+| Feature | Command |
+|---------|---------|
+| **Interactive mode** | `rco` |
+| **Auto-commit** | `rco -y` |
+| **Dry-run preview** | `rco --dry-run` |
+| **Edit in $EDITOR** | `rco --edit` |
+| **Copy to clipboard** | `rco --clipboard` |
+| **Generate variations** | `rco -g 3` |
+| **Add context** | `rco -c "Fix OAuth"` |
+| **Full GitMoji** | `rco --fgm` |
+| **Show prompt** | `rco --show-prompt` |
+| **Debug logging** | `RUST_LOG=debug rco` |
 
 ---
 
 ## 🤖 Providers
 
-Rusty Commit works with **18+ AI providers** out of the box. Configure them interactively with `rco setup` or manually as shown below:
+Rusty Commit supports **100+ AI providers**. Configure interactively with `rco setup` or manually:
 
-> 💡 **Tip**: Use `rco setup` for interactive provider configuration with step-by-step guidance.
-
-### 🔑 OAuth-Enabled (No API Key Required)
+### 🔑 OAuth (No API Key)
 
 | Provider | Command |
 |----------|---------|
 | **Claude (Anthropic)** | `rco auth login` |
-| **Claude Code** | `rco auth login` |
 | **GitHub Copilot** | `rco auth login --provider github-copilot` |
 
 ### 🔐 API Key Providers
+
+<details>
+<summary>🌟 Popular Providers</summary>
 
 | Provider | Setup |
 |----------|-------|
 | **OpenAI** | `rco config set RCO_AI_PROVIDER=openai RCO_API_KEY=sk-... RCO_MODEL=gpt-4o-mini` |
 | **Anthropic** | `rco config set RCO_AI_PROVIDER=anthropic RCO_API_KEY=sk-ant-... RCO_MODEL=claude-3-5-haiku-20241022` |
-| **OpenRouter** | `rco config set RCO_AI_PROVIDER=openrouter RCO_API_KEY=sk-or-...` |
-| **Groq** | `rco config set RCO_AI_PROVIDER=groq RCO_API_KEY=gsk_... RCO_MODEL=llama-3.1-70b-versatile` |
+| **Google Gemini** | `rco config set RCO_AI_PROVIDER=gemini RCO_API_KEY=... RCO_MODEL=gemini-2.5-flash` |
+| **xAI/Grok** | `rco config set RCO_AI_PROVIDER=xai RCO_API_KEY=... RCO_MODEL=grok-2` |
 | **DeepSeek** | `rco config set RCO_AI_PROVIDER=deepseek RCO_API_KEY=sk-... RCO_MODEL=deepseek-chat` |
-| **xAI/Grok** | `rco config set RCO_AI_PROVIDER=xai RCO_API_KEY=... RCO_MODEL=grok-beta` |
-| **Mistral** | `rco config set RCO_AI_PROVIDER=mistral RCO_API_KEY=... RCO_MODEL=mistral-small-latest` |
-| **Google Gemini** | `rco config set RCO_AI_PROVIDER=gemini RCO_API_KEY=... RCO_MODEL=gemini-pro` |
-| **Azure OpenAI** | `rco config set RCO_AI_PROVIDER=azure RCO_API_KEY=... RCO_API_URL=https://<resource>.openai.azure.com` |
-| **Perplexity** | `rco config set RCO_AI_PROVIDER=perplexity RCO_API_KEY=...` |
-| **Ollama (Local)** | `rco config set RCO_AI_PROVIDER=ollama RCO_MODEL=mistral RCO_API_URL=http://localhost:11434` |
-| **Fireworks** | `rco config set RCO_AI_PROVIDER=fireworks RCO_API_KEY=...` |
-| **Moonshot/Kimi** | `rco config set RCO_AI_PROVIDER=moonshot RCO_API_KEY=... RCO_API_URL=https://api.moonshot.cn/v1 RCO_MODEL=kimi-k2` |
-| **Alibaba Qwen** | `rco config set RCO_AI_PROVIDER=dashscope RCO_API_KEY=... RCO_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1 RCO_MODEL=qwen3-coder-32b-instruct` |
+
+</details>
+
+<details>
+<summary>⚡ Ultra-Fast Inference</summary>
+
+| Provider | Setup |
+|----------|-------|
+| **Groq** | `rco config set RCO_AI_PROVIDER=groq RCO_API_KEY=gsk_... RCO_MODEL=llama-3.3-70b-versatile` |
+| **Cerebras** | `rco config set RCO_AI_PROVIDER=cerebras RCO_API_KEY=... RCO_MODEL=llama-3.3-70b` |
+| **SambaNova** | `rco config set RCO_AI_PROVIDER=sambanova RCO_API_KEY=... RCO_MODEL=Meta-Llama-3.3-70B-Instruct` |
+| **Nebius** | `rco config set RCO_AI_PROVIDER=nebius RCO_API_KEY=...` |
+
+</details>
+
+<details>
+<summary>🌐 Multi-Model Aggregators</summary>
+
+| Provider | Setup |
+|----------|-------|
+| **OpenRouter** | `rco config set RCO_AI_PROVIDER=openrouter RCO_API_KEY=sk-or-...` |
 | **Together AI** | `rco config set RCO_AI_PROVIDER=together RCO_API_KEY=...` |
+| **Fireworks** | `rco config set RCO_AI_PROVIDER=fireworks RCO_API_KEY=...` |
+| **Replicate** | `rco config set RCO_AI_PROVIDER=replicate RCO_API_KEY=...` |
 | **DeepInfra** | `rco config set RCO_AI_PROVIDER=deepinfra RCO_API_KEY=...` |
+| **Novita** | `rco config set RCO_AI_PROVIDER=novita RCO_API_KEY=...` |
+
+</details>
+
+<details>
+<summary>🏢 Enterprise Providers</summary>
+
+| Provider | Setup |
+|----------|-------|
+| **Azure OpenAI** | `rco config set RCO_AI_PROVIDER=azure RCO_API_KEY=... RCO_API_URL=https://<resource>.openai.azure.com` |
+| **AWS Bedrock** | `rco config set RCO_AI_PROVIDER=bedrock` |
+| **Google Vertex AI** | `rco config set RCO_AI_PROVIDER=vertex` |
+| **Mistral** | `rco config set RCO_AI_PROVIDER=mistral RCO_API_KEY=... RCO_MODEL=mistral-small-latest` |
+| **Cohere** | `rco config set RCO_AI_PROVIDER=cohere RCO_API_KEY=... RCO_MODEL=command-r` |
+| **AI21 Labs** | `rco config set RCO_AI_PROVIDER=ai21 RCO_API_KEY=... RCO_MODEL=jamba-1.5-mini` |
+| **Perplexity** | `rco config set RCO_AI_PROVIDER=perplexity RCO_API_KEY=...` |
+
+</details>
+
+<details>
+<summary>🏠 Local/Self-Hosted</summary>
+
+| Provider | Setup |
+|----------|-------|
+| **Ollama** | `rco config set RCO_AI_PROVIDER=ollama RCO_MODEL=llama3.2 RCO_API_URL=http://localhost:11434` |
+| **LM Studio** | `rco config set RCO_AI_PROVIDER=lmstudio RCO_API_URL=http://localhost:1234/v1` |
+| **llama.cpp** | `rco config set RCO_AI_PROVIDER=llamacpp RCO_API_URL=http://localhost:8080/v1` |
+
+</details>
+
+<details>
+<summary>🌏 China-based Providers</summary>
+
+| Provider | Setup |
+|----------|-------|
+| **Moonshot/Kimi** | `rco config set RCO_AI_PROVIDER=moonshot RCO_API_KEY=...` |
+| **SiliconFlow** | `rco config set RCO_AI_PROVIDER=siliconflow RCO_API_KEY=...` |
+| **Zhipu AI** | `rco config set RCO_AI_PROVIDER=zhipu RCO_API_KEY=...` |
+| **MiniMax** | `rco config set RCO_AI_PROVIDER=minimax RCO_API_KEY=...` |
+| **Alibaba Qwen** | `rco config set RCO_AI_PROVIDER=dashscope RCO_API_KEY=...` |
+
+</details>
+
+<details>
+<summary>📋 All 100+ Supported Providers</summary>
+
+**GPU Cloud & Inference:**
+Cerebras, SambaNova, Nebius, Lambda, Hyperbolic, Kluster, Together, Fireworks, Replicate, Novita, Predibase, TensorOps, Baseten, Chutes, IO.Net, Scaleway, OVHcloud, Friendli, ModelScope
+
+**Enterprise & Specialized:**
+Cohere, AI21 Labs, Upstage/Solar, Jina AI, Abacus AI, Bailing, Poe
+
+**AI Gateways & Proxies:**
+Helicone, Cloudflare Workers AI, Vercel AI Gateway, Requesty
+
+**China-based:**
+Moonshot, SiliconFlow, Zhipu, MiniMax, Baichuan, 01.AI, Dashscope/Alibaba
+
+**Local/Self-hosted:**
+Ollama, LM Studio, llama.cpp, KoboldCpp, Text Generation WebUI, Tabby
+
+**Additional Providers:**
+Venice, Cortecs, Synthetic, NanoGPT, ZenMux, V0, Morph, Corcel, CyberNative, Edgen, GigaChat, Hydra, Lingyi, Monica, Pollinations, ShuttleAI, Teknium, TheB, TryLeap, Targon, 302.AI, SAP AI Core
+
+</details>
 
 <details>
 <summary>🔒 Secure Storage</summary>
@@ -239,11 +301,9 @@ Falls back to config file if keychain is unavailable.
 
 ### Interactive Configuration
 
-The easiest way to configure Rusty Commit is through the setup wizard:
-
 ```bash
-rco setup                   # Quick setup (essential settings only)
-rco setup --advanced        # Advanced setup (all settings)
+rco setup              # Quick setup (essential settings)
+rco setup --advanced   # Advanced setup (all settings)
 ```
 
 ### Configuration Priority
@@ -258,15 +318,13 @@ Per-repo config > Global config > Environment variables > Defaults
 rco config status                          # Check secure storage status
 rco config set RCO_AI_PROVIDER=anthropic   # Set provider
 rco config set RCO_MODEL=claude-3-5-haiku  # Set model
-rco config set RCO_COMMIT_TYPE=conventional # conventional or gitmoji
-rco config set RCO_EMOJI=true              # Include emojis
-rco config set RCO_LANGUAGE=en             # Output language
 rco config get RCO_AI_PROVIDER             # Get current value
 rco config describe                        # Show all options
 rco config reset --all                     # Reset to defaults
 ```
 
-### Common Options
+<details>
+<summary>🔧 Common Configuration Options</summary>
 
 | Key | Description | Default |
 |-----|-------------|---------|
@@ -279,9 +337,10 @@ rco config reset --all                     # Reset to defaults
 | `RCO_LANGUAGE` | Output language | `en` |
 | `RCO_MAX_TOKENS` | Max response tokens | `1024` |
 | `RCO_TEMPERATURE` | Response creativity | `0.7` |
-| `RCO_ENABLE_COMMIT_BODY` | Add commit body with context | `false` |
-| `RCO_LEARN_FROM_HISTORY` | Learn style from git history | `false` |
-| `RCO_HISTORY_COMMITS_COUNT` | Commits to analyze for style | `50` |
+| `RCO_ENABLE_COMMIT_BODY` | Add commit body | `false` |
+| `RCO_LEARN_FROM_HISTORY` | Learn from git history | `false` |
+
+</details>
 
 ---
 
@@ -296,7 +355,8 @@ rco hook unset  # Remove hook
 
 Once installed, `git commit` (without `-m`) automatically generates commit messages!
 
-### Advanced Hooks
+<details>
+<summary>⚙️ Advanced Hooks</summary>
 
 ```bash
 # Pre-generation hook
@@ -313,33 +373,20 @@ rco config set RCO_HOOK_STRICT=false       # Allow hook failures
 rco config set RCO_HOOK_TIMEOUT_MS=60000   # Timeout in ms
 ```
 
-### Skip Hooks (Per-Run)
-
+**Skip Hooks (Per-Run):**
 ```bash
 rco --no-pre-hooks      # Skip pre-gen + pre-commit hooks
 rco --no-post-hooks     # Skip post-commit hooks
 ```
 
+</details>
+
 ---
 
 ## 🧠 Advanced Features
 
-### Repository Context Awareness
-
-Rusty Commit automatically detects and includes project context for better commit messages:
-
-```bash
-# Create custom context file
-echo "Payment processing microservice using Stripe API" > .rco/context.txt
-```
-
-**Auto-detected context sources:**
-- `.rco/context.txt` - Custom project description
-- `README.md` - First paragraph
-- `Cargo.toml` - Rust project description
-- `package.json` - Node.js project description
-
-### Commit Body Generation
+<details>
+<summary>📝 Commit Body Generation</summary>
 
 Enable detailed commit messages with body explaining the "why":
 
@@ -356,7 +403,10 @@ feat(auth): implement OAuth2 PKCE flow
 - Handle token expiration gracefully
 ```
 
-### Style Learning from History
+</details>
+
+<details>
+<summary>🧠 Style Learning from History</summary>
 
 Automatically learn and match your team's commit style:
 
@@ -370,9 +420,12 @@ Analyzes last 50 commits to detect:
 - Capitalization preferences
 - Gitmoji usage patterns
 
-### Enhanced GitMoji Support
+</details>
 
-25+ emojis from [gitmoji.dev](https://gitmoji.dev) specification:
+<details>
+<summary>😄 GitMoji Support</summary>
+
+25+ emojis from [gitmoji.dev](https://gitmoji.dev):
 
 | Emoji | Meaning | Use Case |
 |-------|---------|----------|
@@ -389,45 +442,65 @@ Analyzes last 50 commits to detect:
 | 🚀 | `:rocket:` | Deployment |
 | 💥 | `:boom:` | Breaking changes |
 
+</details>
+
+<details>
+<summary>📂 Repository Context Awareness</summary>
+
+Rusty Commit automatically detects project context:
+
+```bash
+# Create custom context file
+echo "Payment processing microservice" > .rco/context.txt
+```
+
+**Auto-detected sources:**
+- `.rco/context.txt` - Custom project description
+- `README.md` - First paragraph
+- `Cargo.toml` - Rust project description
+- `package.json` - Node.js project description
+
+</details>
+
 ---
 
 ## 🎨 Custom Skills
 
-Create reusable commit message templates and prompt customizations:
+Create reusable commit message templates:
 
 ```bash
-# List available skills
-rco skills list
-
-# Create a new skill
-rco skills create conventional-with-scope --category template
-
-# Create project-specific skill
-rco skills create my-team-style --project
-
-# Show skill details
-rco skills show my-team-style
-
-# Remove a skill
-rco skills remove my-team-style
+rco skills list                           # List available skills
+rco skills create my-template             # Create a new skill
+rco skills create my-team-style --project # Project-specific skill
+rco skills show my-team-style             # Show skill details
+rco skills remove my-team-style           # Remove a skill
+rco --skill my-team-template              # Use a skill
 ```
 
-### Skill Structure
+<details>
+<summary>📥 Import Skills from External Sources</summary>
 
-Skills are stored in `~/.config/rustycommit/skills/` (or `.rco/skills/` for project-specific):
+```bash
+# Import from Claude Code
+rco skills available                      # List Claude Code skills
+rco skills import claude-code --name <skill-name>
 
+# Import from GitHub
+rco skills import github:owner/repo
+
+# Import from GitHub Gist
+rco skills import gist:<gist-id>
+
+# Import from URL
+rco skills import https://example.com/skill-definition.md
 ```
-my-skill/
-├── skill.toml      # Skill manifest
-├── prompt.md       # Custom prompt template
-└── hooks/          # Optional hooks
-    ├── pre_gen.sh
-    └── post_gen.sh
-```
 
-### Custom Prompt Template
+</details>
 
-Create `prompt.md` with placeholders:
+<details>
+<summary>📝 Custom Prompt Template</summary>
+
+Create `~/.config/rustycommit/skills/my-skill/prompt.md`:
 
 ```markdown
 # Custom Commit Prompt
@@ -443,8 +516,9 @@ Max length: {max_length}
 Generate a commit message following our team conventions:
 - Use present tense
 - Include ticket number if obvious from branch name
-- Reference related components
 ```
+
+</details>
 
 ---
 
@@ -452,70 +526,14 @@ Generate a commit message following our team conventions:
 
 Rusty Commit includes an **MCP (Model Context Protocol)** server for editor integrations.
 
-### Start the Server
-
 ```bash
-# TCP Mode (Cursor, VS Code)
-rco mcp server --port 3000
-
-# STDIO Mode (Direct integration)
-rco mcp stdio
+rco mcp server --port 3000   # TCP Mode (Cursor, VS Code)
+rco mcp stdio                # STDIO Mode (Direct integration)
 ```
 
-### Editor Setup
+**Cursor:** `Settings > Features > MCP > Add Server` → Type: HTTP → URL: `http://localhost:3000`
 
-**Cursor:**
-```
-Settings > Features > MCP > Add Server
-Type: HTTP
-URL: http://localhost:3000
-```
-
-**Claude Code:**
-```bash
-rco mcp stdio | claude-code connect stdio
-```
-
-### Available MCP Tools
-
-- `generate_commit` - Generate commit from staged changes
-- `get_config` / `set_config` - Manage configuration
-- `list_accounts` / `use_account` - Switch accounts
-
----
-
-## 🔄 Multi-Account Support
-
-Perfect for switching between work and personal projects!
-
-```bash
-# Add accounts
-rco config add-provider                    # Interactive wizard
-rco config add-provider --provider openai --alias work-openai
-
-# Manage accounts
-rco config list-accounts                   # Show all accounts
-rco config show-account work-openai        # Show account details
-rco config use-account work-openai         # Switch to account
-rco config remove-account work-openai      # Remove account
-```
-
-### Account Configuration
-
-Accounts stored in `~/.config/rustycommit/accounts.toml`:
-
-```toml
-[accounts.work-openai]
-provider = "openai"
-model = "gpt-4o-mini"
-
-[accounts.personal-anthropic]
-provider = "anthropic"
-model = "claude-3-5-haiku-20241022"
-
-[active_account]
-alias = "work-openai"
-```
+**Claude Code:** `rco mcp stdio | claude-code connect stdio`
 
 ---
 
@@ -527,12 +545,6 @@ rco pr generate --base main # Compare against main branch
 rco pr browse               # Generate and open PR creation page
 ```
 
-Features:
-- Analyzes all commits since base branch
-- Groups changes by type (features, fixes, docs, etc.)
-- Follows PR template conventions
-- Includes breaking changes and deprecation notices
-
 ---
 
 ## 🚫 File Exclusion
@@ -543,7 +555,6 @@ Exclude files from AI analysis via `.rcoignore`:
 # Dependencies
 node_modules/
 vendor/
-Cargo.lock
 
 # Build artifacts
 *.min.js
@@ -557,14 +568,9 @@ build/
 
 # OS
 .DS_Store
-Thumbs.db
 ```
 
-Or via command line:
-
-```bash
-rco -x "package-lock.json" -x "*.lock" -x "*.min.js"
-```
+Or via command line: `rco -x "*.lock" -x "*.min.js"`
 
 ---
 
@@ -581,128 +587,32 @@ rco update --version 1.0.2  # Install specific version
 
 ## 🏃 GitHub Action
 
-Use in CI/CD workflows:
-
 ```yaml
-name: AI Commits
-on: [push]
-
-jobs:
-  ai-commit:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: hongkongkiwi/action-rusty-commit@v1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RCO_API_KEY: ${{ secrets.RCO_API_KEY }}
-          RCO_AI_PROVIDER: 'anthropic'
-          RCO_MODEL: 'claude-3-5-haiku-20241022'
-```
-
-See [action-rusty-commit](https://github.com/hongkongkiwi/action-rusty-commit) for details.
-
----
-
-## 🛠️ Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| **401 / Invalid API key** | Re-authenticate: `rco auth login` or set `RCO_API_KEY` |
-| **429 Rate-limited** | Wait briefly; try lighter model or switch accounts |
-| **Secure storage unavailable** | Falls back to file; check `rco config status` |
-| **Hooks not running** | Ensure `.git/hooks/prepare-commit-msg` is executable |
-| **OAuth browser not opening** | Use `rco auth login --no-browser` |
-| **Large diff truncated** | Increase `RCO_DIFF_TOKENS` or use `.rcoignore` |
-| **Reasoning model thinking tags** | Use `--strip-thinking` flag |
-
-### Debug Mode
-
-```bash
-RUST_LOG=debug rco -y       # Enable debug logging
-rco --show-prompt           # See exact prompt sent to AI
-rco --timing                # Show timing breakdown
+- uses: hongkongkiwi/rusty-commit@v1
+  with:
+    provider: 'anthropic'
+    api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+    auto-commit: 'true'
 ```
 
 ---
 
-## 🧪 Development
+## 🤝 Contributing
 
-```bash
-# Build
-cargo build
-cargo build --release
-cargo build --features secure-storage
-
-# Test
-cargo test
-cargo test --all-features
-
-# Lint
-cargo clippy --all-features -- -D warnings
-cargo fmt
-
-# Just commands
-just build
-just test
-just all    # fmt + clippy + test
-```
-
----
-
-## 🔒 Security & Verification
-
-All releases are cryptographically signed with multiple methods:
-
-### Automatic Verification
-
-The install script automatically verifies downloads using the strongest available method.
-
-### Manual Verification
-
-```bash
-# Cosign/Sigstore (modern)
-cosign verify-blob \
-  --bundle rustycommit-linux-x86_64.tar.gz.cosign.bundle \
-  --certificate-identity-regexp "https://github.com/hongkongkiwi/rusty-commit/.github/workflows/release.yml@.*" \
-  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  rustycommit-linux-x86_64.tar.gz
-
-# GPG (traditional)
-gpg --keyserver hkps://keys.openpgp.org --recv-keys 0EC2DFF577818B86BA38DA3F164E3F90E425B2AD
-gpg --verify rustycommit-linux-x86_64.tar.gz.asc rustycommit-linux-x86_64.tar.gz
-
-# GitHub attestations
-gh attestation verify rustycommit-linux-x86_64.tar.gz --repo hongkongkiwi/rusty-commit
-```
-
-See [docs/VERIFICATION.md](docs/VERIFICATION.md) for details.
-
----
-
-## 💖 Support the Project
-
-If Rusty Commit saves you time, consider supporting ongoing development:
-
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-@hongkongkiwi-fd2e83?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/hongkongkiwi)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/hongkongkiwi)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
 <div align="center">
 
-**Inspired by [OpenCommit](https://github.com/di-sukharev/opencommit)** · Built with 🦀 Rust
+**[⬆ Back to Top](#-rusty-commit-rco)**
 
-**Build faster. Commit smarter.**
+Made with 🦀 by the Rusty Commit Contributors
 
 </div>

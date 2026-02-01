@@ -404,6 +404,7 @@ pub fn git_push(remote: &str, branch: &str) -> Result<()> {
 ///
 /// git::git_push_upstream().unwrap();
 /// ```
+#[allow(dead_code)]
 pub fn git_push_upstream() -> Result<()> {
     let output = Command::new("git")
         .args(["push", "--set-upstream"])

@@ -161,12 +161,12 @@ fn apply_skill_to_config(config: &mut Config, skill_name: &str) -> Result<()> {
     let mut manager = SkillsManager::new()?;
     manager.discover()?;
 
-    let skill = manager
-        .find(skill_name)
-        .ok_or_else(|| anyhow::anyhow!(
+    let skill = manager.find(skill_name).ok_or_else(|| {
+        anyhow::anyhow!(
             "Skill '{}' not found. Run 'rco skills list' to see available skills.",
             skill_name
-        ))?;
+        )
+    })?;
 
     // Load prompt template from skill if available
     if let Some(prompt_template) = skill.load_prompt_template()? {
@@ -302,7 +302,7 @@ fn handle_dry_run_mode(messages: &[String], ctx: &ExecContext) -> Result<()> {
     ctx.divider(None);
     ctx.subheader("The following commit message would be generated:");
     println!();
-    
+
     if messages.len() == 1 {
         println!("{}", messages[0].green());
     } else {
@@ -312,7 +312,7 @@ fn handle_dry_run_mode(messages: &[String], ctx: &ExecContext) -> Result<()> {
             println!("{}", msg.green());
         }
     }
-    
+
     ctx.divider(None);
     ctx.subheader("No commit was made. Remove --dry-run to commit.");
     Ok(())
@@ -340,17 +340,17 @@ fn push_after_commit(config: &Config, ctx: &ExecContext) -> Result<()> {
     ctx.subheader("Pushing to remote...");
 
     let current_branch = git::get_current_branch()?;
-    let remote = config
-        .remote
-        .as_deref()
-        .unwrap_or("origin");
+    let remote = config.remote.as_deref().unwrap_or("origin");
 
     match git::git_push(remote, &current_branch) {
         Ok(_) => {
             ctx.success(&format!("Pushed '{}' to '{}'", current_branch, remote));
         }
         Err(e) => {
-            ctx.warning(&format!("Push failed: {}. Try running 'git push' manually.", e));
+            ctx.warning(&format!(
+                "Push failed: {}. Try running 'git push' manually.",
+                e
+            ));
         }
     }
 
@@ -527,9 +527,9 @@ fn edit_commit_message(original: &str) -> Result<String> {
 /// Open commit message in $EDITOR for editing
 fn edit_in_external_editor(original: &str) -> Result<String> {
     use std::env;
-    use tempfile::NamedTempFile;
     use std::io::Write;
     use std::process::Command;
+    use tempfile::NamedTempFile;
 
     // Get the editor from environment
     let editor = env::var("EDITOR")
@@ -546,32 +546,39 @@ fn edit_in_external_editor(original: &str) -> Result<String> {
     // Create a temporary file with the commit message
     let mut temp_file = NamedTempFile::with_suffix(".txt")
         .context("Failed to create temporary file for editing")?;
-    
+
     // Write the original message to the temp file
     temp_file
         .write_all(original.as_bytes())
         .context("Failed to write to temporary file")?;
-    temp_file.flush().context("Failed to flush temporary file")?;
-    
+    temp_file
+        .flush()
+        .context("Failed to flush temporary file")?;
+
     let temp_path = temp_file.path().to_path_buf();
-    
+
     // Keep the temp file from being deleted when dropped
     let _temp_file = temp_file.into_temp_path();
-    
+
     // Open the editor
     let status = Command::new(&editor)
         .arg(&temp_path)
         .status()
-        .with_context(|| format!("Failed to open editor '{}'. Make sure $EDITOR is set correctly.", editor))?;
-    
+        .with_context(|| {
+            format!(
+                "Failed to open editor '{}'. Make sure $EDITOR is set correctly.",
+                editor
+            )
+        })?;
+
     if !status.success() {
         anyhow::bail!("Editor exited with error status");
     }
-    
+
     // Read the edited message back
     let edited = std::fs::read_to_string(&temp_path)
         .context("Failed to read edited commit message from temporary file")?;
-    
+
     Ok(edited)
 }
 

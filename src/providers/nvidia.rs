@@ -125,7 +125,8 @@ impl AIProvider for NvidiaProvider {
         let messages = vec![
             NvidiaMessage {
                 role: "system".to_string(),
-                content: "You are an expert at writing clear, concise git commit messages.".to_string(),
+                content: "You are an expert at writing clear, concise git commit messages."
+                    .to_string(),
             },
             NvidiaMessage {
                 role: "user".to_string(),
@@ -156,7 +157,9 @@ impl AIProvider for NvidiaProvider {
             if !response.status().is_success() {
                 let error_text = response.text().await?;
                 if error_text.contains("401") || error_text.contains("Unauthorized") {
-                    return Err(anyhow::anyhow!("Invalid NVIDIA API key. Please check your API key configuration."));
+                    return Err(anyhow::anyhow!(
+                        "Invalid NVIDIA API key. Please check your API key configuration."
+                    ));
                 }
                 return Err(anyhow::anyhow!("NVIDIA NIM API error: {}", error_text));
             }

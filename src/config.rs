@@ -537,8 +537,11 @@ impl Config {
                 Err(e) => {
                     eprintln!(
                         "{}",
-                        format!("Warning: Failed to load prompt file '{}': {}. Using fallback.", prompt_file, e)
-                            .yellow()
+                        format!(
+                            "Warning: Failed to load prompt file '{}': {}. Using fallback.",
+                            prompt_file, e
+                        )
+                        .yellow()
                     );
                     self.custom_prompt.clone()
                 }
@@ -555,7 +558,9 @@ impl Config {
             );
             eprintln!(
                 "{}",
-                "⚠️  SECURITY WARNING: Using custom prompt template.".yellow().bold()
+                "⚠️  SECURITY WARNING: Using custom prompt template."
+                    .yellow()
+                    .bold()
             );
             eprintln!(
                 "{}",

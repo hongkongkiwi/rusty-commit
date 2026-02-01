@@ -5,12 +5,12 @@ pub mod anthropic;
 pub mod azure;
 #[cfg(feature = "bedrock")]
 pub mod bedrock;
+#[cfg(feature = "flowise")]
+pub mod flowise;
 #[cfg(feature = "gemini")]
 pub mod gemini;
 #[cfg(feature = "huggingface")]
 pub mod huggingface;
-#[cfg(feature = "flowise")]
-pub mod flowise;
 #[cfg(feature = "mlx")]
 pub mod mlx;
 #[cfg(feature = "nvidia")]
@@ -416,7 +416,9 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     prompt.push_str("- Return ONLY the commit message, with no additional explanation, markdown formatting, or code blocks\n");
     prompt.push_str("- Do not include any reasoning, thinking, analysis, <thinking> tags, or XML-like tags in your response\n");
     prompt.push_str("- Never explain your choices or provide commentary\n");
-    prompt.push_str("- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n");
+    prompt.push_str(
+        "- If you cannot generate a meaningful commit message, return \"chore: update\"\n\n",
+    );
 
     // Add style guidance from history if enabled
     if config.learn_from_history.unwrap_or(false) {
@@ -478,10 +480,13 @@ fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     // Add commit body guidance if enabled
     if config.enable_commit_body.unwrap_or(false) {
         prompt.push_str("\nCOMMIT BODY (optional):\n");
-        prompt.push_str("- Add a blank line after the description, then explain WHY the change was made\n");
+        prompt.push_str(
+            "- Add a blank line after the description, then explain WHY the change was made\n",
+        );
         prompt.push_str("- Use bullet points for multiple changes\n");
         prompt.push_str("- Wrap body text at 72 characters\n");
-        prompt.push_str("- Focus on motivation and context, not what changed (that's in the diff)\n");
+        prompt
+            .push_str("- Focus on motivation and context, not what changed (that's in the diff)\n");
     }
 
     prompt
@@ -525,7 +530,12 @@ fn get_style_guidance(config: &Config) -> Option<String> {
 }
 
 /// Build the user prompt part (actual task + diff)
-fn build_user_prompt(diff: &str, context: Option<&str>, _full_gitmoji: bool, _config: &Config) -> String {
+fn build_user_prompt(
+    diff: &str,
+    context: Option<&str>,
+    _full_gitmoji: bool,
+    _config: &Config,
+) -> String {
     let mut prompt = String::new();
 
     // Add project context if available
@@ -573,7 +583,7 @@ fn extract_file_summary(diff: &str) -> String {
     let mut files: Vec<String> = Vec::new();
     let mut extensions: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut file_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-    
+
     for line in diff.lines() {
         if line.starts_with("+++ b/") {
             let path = line.strip_prefix("+++ b/").unwrap_or(line);
@@ -584,50 +594,54 @@ fn extract_file_summary(diff: &str) -> String {
                     if let Some(ext_str) = ext.to_str() {
                         let ext_lower = ext_str.to_lowercase();
                         extensions.insert(ext_lower.clone());
-                        
+
                         // Categorize file type
                         let category = categorize_file_type(&ext_lower);
                         *file_types.entry(category).or_insert(0) += 1;
                     }
                 } else {
                     // No extension - might be a config file or script
-                    if path.contains("Makefile") || path.contains("Dockerfile") || path.contains("LICENSE") {
+                    if path.contains("Makefile")
+                        || path.contains("Dockerfile")
+                        || path.contains("LICENSE")
+                    {
                         *file_types.entry("config".to_string()).or_insert(0) += 1;
                     }
                 }
             }
         }
     }
-    
+
     if files.is_empty() {
         return String::new();
     }
-    
+
     // Build summary
     let mut summary = format!("{} file(s)", files.len());
-    
+
     // Add file type categories
     if !file_types.is_empty() {
         let mut type_list: Vec<_> = file_types.into_iter().collect();
         type_list.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by count descending
-        
-        let type_str: Vec<_> = type_list.iter()
+
+        let type_str: Vec<_> = type_list
+            .iter()
             .map(|(t, c)| format!("{} {}", c, t))
             .collect();
         summary.push_str(&format!(" ({})", type_str.join(", ")));
     }
-    
+
     // Add extension info if not too many
     if !extensions.is_empty() && extensions.len() <= 5 {
         let ext_list: Vec<_> = extensions.into_iter().collect();
         summary.push_str(&format!(" [.{}]", ext_list.join(", .")));
     }
-    
+
     // Add first few file names if small number
     if files.len() <= 3 {
         summary.push_str(&format!(": {}", files.join(", ")));
     }
-    
+
     summary
 }
 
@@ -653,13 +667,13 @@ fn categorize_file_type(ext: &str) -> String {
         "m" => "Objective-C",
         "lua" => "Lua",
         "pl" => "Perl",
-        
+
         // Web
         "html" | "htm" => "HTML",
         "css" | "scss" | "sass" | "less" => "CSS",
         "vue" => "Vue",
         "svelte" => "Svelte",
-        
+
         // Data/Config
         "json" => "JSON",
         "yaml" | "yml" => "YAML",
@@ -667,12 +681,12 @@ fn categorize_file_type(ext: &str) -> String {
         "xml" => "XML",
         "csv" => "CSV",
         "sql" => "SQL",
-        
+
         // Documentation
         "md" | "markdown" => "Markdown",
         "rst" => "reStructuredText",
         "txt" => "Text",
-        
+
         // Build/Config
         "sh" | "bash" | "zsh" | "fish" => "Shell",
         "ps1" => "PowerShell",
@@ -680,16 +694,17 @@ fn categorize_file_type(ext: &str) -> String {
         "dockerfile" => "Docker",
         "makefile" | "mk" => "Make",
         "cmake" => "CMake",
-        
+
         // Other
         _ => "Other",
-    }.to_string()
+    }
+    .to_string()
 }
 
 /// Get project context from .rco/context.txt or README
 fn get_project_context() -> Option<String> {
     use std::path::Path;
-    
+
     // Try .rco/context.txt first
     if let Ok(repo_root) = crate::git::get_repo_root() {
         let context_path = Path::new(&repo_root).join(".rco").join("context.txt");
@@ -701,7 +716,7 @@ fn get_project_context() -> Option<String> {
                 }
             }
         }
-        
+
         // Try README.md - extract first paragraph
         let readme_path = Path::new(&repo_root).join("README.md");
         if readme_path.exists() {
@@ -723,7 +738,7 @@ fn get_project_context() -> Option<String> {
                 }
             }
         }
-        
+
         // Try Cargo.toml for Rust projects
         let cargo_path = Path::new(&repo_root).join("Cargo.toml");
         if cargo_path.exists() {
@@ -738,7 +753,7 @@ fn get_project_context() -> Option<String> {
                         in_package = false;
                     } else if in_package && trimmed.starts_with("description") {
                         if let Some(idx) = trimmed.find('=') {
-                            let desc = trimmed[idx+1..].trim().trim_matches('"');
+                            let desc = trimmed[idx + 1..].trim().trim_matches('"');
                             if !desc.is_empty() {
                                 return Some(format!("Rust project: {}", desc));
                             }
@@ -747,7 +762,7 @@ fn get_project_context() -> Option<String> {
                 }
             }
         }
-        
+
         // Try package.json for Node projects
         let package_path = Path::new(&repo_root).join("package.json");
         if package_path.exists() {
@@ -762,7 +777,7 @@ fn get_project_context() -> Option<String> {
             }
         }
     }
-    
+
     None
 }
 

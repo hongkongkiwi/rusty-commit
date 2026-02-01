@@ -399,7 +399,7 @@ jobs:
       - name: Upload Linux musl binary
         uses: actions/upload-artifact@v4
         with:
-          name: binary-${{ matrix.target }}
+          name: binary-musl-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
           retention-days: 5
 
@@ -558,13 +558,13 @@ jobs:
       - name: Download Linux musl binaries (amd64)
         uses: actions/download-artifact@v4
         with:
-          name: binary-x86_64-unknown-linux-musl
+          name: binary-musl-x86_64-unknown-linux-musl
           path: docker-bin/amd64
 
       - name: Download Linux musl binaries (arm64)
         uses: actions/download-artifact@v4
         with:
-          name: binary-aarch64-unknown-linux-musl
+          name: binary-musl-aarch64-unknown-linux-musl
           path: docker-bin/arm64
 
       - name: Prepare Docker binaries

@@ -139,7 +139,7 @@ pub struct OpenAICompatibleProvider {
 impl OpenAICompatibleProvider {
     pub fn new() -> Self {
         let mut compat = std::collections::HashMap::new();
-        
+
         // Core OpenAI-compatible providers
         compat.insert("deepseek", "https://api.deepseek.com/v1");
         compat.insert("groq", "https://api.groq.com/openai/v1");
@@ -155,16 +155,19 @@ impl OpenAICompatibleProvider {
         compat.insert("dashscope", "https://dashscope.console.aliyuncs.com/api/v1");
         compat.insert("alibaba", "https://dashscope.console.aliyuncs.com/api/v1");
         compat.insert("qwen", "https://dashscope.console.aliyuncs.com/api/v1");
-        compat.insert("qwen-coder", "https://dashscope.console.aliyuncs.com/api/v1");
+        compat.insert(
+            "qwen-coder",
+            "https://dashscope.console.aliyuncs.com/api/v1",
+        );
         compat.insert("codex", "https://api.openai.com/v1");
-        
+
         // From OpenCode (Enterprise & Cloud)
         compat.insert("cohere", "https://api.cohere.com/v1");
         compat.insert("ai21", "https://api.ai21.com/studio/v1");
         compat.insert("ai21-labs", "https://api.ai21.com/studio/v1");
         compat.insert("upstage", "https://api.upstage.ai/v1/solar");
         compat.insert("solar", "https://api.upstage.ai/v1/solar");
-        
+
         // From OpenCode (GPU Cloud & Inference)
         compat.insert("nebius", "https://api.studio.nebius.ai/v1");
         compat.insert("ovh", "https://api.ovhcloud.com/v1");
@@ -219,14 +222,17 @@ impl OpenAICompatibleProvider {
         compat.insert("teknium", "https://api.teknium.ai/v1");
         compat.insert("theb", "https://api.theb.ai/v1");
         compat.insert("tryleap", "https://api.tryleap.ai/v1");
-        compat.insert("workers-ai", "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1");
-        
+        compat.insert(
+            "workers-ai",
+            "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+        );
+
         // China-based providers
         compat.insert("siliconflow", "https://api.siliconflow.cn/v1");
         compat.insert("zhipu", "https://open.bigmodel.cn/api/paas/v4");
         compat.insert("minimax", "https://api.minimax.chat/v1");
         compat.insert("glm", "https://open.bigmodel.cn/api/paas/v4");
-        
+
         // Additional providers from OpenCommit
         compat.insert("aimlapi", "https://api.aimlapi.com/v1");
 

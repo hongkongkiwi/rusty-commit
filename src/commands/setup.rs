@@ -5,7 +5,6 @@ use dialoguer::{Confirm, Input, Select};
 use crate::cli::SetupCommand;
 use crate::config::Config;
 
-
 /// Provider option for the setup wizard
 struct ProviderOption {
     name: &'static str,
@@ -526,7 +525,10 @@ async fn run_advanced_setup() -> Result<()> {
 fn select_provider_quick() -> Result<ProviderOption> {
     println!();
     println!("{}", "Select your AI provider:".bold());
-    println!("{}", "   This determines which AI will generate your commit messages.".dimmed());
+    println!(
+        "{}",
+        "   This determines which AI will generate your commit messages.".dimmed()
+    );
     println!();
 
     let providers = ProviderOption::all();
@@ -612,11 +614,7 @@ fn select_provider_advanced() -> Result<ProviderOption> {
     let provider = providers.into_iter().nth(selection).unwrap();
 
     println!();
-    println!(
-        "{} Selected: {}",
-        "✓".green(),
-        provider.name.bright_cyan()
-    );
+    println!("{} Selected: {}", "✓".green(), provider.name.bright_cyan());
 
     Ok(provider)
 }
@@ -639,7 +637,10 @@ fn prompt_for_api_key(provider_name: &str) -> Result<String> {
     println!();
 
     let api_key: String = Input::new()
-        .with_prompt(format!("Enter your {} API key", provider_name.bright_cyan()))
+        .with_prompt(format!(
+            "Enter your {} API key",
+            provider_name.bright_cyan()
+        ))
         .allow_empty(true)
         .interact()?;
 
@@ -776,28 +777,18 @@ fn print_completion_message(config: &Config, is_advanced: bool) {
     }
     if let Some(ref language) = config.language {
         if language != "en" {
-            println!(
-                "  {} Language: {}",
-                "•".cyan(),
-                language.bright_white()
-            );
+            println!("  {} Language: {}", "•".cyan(), language.bright_white());
         }
     }
 
     println!();
     println!("{} You're ready to go!", "→".cyan());
     println!();
-    println!(
-        "   Try it now:  {}",
-        "rco".bold().bright_cyan().underline()
-    );
+    println!("   Try it now:  {}", "rco".bold().bright_cyan().underline());
     println!();
 
     if is_advanced {
-        println!(
-            "   Make a commit:  {}",
-            "git add . && rco".dimmed()
-        );
+        println!("   Make a commit:  {}", "git add . && rco".dimmed());
         println!();
         println!(
             "{} Modify settings anytime: {}",

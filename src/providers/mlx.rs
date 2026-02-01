@@ -56,11 +56,7 @@ impl MlxProvider {
             .as_deref()
             .unwrap_or("http://localhost:8080")
             .to_string();
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("default")
-            .to_string();
+        let model = config.model.as_deref().unwrap_or("default").to_string();
 
         Ok(Self {
             client,
@@ -113,7 +109,8 @@ impl AIProvider for MlxProvider {
         let messages = vec![
             MlxMessage {
                 role: "system".to_string(),
-                content: "You are an expert at writing clear, concise git commit messages.".to_string(),
+                content: "You are an expert at writing clear, concise git commit messages."
+                    .to_string(),
             },
             MlxMessage {
                 role: "user".to_string(),

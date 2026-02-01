@@ -11,7 +11,11 @@ use crate::skills::{SkillCategory, SkillsManager};
 pub async fn execute(cmd: SkillsCommand) -> Result<()> {
     match cmd.action {
         SkillsAction::List { category } => list_skills(category).await,
-        SkillsAction::Create { name, category, project } => create_skill(name, category, project).await,
+        SkillsAction::Create {
+            name,
+            category,
+            project,
+        } => create_skill(name, category, project).await,
         SkillsAction::Show { name } => show_skill(name).await,
         SkillsAction::Remove { name, force } => remove_skill(name, force).await,
         SkillsAction::Open => open_skills_dir().await,
@@ -37,13 +41,20 @@ async fn list_skills(category_filter: Option<String>) -> Result<()> {
     // Filter by category if specified
     let filtered_skills: Vec<_> = if let Some(ref cat) = category_filter {
         let category = parse_category(cat);
-        manager.by_category(&category).into_iter().cloned().collect()
+        manager
+            .by_category(&category)
+            .into_iter()
+            .cloned()
+            .collect()
     } else {
         skills.to_vec()
     };
 
     if filtered_skills.is_empty() {
-        println!("{}", format!("No skills found in category: {}", category_filter.unwrap()).yellow());
+        println!(
+            "{}",
+            format!("No skills found in category: {}", category_filter.unwrap()).yellow()
+        );
         return Ok(());
     }
 
@@ -51,7 +62,8 @@ async fn list_skills(category_filter: Option<String>) -> Result<()> {
     println!();
 
     // Group by category
-    let mut by_category: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+    let mut by_category: std::collections::HashMap<String, Vec<_>> =
+        std::collections::HashMap::new();
     for skill in &filtered_skills {
         by_category
             .entry(skill.category().to_string())
@@ -68,7 +80,9 @@ async fn list_skills(category_filter: Option<String>) -> Result<()> {
         for skill in by_category.get(category).unwrap() {
             let source_marker = match skill.source() {
                 crate::skills::SkillSource::Builtin => format!(" {}", "[built-in]".dimmed()),
-                crate::skills::SkillSource::Project => format!(" {}", "[project]".yellow().dimmed()),
+                crate::skills::SkillSource::Project => {
+                    format!(" {}", "[project]".yellow().dimmed())
+                }
                 crate::skills::SkillSource::User => String::new(),
             };
 
@@ -112,19 +126,23 @@ async fn create_skill(name: String, category: String, project: bool) -> Result<(
         let project_dir = manager.ensure_project_skills_dir()?.ok_or_else(|| {
             anyhow::anyhow!("Not in a git repository. Cannot create project-level skill.")
         })?;
-        
+
         println!(
             "{} Creating new {} project skill '{}'...",
             "→".cyan(),
             skill_category.to_string().cyan(),
             name.green()
         );
-        
+
         let skill_dir = project_dir.join(&name);
         if skill_dir.exists() {
-            anyhow::bail!("Project skill '{}' already exists at {}", name, skill_dir.display());
+            anyhow::bail!(
+                "Project skill '{}' already exists at {}",
+                name,
+                skill_dir.display()
+            );
         }
-        
+
         fs::create_dir_all(&skill_dir)?;
         create_skill_files(&skill_dir, &name, skill_category)?;
         skill_dir
@@ -136,7 +154,7 @@ async fn create_skill(name: String, category: String, project: bool) -> Result<(
             skill_category.to_string().cyan(),
             name.green()
         );
-        
+
         manager.create_skill(&name, skill_category)?
     };
 
@@ -159,20 +177,34 @@ async fn create_skill(name: String, category: String, project: bool) -> Result<(
         "  3. Use your skill: {}",
         format!("rco --skill {}", name).cyan()
     );
-    
+
     if project {
         println!();
-        println!("{}", "Note: Project skills are shared with everyone who clones this repo.".yellow().dimmed());
-        println!("{}", "      Make sure to commit the .rco/skills/ directory to version control.".yellow().dimmed());
+        println!(
+            "{}",
+            "Note: Project skills are shared with everyone who clones this repo."
+                .yellow()
+                .dimmed()
+        );
+        println!(
+            "{}",
+            "      Make sure to commit the .rco/skills/ directory to version control."
+                .yellow()
+                .dimmed()
+        );
     }
 
     Ok(())
 }
 
 /// Create skill files (skill.toml and prompt.md)
-fn create_skill_files(skill_dir: &std::path::Path, name: &str, category: crate::skills::SkillCategory) -> Result<()> {
+fn create_skill_files(
+    skill_dir: &std::path::Path,
+    name: &str,
+    category: crate::skills::SkillCategory,
+) -> Result<()> {
     use crate::skills::{SkillManifest, SkillMeta};
-    
+
     // Create skill.toml
     let manifest = SkillManifest {
         skill: SkillMeta {
@@ -214,7 +246,7 @@ Generate a commit message that:
 "#;
 
     fs::write(skill_dir.join("prompt.md"), prompt_template)?;
-    
+
     Ok(())
 }
 
@@ -234,11 +266,7 @@ async fn show_skill(name: String) -> Result<()> {
         "Category".dimmed(),
         skill.category().to_string().cyan()
     );
-    println!(
-        "{}: {}",
-        "Version".dimmed(),
-        skill.manifest.skill.version
-    );
+    println!("{}: {}", "Version".dimmed(), skill.manifest.skill.version);
     println!(
         "{}: {}",
         "Source".dimmed(),
@@ -355,20 +383,14 @@ async fn open_skills_dir() -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         // Try xdg-open first, then fall back to other options
-        let result = std::process::Command::new("xdg-open")
-            .arg(path)
-            .spawn();
+        let result = std::process::Command::new("xdg-open").arg(path).spawn();
 
         if result.is_err() {
             // Try gnome-open or kde-open
             let _ = std::process::Command::new("gnome-open")
                 .arg(path)
                 .spawn()
-                .or_else(|_| {
-                    std::process::Command::new("kde-open")
-                        .arg(path)
-                        .spawn()
-                })
+                .or_else(|_| std::process::Command::new("kde-open").arg(path).spawn())
                 .context("Failed to open skills directory. Try installing xdg-open.")?;
         }
     }
@@ -381,27 +403,39 @@ async fn open_skills_dir() -> Result<()> {
             .context("Failed to open skills directory")?;
     }
 
-    println!("{} Opened skills directory: {}", "✓".green(), path.display());
+    println!(
+        "{} Opened skills directory: {}",
+        "✓".green(),
+        path.display()
+    );
 
     Ok(())
 }
 
 async fn import_skills(source: String, specific_name: Option<String>) -> Result<()> {
-    use crate::skills::external::{parse_source, import_from_claude_code, import_from_github, import_from_gist, import_from_url};
-    
+    use crate::skills::external::{
+        import_from_claude_code, import_from_gist, import_from_github, import_from_url,
+        parse_source,
+    };
+
     let manager = SkillsManager::new()?;
     let target_dir = manager.skills_dir();
-    
+
     // Ensure skills directory exists
     if !target_dir.exists() {
-        fs::create_dir_all(target_dir)?;
+        fs::create_dir_all(target_dir)
+            .with_context(|| format!("Failed to create target directory: {:?}", target_dir))?;
     }
-    
+
     let source = parse_source(&source)?;
-    
-    println!("{} Importing from {}...", "→".cyan(), source.to_string().cyan());
+
+    println!(
+        "{} Importing from {}...",
+        "→".cyan(),
+        source.to_string().cyan()
+    );
     println!();
-    
+
     let imported = match source {
         crate::skills::external::ExternalSource::ClaudeCode => {
             if let Some(name) = specific_name {
@@ -411,11 +445,11 @@ async fn import_skills(source: String, specific_name: Option<String>) -> Result<
                     .join(".claude")
                     .join("skills")
                     .join(&name);
-                
+
                 if !claude_dir.exists() {
                     anyhow::bail!("Claude Code skill '{}' not found at {:?}", name, claude_dir);
                 }
-                
+
                 let target = target_dir.join(&name);
                 crate::skills::external::convert_claude_skill(&claude_dir, &target, &name)?;
                 vec![name]
@@ -426,10 +460,11 @@ async fn import_skills(source: String, specific_name: Option<String>) -> Result<
         crate::skills::external::ExternalSource::GitHub { owner, repo, path } => {
             if let Some(name) = specific_name {
                 // Import specific skill from GitHub
-                let specific_path = path.as_ref()
+                let specific_path = path
+                    .as_ref()
                     .map(|p| format!("{}/{}", p, name))
                     .unwrap_or_else(|| format!(".rco/skills/{}", name));
-                
+
                 import_from_github(&owner, &repo, Some(&specific_path), target_dir)?
             } else {
                 import_from_github(&owner, &repo, path.as_deref(), target_dir)?
@@ -437,7 +472,11 @@ async fn import_skills(source: String, specific_name: Option<String>) -> Result<
         }
         crate::skills::external::ExternalSource::Gist { id } => {
             if specific_name.is_some() {
-                println!("{}", "Note: Gist import doesn't support filtering by name. Importing all...".yellow());
+                println!(
+                    "{}",
+                    "Note: Gist import doesn't support filtering by name. Importing all..."
+                        .yellow()
+                );
             }
             let name = import_from_gist(&id, target_dir)?;
             vec![name]
@@ -447,54 +486,73 @@ async fn import_skills(source: String, specific_name: Option<String>) -> Result<
             vec![name]
         }
     };
-    
+
     if imported.is_empty() {
-        println!("{}", "No new skills were imported (they may already exist).".yellow());
+        println!(
+            "{}",
+            "No new skills were imported (they may already exist).".yellow()
+        );
     } else {
-        println!("{} Successfully imported {} skill(s):", "✓".green(), imported.len());
+        println!(
+            "{} Successfully imported {} skill(s):",
+            "✓".green(),
+            imported.len()
+        );
         for name in &imported {
             println!("  • {}", name.green());
         }
         println!();
-        println!("Use {} to see all available skills.", "rco skills list".cyan());
+        println!(
+            "Use {} to see all available skills.",
+            "rco skills list".cyan()
+        );
     }
-    
+
     Ok(())
 }
 
 async fn list_available_skills(source: String) -> Result<()> {
     use crate::skills::external::list_claude_code_skills;
-    
+
     match source.as_str() {
         "claude-code" | "claude" => {
             let skills = list_claude_code_skills()?;
-            
+
             if skills.is_empty() {
                 println!("{}", "No Claude Code skills found.".yellow());
                 println!();
                 println!("Claude Code skills are stored in: ~/.claude/skills/");
                 return Ok(());
             }
-            
+
             println!("{}", "Available Claude Code Skills".bold().underline());
             println!();
-            println!("{}", "Run 'rco skills import claude-code [name]' to import".dimmed());
+            println!(
+                "{}",
+                "Run 'rco skills import claude-code [name]' to import".dimmed()
+            );
             println!();
-            
+
             for (name, description) in skills {
                 println!("{} {}", "•".cyan(), name.green());
                 println!("  {}", description.dimmed());
             }
-            
+
             println!();
             println!("To import all: {}", "rco skills import claude-code".cyan());
-            println!("To import one: {}", "rco skills import claude-code --name <skill-name>".cyan());
+            println!(
+                "To import one: {}",
+                "rco skills import claude-code --name <skill-name>".cyan()
+            );
         }
         _ => {
-            anyhow::bail!("Unknown source: {}. Currently supported: claude-code", source);
+            anyhow::bail!(
+                "Unknown source: {}. Currently supported: claude-code",
+                source
+            );
         }
     }
-    
+
     Ok(())
 }
 

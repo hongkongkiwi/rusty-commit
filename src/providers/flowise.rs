@@ -106,12 +106,12 @@ impl AIProvider for FlowiseProvider {
         let flowise_response: FlowiseResponse = retry_async(|| async {
             let url = format!("{}/api/v1/prediction/flowise", self.api_url);
             let mut req = self.client.post(&url).json(&request);
-            
+
             // Add API key if available
             if let Some(ref key) = self.api_key {
                 req = req.header("Authorization", format!("Bearer {}", key));
             }
-            
+
             let response = req
                 .send()
                 .await
@@ -120,7 +120,9 @@ impl AIProvider for FlowiseProvider {
             if !response.status().is_success() {
                 let error_text = response.text().await?;
                 if error_text.contains("Unauthorized") || error_text.contains("401") {
-                    return Err(anyhow::anyhow!("Invalid Flowise API key. Please check your configuration."));
+                    return Err(anyhow::anyhow!(
+                        "Invalid Flowise API key. Please check your configuration."
+                    ));
                 }
                 return Err(anyhow::anyhow!("Flowise API error: {}", error_text));
             }
@@ -135,10 +137,7 @@ impl AIProvider for FlowiseProvider {
         .await
         .context("Failed to generate commit message from Flowise after retries")?;
 
-        let message = flowise_response
-            .text
-            .trim()
-            .to_string();
+        let message = flowise_response.text.trim().to_string();
 
         if message.is_empty() {
             anyhow::bail!("Flowise returned an empty response");

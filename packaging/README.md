@@ -9,7 +9,7 @@ When a GitHub release is published, the following packages are automatically cre
 ### Linux Packages
 
 #### Debian/Ubuntu (.deb)
-- **Architectures**: amd64, arm64, armhf
+- **Architectures**: amd64, arm64
 - **Installation**: `sudo dpkg -i rusty-commit_VERSION_ARCH.deb`
 - **Uninstallation**: `sudo apt remove rusty-commit`
 
@@ -25,9 +25,10 @@ When a GitHub release is published, the following packages are automatically cre
 - **Uninstallation**: `sudo apk del rusty-commit`
 
 #### Snap Package (.snap)
-- **Universal package** for all Linux distributions
+- **Universal package** for all Linux distributions (amd64)
 - **Installation**: `sudo snap install --classic rusty-commit_VERSION.snap`
 - **Uninstallation**: `sudo snap remove rusty-commit`
+- **Note**: Published to Snap Store automatically on release
 
 ### Platform-Agnostic Archives
 
@@ -63,7 +64,7 @@ sudo snap install snapcraft --classic
 #### Build .deb Package
 ```bash
 VERSION=1.0.1
-ARCH=amd64  # or arm64, armhf
+ARCH=amd64  # or arm64
 
 # Create package structure
 mkdir -p rusty-commit_${VERSION}_${ARCH}/{DEBIAN,usr/bin}

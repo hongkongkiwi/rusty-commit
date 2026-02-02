@@ -801,3 +801,165 @@ jobs:
           git add action.yml README.md 2>/dev/null || git add action.yml
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
+
+  update-scoop:
+    name: Update Scoop Bucket
+    needs: finalize-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION_RAW#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout scoop-bucket
+        uses: actions/checkout@v4
+        with:
+          repository: hongkongkiwi/scoop-rusty-commit
+          token: ${{ secrets.SCOOP_REPO_UPDATE_TOKEN }}
+          path: scoop-tap
+
+      - name: Download SHA256 checksums
+        uses: actions/download-artifact@v7
+        with:
+          name: sha256sums
+          path: scoop-tmp
+
+      - name: Extract SHA256 for Windows x86_64
+        id: sha256
+        run: |
+          SHA256_X86_64_WINDOWS=$(grep -E 'rusty-commit-.*-x86_64-pc-windows-msvc\.zip' scoop-tmp/SHA256SUMS.txt | awk '{print $1}')
+
+          if [ -z "$SHA256_X86_64_WINDOWS" ]; then
+            echo "Missing SHA256 checksum for Windows x86_64" >&2
+            exit 1
+          fi
+
+          echo "sha256_x86_64_windows=${SHA256_X86_64_WINDOWS}" >> "$GITHUB_OUTPUT"
+          echo "SHA256 x86_64-windows: $SHA256_X86_64_WINDOWS"
+
+      - name: Update Scoop manifest
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256_X86_64_WINDOWS="${{ steps.sha256.outputs.sha256_x86_64_windows }}"
+
+          # Update the manifest version
+          sed -i "s/\"version\": \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/\"version\": \"${VERSION}\"/" scoop-tap/rusty-commit.json
+
+          # Update the URL with the correct version
+          sed -i "s|https://github.com/hongkongkiwi/rusty-commit/releases/download/v[0-9.]*/rusty-commit-v[0-9.]*-x86_64-pc-windows-msvc.zip|https://github.com/hongkongkiwi/rusty-commit/releases/download/v${VERSION}/rusty-commit-v${VERSION}-x86_64-pc-windows-msvc.zip|g" scoop-tap/rusty-commit.json
+
+          # Update the hash
+          sed -i "s/\"hash\": \"[a-f0-9]+\"/\"hash\": \"${SHA256_X86_64_WINDOWS}\"/" scoop-tap/rusty-commit.json
+
+          cat scoop-tap/rusty-commit.json
+
+      - name: Commit and push changes
+        working-directory: ./scoop-tap
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add rusty-commit.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit for scoop manifest"
+            exit 0
+          fi
+
+          git commit -m "Update rusty-commit to v${VERSION}"
+          git push
+
+  build-snap:
+    name: Build and Publish Snap
+    needs: build-apk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION_RAW#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download musl binary
+        uses: actions/download-artifact@v7
+        with:
+          name: binary-musl-x86_64-unknown-linux-musl
+          path: snap-src
+
+      - name: Prepare Snapcraft directory
+        run: |
+          mkdir -p snap-src/snap
+
+      - name: Create snapcraft.yaml
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          cat > snap-src/snap/snapcraft.yaml << 'EOF'
+          name: rusty-commit
+          base: core22
+          version: 'VERSION_PLACEHOLDER'
+          summary: AI-powered commit message generator
+          description: |
+            Rusty-commit is a modern, AI-powered git commit message generator that helps
+            you create meaningful, standardized commit messages following Conventional Commits.
+            Supports 100+ AI providers including OpenAI, Claude, Groq, and more.
+          grade: stable
+          confinement: classic
+          license: MIT
+
+          parts:
+            rco:
+              plugin: dump
+              source: snap-src/
+              override-pull: |
+                snapcraftctl pull
+                snapctl set version $SNAPCRAFT_PROJECT_VERSION
+
+          apps:
+            rco:
+              command: rco
+          EOF
+
+          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/" snap-src/snap/snapcraft.yaml
+
+      - name: Set up Snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          snapcraft-channel: stable
+
+      - name: Build Snap package
+        run: |
+          cd snap-src
+          VERSION="${{ steps.version.outputs.version }}"
+          snapcraft pack --output rusty-commit_${VERSION}_amd64.snap
+
+      - name: Upload Snap package to release
+        uses: actions/upload-artifact@v6
+        with:
+          name: rusty-commit.snap
+          path: snap-src/rusty-commit_*.snap
+          retention-days: 5
+
+      - name: Upload Snap to GitHub Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          draft: false
+          prerelease: false
+          files: snap-src/rusty-commit_*.snap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Snap Store
+        if: env.SNAP_STORE_LOGIN != ''
+        uses: snapcore/action-publish@v1
+        with:
+          snapcraft-channel: stable
+          login: ${{ secrets.SNAP_STORE_LOGIN }}

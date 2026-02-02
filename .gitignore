@@ -1,3 +1,6 @@
+rusty-commit_token.txt
+snap_store_login.txt
+
 # Rust
 target/
 Cargo.lock

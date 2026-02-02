@@ -76,6 +76,30 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 # See: docs/INSTALL-SCRIPT-VERIFICATION.md
 ```
 
+**Verify release binaries with GPG:**
+
+```bash
+# Download release files
+wget https://github.com/hongkongkiwi/rusty-commit/releases/download/v1.0.0/rusty-commit-v1.0.0-x86_64-unknown-linux-musl.tar.gz
+wget https://github.com/hongkongkiwi/rusty-commit/releases/download/v1.0.0/rusty-commit-v1.0.0-x86_64-unknown-linux-musl.tar.gz.asc
+wget https://github.com/hongkongkiwi/rusty-commit/releases/download/v1.0.0/SHA256SUMS.txt
+wget https://github.com/hongkongkiwi/rusty-commit/releases/download/v1.0.0/SHA256SUMS.txt.asc
+
+# Verify GPG signature
+gpg --verify SHA256SUMS.txt.asc
+
+# Verify checksums
+sha256sum -c SHA256SUMS.txt
+```
+
+Or verify individual files directly:
+
+```bash
+gpg --verify rusty-commit-v1.0.0-x86_64-unknown-linux-musl.tar.gz.asc
+```
+
+**GPG Public Key:** [`0x0EC2DFF577818B86`](https://keys.openpgp.org/search?q=0x0EC2DFF577818B86) (full: `0EC2DFF577818B86BA38DA3F164E3F90E425B2AD`)
+
 </details>
 
 <details>
@@ -88,7 +112,11 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 | **Debian/Ubuntu** | `wget .../rusty-commit_amd64.deb && sudo dpkg -i rusty-commit_amd64.deb` | - |
 | **Fedora/RHEL** | `sudo dnf install https://.../rusty-commit.x86_64.rpm` | - |
 | **Alpine** | `wget .../rusty-commit-x86_64.apk && sudo apk add --allow-untrusted rusty-commit-x86_64.apk` | - |
+| **Arch Linux (AUR)** | `yay -S rusty-commit` or `paru -S rusty-commit` | Community |
+| **Nix/NixOS** | `nix-env -iA nixpkgs.rusty-commit` or via flake | [nixpkgs-overlays](https://github.com/hongkongkiwi/nixpkgs-overlays) |
 | **Windows (Scoop)** | `scoop bucket add rusty-commit && scoop install rusty-commit` | [scoop-rusty-commit](https://github.com/hongkongkiwi/scoop-rusty-commit) |
+| **Windows (Winget)** | `winget install hongkongkiwi.rusty-commit` | Community (via [winget-pkgs](https://github.com/microsoft/winget-pkgs)) |
+| **Windows (Chocolatey)** | `choco install rusty-commit` | Community |
 | **Windows (Binary)** | [Download from releases](https://github.com/hongkongkiwi/rusty-commit/releases) | - |
 
 </details>

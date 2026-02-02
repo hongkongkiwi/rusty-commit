@@ -99,26 +99,33 @@ runs:
           *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
         esac
 
-        # Determine OS
+        # Determine OS and target triple (must match release artifact names)
         case "$(uname -s)" in
           Linux*)
             OS="linux"
-            if ldd --version 2>&1 | grep -q musl; then
-              OS_VARIANT="linux-${ARCH}-musl"
-            else
-              OS_VARIANT="linux-${ARCH}"
-            fi
             ARCHIVE_EXT="tar.gz"
+            case "$ARCH" in
+              x86_64) OS_VARIANT="x86_64-unknown-linux-musl" ;;
+              aarch64) OS_VARIANT="aarch64-unknown-linux-musl" ;;
+              *) echo "Unsupported Linux architecture: $ARCH"; exit 1 ;;
+            esac
             ;;
           Darwin*)
             OS="macos"
-            OS_VARIANT="macos-${ARCH}"
             ARCHIVE_EXT="tar.gz"
+            case "$ARCH" in
+              x86_64) OS_VARIANT="x86_64-apple-darwin" ;;
+              aarch64) OS_VARIANT="aarch64-apple-darwin" ;;
+              *) echo "Unsupported macOS architecture: $ARCH"; exit 1 ;;
+            esac
             ;;
           CYGWIN*|MINGW*|MSYS*)
             OS="windows"
-            OS_VARIANT="windows-${ARCH}"
             ARCHIVE_EXT="zip"
+            case "$ARCH" in
+              x86_64) OS_VARIANT="x86_64-pc-windows-msvc" ;;
+              *) echo "Unsupported Windows architecture: $ARCH"; exit 1 ;;
+            esac
             ;;
           *) echo "Unsupported OS: $(uname -s)"; exit 1 ;;
         esac
@@ -133,7 +140,7 @@ runs:
         echo "Installing Rusty Commit ${LATEST_RELEASE} for ${OS_VARIANT}"
 
         # Download and extract
-        DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_RELEASE}/rustycommit-${OS_VARIANT}.${ARCHIVE_EXT}"
+        DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${LATEST_RELEASE}/rusty-commit-${LATEST_RELEASE}-${OS_VARIANT}.${ARCHIVE_EXT}"
 
         if [ "$ARCHIVE_EXT" = "tar.gz" ]; then
           curl -L "$DOWNLOAD_URL" | tar xz

@@ -35,14 +35,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Rebase conflicted Dependabot PRs
+      - name: Get Dependabot PRs to process
+        id: get-prs
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { execSync } = require('child_process');
-            
-            // Get PR number from input or process all
             const specificPR = context.payload.inputs?.pr_number;
             
             const { data: prs } = await github.rest.pulls.list({
@@ -52,6 +50,9 @@ jobs:
               per_page: 100
             });
 
+            // Filter for Dependabot PRs and check mergeable state
+            const prsToProcess = [];
+            
             for (const pr of prs) {
               // Skip non-Dependabot PRs unless specific PR requested
               if (pr.user?.login !== 'dependabot[bot]' && !specificPR) continue;
@@ -71,67 +72,129 @@ jobs:
                 continue;
               }
 
-              console.log(`  PR #${pr.number} has merge conflicts`);
+              console.log(`  PR #${pr.number} has merge conflicts - marking for rebase`);
+              prsToProcess.push({
+                number: pr.number,
+                branch: pr.head.ref,
+                base: pr.base.ref,
+                title: pr.title
+              });
+            }
+            
+            // Output as JSON for next step
+            core.setOutput('prs', JSON.stringify(prsToProcess));
+            console.log(`Found ${prsToProcess.length} PR(s) with conflicts to rebase`);
 
+      - name: Install jq
+        if: steps.get-prs.outputs.prs != '[]'
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Rebase conflicted PRs
+        if: steps.get-prs.outputs.prs != '[]'
+        run: |
+          # Parse the PR list from JSON
+          prs='${{ steps.get-prs.outputs.prs }}'
+          
+          # Process each PR
+          echo "$prs" | jq -c '.[]' | while read -r pr; do
+            pr_number=$(echo "$pr" | jq -r '.number')
+            pr_branch=$(echo "$pr" | jq -r '.branch')
+            base_branch=$(echo "$pr" | jq -r '.base')
+            pr_title=$(echo "$pr" | jq -r '.title')
+            
+            echo "Rebasing PR #$pr_number: $pr_title"
+            echo "  Branch: $pr_branch -> $base_branch"
+            
+            # Fetch branches
+            git fetch origin "$base_branch":"$base_branch" || {
+              echo "Failed to fetch base branch $base_branch"
+              echo "pr_${pr_number}_status=fetch_failed" >> "$GITHUB_OUTPUT"
+              continue
+            }
+            
+            git fetch origin "$pr_branch":"$pr_branch" || {
+              echo "Failed to fetch PR branch $pr_branch"
+              echo "pr_${pr_number}_status=fetch_failed" >> "$GITHUB_OUTPUT"
+              continue
+            }
+            
+            # Checkout PR branch
+            git checkout "$pr_branch" || {
+              echo "Failed to checkout PR branch $pr_branch"
+              echo "pr_${pr_number}_status=checkout_failed" >> "$GITHUB_OUTPUT"
+              continue
+            }
+            
+            # Attempt rebase
+            if git rebase "$base_branch"; then
+              # Push rebased branch
+              if git push --force-with-lease origin "$pr_branch"; then
+                echo "pr_${pr_number}_status=rebased" >> "$GITHUB_OUTPUT"
+                echo "Successfully rebased PR #$pr_number"
+              else
+                echo "pr_${pr_number}_status=push_failed" >> "$GITHUB_OUTPUT"
+                echo "Failed to push rebased branch for PR #$pr_number"
+              fi
+            else
+              # Rebase failed
+              echo "pr_${pr_number}_status=rebase_failed" >> "$GITHUB_OUTPUT"
+              echo "Rebase failed for PR #$pr_number"
+              git rebase --abort 2>/dev/null || true
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on rebased PRs
+        if: steps.get-prs.outputs.prs != '[]'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prs = JSON.parse('${{ steps.get-prs.outputs.prs }}');
+            
+            for (const pr of prs) {
               try {
-                // Fetch the PR branch
-                const prBranch = pr.head.ref;
-                const baseBranch = pr.base.ref;
-                
-                console.log(`  Attempting to rebase ${prBranch} onto ${baseBranch}`);
-
-                // Fetch all branches
-                execSync(`git fetch origin ${baseBranch}:${baseBranch}`, { stdio: 'inherit' });
-                execSync(`git fetch origin ${prBranch}:${prBranch}`, { stdio: 'inherit' });
-
-                // Checkout PR branch
-                execSync(`git checkout ${prBranch}`, { stdio: 'inherit' });
-
-                // Attempt rebase
-                try {
-                  execSync(`git rebase ${baseBranch}`, { stdio: 'inherit' });
-                  
-                  // Force push the rebased branch
-                  execSync(`git push --force-with-lease origin ${prBranch}`, { stdio: 'inherit' });
-                  
-                  console.log(`  Successfully rebased PR #${pr.number}`);
-                  
-                  // Add a comment
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: pr.number,
-                    body: '🤖 **Auto-rebase successful**\n\nThis PR has been automatically rebased to resolve merge conflicts.'
-                  });
-                  
-                } catch (rebaseError) {
-                  // Rebase failed, abort and close the PR
-                  console.log(`  Rebase failed for PR #${pr.number}, aborting rebase`);
-                  
-                  try {
-                    execSync('git rebase --abort', { stdio: 'ignore' });
-                  } catch (e) {
-                    // Ignore abort errors
-                  }
-
-                  // Close the PR
-                  await github.rest.pulls.update({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    pull_number: pr.number,
-                    state: 'closed'
-                  });
-
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: pr.number,
-                    body: `🤖 **Auto-rebase failed**\n\nThis Dependabot PR has merge conflicts that could not be automatically resolved. The PR has been closed.\n\n**Next steps:**\n- Dependabot will automatically create a new PR with updated dependencies\n- Or you can manually update dependencies and resolve conflicts\n\n<details><summary>Debug Info</summary>\n\n\`\`\`\n${rebaseError.message}\n\`\`\`\n</details>`
-                  });
-
-                  console.log(`  Closed PR #${pr.number} due to unresolvable conflicts`);
-                }
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: '🤖 **Auto-rebase successful**\n\nThis PR has been automatically rebased to resolve merge conflicts.'
+                });
+                console.log(`Commented on PR #${pr.number}`);
               } catch (error) {
-                console.error(`  Error processing PR #${pr.number}:`, error.message);
+                console.error(`Failed to comment on PR #${pr.number}:`, error.message);
+              }
+            }
+
+      - name: Close PRs with unresolvable conflicts
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prs = JSON.parse('${{ steps.get-prs.outputs.prs }}');
+            
+            for (const pr of prs) {
+              try {
+                // Close the PR
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed'
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `🤖 **Auto-rebase failed**\n\nThis Dependabot PR has merge conflicts that could not be automatically resolved. The PR has been closed.\n\n**Next steps:**\n- Dependabot will automatically create a new PR with updated dependencies\n- Or you can manually update dependencies and resolve conflicts`
+                });
+
+                console.log(`Closed PR #${pr.number} due to unresolvable conflicts`);
+              } catch (error) {
+                console.error(`Error closing PR #${pr.number}:`, error.message);
               }
             }

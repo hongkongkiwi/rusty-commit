@@ -1,0 +1,28 @@
+{
+    "version": "1.0.0",
+    "description": "AI-powered commit message generator written in Rust",
+    "homepage": "https://github.com/hongkongkiwi/rusty-commit",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/hongkongkiwi/rusty-commit/releases/download/v1.0.0/rusty-commit-v1.0.0-x86_64-pc-windows-msvc.zip",
+            "hash": "sha256_hash_here"
+        }
+    },
+    "bin": "rusty-commit.exe",
+    "checkver": {
+        "url": "https://github.com/hongkongkiwi/rusty-commit/releases/latest",
+        "re": "tag/v([\\d.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/hongkongkiwi/rusty-commit/releases/download/v$version/rusty-commit-v$version-x86_64-pc-windows-msvc.zip"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/SHA256SUMS.txt",
+            "regex": "$basename\\s+([a-f0-9]+)"
+        }
+    }
+}

@@ -196,8 +196,12 @@ release TYPE="patch":
     echo "Current version: $CURRENT_VERSION"
     echo "New version: $NEW_VERSION"
 
-    # Update version in Cargo.toml
-    sed -i '' "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
+    # Update version in Cargo.toml (handle both macOS and Linux)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
+    else
+        sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
+    fi
 
     # Commit version bump
     git add Cargo.toml

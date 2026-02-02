@@ -17,6 +17,10 @@ permissions:
   contents: write
   packages: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -53,7 +57,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -107,7 +111,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
@@ -125,7 +129,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all binaries
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: binaries
           pattern: binary-*
@@ -136,6 +140,13 @@ jobs:
         run: |
           VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
           VERSION="${VERSION_RAW#v}"
+          
+          # Validate semver format (X.Y.Z)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version '$VERSION' does not match semver format (X.Y.Z)"
+            exit 1
+          fi
+          
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Prepare release assets
@@ -164,7 +175,7 @@ jobs:
           ls -la release
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
           prerelease: false
@@ -176,7 +187,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release binaries for finalize job
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: release
           path: release/
@@ -187,6 +198,7 @@ jobs:
     name: Publish to crates.io
     needs: release
     runs-on: ubuntu-latest
+    if: ${{ secrets.CARGO_REGISTRY_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -246,7 +258,7 @@ jobs:
           tool: cargo-deb
 
       - name: Download release binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release
@@ -255,7 +267,7 @@ jobs:
         run: cargo deb --target ${{ matrix.target }} --no-build
 
       - name: Upload .deb package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rusty-commit.deb-${{ matrix.arch }}
           path: target/${{ matrix.target }}/debian/*_${{ matrix.deb_arch }}.deb
@@ -305,33 +317,34 @@ jobs:
           tar -C tmp-pkg-dir -czf "rpmbuild/SOURCES/${pkgname}-${VERSION}.tar.gz" "${pkgname}-${VERSION}"
           rm -rf tmp-pkg-dir
 
-          # Create spec file
-          cat > rpmbuild/SPECS/rusty-commit.spec << EOF
-          Name:           ${pkgname}
-          Version:        ${VERSION}
-          Release:        0%{?dist}
-          Summary:        A modern, AI-powered git commit message generator
-          License:        MIT
-          URL:            https://github.com/hongkongkiwi/rusty-commit
-          Source0:        %{name}-%{version}.tar.gz
-          BuildArch:      ${{ matrix.rpm_arch }}
-          %description
-          Rusty-commit is a modern, AI-powered git commit message generator that helps
-          you create meaningful, standardized commit messages following Conventional Commits.
-
-          %prep
-          %setup -q
-
-          %install
-          mkdir -p %{buildroot}/usr/bin
-          install -m 755 %{_builddir}/%{name}-%{version}/rco %{buildroot}/usr/bin/rco
-
-          %files
-          /usr/bin/rco
-          %changelog
-          * Sat Jan 24 2026 Rusty Commit <rusty-commit@users.noreply.github.com> - ${VERSION}-0
-          - Initial RPM package
-          EOF
+          # Create spec file inline (avoiding YAML heredoc issues with % characters)
+          printf '%s\n' \
+            "Name:           ${pkgname}" \
+            "Version:        ${VERSION}" \
+            "Release:        0%{?dist}" \
+            "Summary:        A modern, AI-powered git commit message generator" \
+            "License:        MIT" \
+            "URL:            https://github.com/hongkongkiwi/rusty-commit" \
+            "Source0:        %{name}-%{version}.tar.gz" \
+            "BuildArch:      ${{ matrix.rpm_arch }}" \
+            "" \
+            "%description" \
+            "Rusty-commit is a modern, AI-powered git commit message generator that helps" \
+            "you create meaningful, standardized commit messages following Conventional Commits." \
+            "" \
+            "%prep" \
+            "%setup -q" \
+            "" \
+            "%install" \
+            "mkdir -p %{buildroot}/usr/bin" \
+            "install -m 755 %{_builddir}/%{name}-%{version}/rco %{buildroot}/usr/bin/rco" \
+            "" \
+            "%files" \
+            "/usr/bin/rco" \
+            "" \
+            "%changelog" \
+            "* Sat Jan 24 2026 Rusty Commit <rusty-commit@users.noreply.github.com> - ${VERSION}-0" \
+            "- Initial RPM package" > rpmbuild/SPECS/rusty-commit.spec
 
       - name: Build .rpm package
         run: |
@@ -340,7 +353,7 @@ jobs:
             --target ${{ matrix.rpm_arch }}
 
       - name: Upload .rpm package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rusty-commit.rpm-${{ matrix.arch }}
           path: rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm
@@ -397,7 +410,7 @@ jobs:
           cp target/${{ matrix.target }}/release/rco apk-build/bin/
 
       - name: Upload Linux musl binary
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: binary-musl-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -448,7 +461,7 @@ jobs:
               su builder -c "export REPODEST=/work/apk-packages PACKAGER= && abuild -r"'
 
       - name: Upload Alpine package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rusty-commit.apk-${{ matrix.arch }}
           path: apk-packages/**/*.apk
@@ -465,7 +478,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download release assets
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: release
           path: release-assets
@@ -476,7 +489,7 @@ jobs:
           find release-assets -type f -exec ls -la {} \;
 
       - name: Download all packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: packages
           pattern: rusty-commit.*
@@ -505,42 +518,69 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Setup GPG for signing
-        if: env.GPG_PRIVATE_KEY != ''
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         uses: actions/cache@v5
         with:
           path: ~/.gnupg
-          key: gpg-key-${{ env.GPG_PRIVATE_KEY }}
+          key: gpg-key-${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Import GPG key
-        if: env.GPG_PRIVATE_KEY != ''
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         run: |
-          echo '${{ env.GPG_PRIVATE_KEY }}' | gpg --batch --import --
+          echo '${{ secrets.GPG_PRIVATE_KEY }}' | gpg --batch --import --
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Sign checksums
-        if: env.GPG_PRIVATE_KEY != ''
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         run: |
           cd release-packages
           gpg --batch --yes --armor --detach-sign SHA256SUMS.txt
           cat SHA256SUMS.txt.asc
 
+      - name: Generate per-file GPG signatures
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        run: |
+          cd release-packages
+
+          # Import the GPG key
+          echo '${{ secrets.GPG_PRIVATE_KEY }}' | gpg --batch --import --
+
+          # Generate .asc signature for each file (except .asc and .txt files)
+          for file in *.zip *.tar.gz *.deb *.rpm *.apk *.snap; do
+            if [ -f "$file" ] && [ ! "$file" = "*.txt" ]; then
+              echo "Signing $file..."
+              gpg --batch --yes --armor --detach-sign "$file"
+            fi
+          done
+
+          # List generated signatures
+          ls -la *.asc 2>/dev/null || echo "No .asc files generated"
+
+      - name: Upload per-file GPG signatures
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpg-signatures
+          path: release-packages/*.asc
+          retention-days: 5
+
       - name: Upload SHA256 checksums
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: sha256sums
           path: release-packages/SHA256SUMS.txt
           retention-days: 5
 
       - name: Upload GPG signature
-        if: env.GPG_PRIVATE_KEY != ''
-        uses: actions/upload-artifact@v6
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        uses: actions/upload-artifact@v4
         with:
           name: sha256sums-asc
           path: release-packages/SHA256SUMS.txt.asc
           retention-days: 5
 
       - name: Update GitHub Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
           prerelease: false
@@ -551,18 +591,19 @@ jobs:
     needs:
       - build-apk
     runs-on: ubuntu-latest
+    if: ${{ secrets.GITHUB_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Download Linux musl binaries (amd64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: binary-musl-x86_64-unknown-linux-musl
           path: docker-bin/amd64
 
       - name: Download Linux musl binaries (arm64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: binary-musl-aarch64-unknown-linux-musl
           path: docker-bin/arm64
@@ -613,6 +654,7 @@ jobs:
     name: Update Homebrew Formula
     needs: finalize-release
     runs-on: ubuntu-latest
+    if: ${{ secrets.HOMEBREW_REPO_UPDATE_TOKEN != '' }}
     steps:
       - name: Checkout homebrew-rusty-commit
         uses: actions/checkout@v4
@@ -622,7 +664,7 @@ jobs:
           path: homebrew-tap
 
       - name: Download SHA256 checksums
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: sha256sums
           path: homebrew-tmp
@@ -728,6 +770,7 @@ jobs:
     name: Update Pre-commit Hook
     needs: finalize-release
     runs-on: ubuntu-latest
+    if: ${{ secrets.PRECOMMIT_REPO_UPDATE_TOKEN != '' }}
     steps:
       - name: Checkout precommit-rusty-commit
         uses: actions/checkout@v4
@@ -773,6 +816,7 @@ jobs:
     name: Update GitHub Action
     needs: finalize-release
     runs-on: ubuntu-latest
+    if: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN != '' }}
     steps:
       - name: Checkout action-rusty-commit
         uses: actions/checkout@v4
@@ -806,6 +850,7 @@ jobs:
     name: Update Scoop Bucket
     needs: finalize-release
     runs-on: ubuntu-latest
+    if: ${{ secrets.SCOOP_REPO_UPDATE_TOKEN != '' }}
     steps:
       - name: Determine version
         id: version
@@ -873,10 +918,367 @@ jobs:
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
 
+  update-winget:
+    name: Update Winget Package
+    needs: finalize-release
+    runs-on: ubuntu-latest
+    if: ${{ secrets.WINGET_PKGS_TOKEN != '' }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION_RAW#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout winget-pkgs
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/winget-pkgs
+          token: ${{ secrets.WINGET_PKGS_TOKEN }}
+          path: winget-pkgs
+
+      - name: Download SHA256 checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+          path: winget-tmp
+
+      - name: Extract SHA256 for Windows x86_64
+        id: sha256
+        run: |
+          SHA256_X86_64_WINDOWS=$(grep -E 'rusty-commit-.*-x86_64-pc-windows-msvc\.zip' winget-tmp/SHA256SUMS.txt | awk '{print $1}')
+
+          if [ -z "$SHA256_X86_64_WINDOWS" ]; then
+            echo "Missing SHA256 checksum for Windows x86_64" >&2
+            exit 1
+          fi
+
+          echo "sha256_x86_64_windows=${SHA256_X86_64_WINDOWS}" >> "$GITHUB_OUTPUT"
+          echo "SHA256 x86_64-windows: $SHA256_X86_64_WINDOWS"
+
+      - name: Prepare Winget manifest directory
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p winget-pkgs/manifests/h/hongkongkiwi/rusty-commit/${VERSION}
+
+      - name: Checkout packaging templates
+        uses: actions/checkout@v4
+        with:
+          path: packaging-templates
+          sparse-checkout: |
+            packaging/winget
+
+      - name: Update Winget manifests
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256_X86_64_WINDOWS="${{ steps.sha256.outputs.sha256_x86_64_windows }}"
+
+          # Copy and update version manifest
+          sed "s/__VERSION__/${VERSION}/g" packaging-templates/packaging/winget/hongkongkiwi.rusty-commit.yaml > \
+            winget-pkgs/manifests/h/hongkongkiwi/rusty-commit/${VERSION}/hongkongkiwi.rusty-commit.yaml
+
+          # Copy and update installer manifest with SHA256
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__SHA256__/${SHA256_X86_64_WINDOWS}/g" \
+              packaging-templates/packaging/winget/hongkongkiwi.rusty-commit.installer.yaml > \
+            winget-pkgs/manifests/h/hongkongkiwi/rusty-commit/${VERSION}/hongkongkiwi.rusty-commit.installer.yaml
+
+          # Copy locale manifest
+          sed "s/__VERSION__/${VERSION}/g" packaging-templates/packaging/winget/hongkongkiwi.rusty-commit.locale.en-US.yaml > \
+            winget-pkgs/manifests/h/hongkongkiwi/rusty-commit/${VERSION}/hongkongkiwi.rusty-commit.locale.en-US.yaml
+
+          # Verify the manifests
+          ls -la winget-pkgs/manifests/h/hongkongkiwi/rusty-commit/${VERSION}/
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.WINGET_PKGS_TOKEN }}
+          repository: microsoft/winget-pkgs
+          path: winget-pkgs
+          commit-message: "Update rusty-commit to v${{ steps.version.outputs.version }}"
+          title: "Update rusty-commit to v${{ steps.version.outputs.version }}"
+          body: |
+            Automated changes by GitHub Actions.
+            SHA256: ${{ steps.sha256.outputs.sha256_x86_64_windows }}
+          labels: |
+            validation-passed
+            update-manifest
+
+  update-aur:
+    name: Update AUR Package
+    needs: finalize-release
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AUR_SSH_KEY != '' }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION_RAW#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout packaging templates
+        uses: actions/checkout@v4
+        with:
+          path: packaging-templates
+          sparse-checkout: |
+            packaging/aur
+
+      - name: Download SHA256 checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+          path: aur-tmp
+
+      - name: Extract SHA256 for Linux x86_64 musl
+        id: sha256
+        run: |
+          SHA256_X86_64_LINUX=$(grep -E 'rusty-commit-.*-x86_64-unknown-linux-musl\.tar\.gz' aur-tmp/SHA256SUMS.txt | awk '{print $1}')
+
+          if [ -z "$SHA256_X86_64_LINUX" ]; then
+            echo "Missing SHA256 checksum for Linux x86_64" >&2
+            exit 1
+          fi
+
+          echo "sha256_x86_64_linux=${SHA256_X86_64_LINUX}" >> "$GITHUB_OUTPUT"
+          echo "SHA256 x86_64-linux-musl: $SHA256_X86_64_LINUX"
+
+      - name: Setup SSH for AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Clone AUR repository
+        run: |
+          git clone aur@aur.archlinux.org:rusty-commit.git aur-repo
+          cd aur-repo
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256_X86_64_LINUX="${{ steps.sha256.outputs.sha256_x86_64_linux }}"
+
+          # Update PKGBUILD with version and SHA256
+          sed "s/__VERSION__/${VERSION}/g" packaging-templates/packaging/aur/PKGBUILD > aur-repo/PKGBUILD
+          sed -i "s/__SHA256_X86_64__/${SHA256_X86_64_LINUX}/g" aur-repo/PKGBUILD
+
+          # Update .SRCINFO
+          sed "s/__VERSION__/${VERSION}/g" packaging-templates/packaging/aur/.SRCINFO > aur-repo/.SRCINFO
+          sed -i "s/__SHA256_X86_64__/${SHA256_X86_64_LINUX}/g" aur-repo/.SRCINFO
+
+          cat aur-repo/PKGBUILD
+
+      - name: Copy LICENSE and README
+        run: |
+          cp packaging-templates/LICENSE aur-repo/ 2>/dev/null || true
+          cp packaging-templates/README.md aur-repo/ 2>/dev/null || true
+
+      - name: Commit and push to AUR
+        working-directory: ./aur-repo
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add PKGBUILD .SRCINFO LICENSE README.md 2>/dev/null || git add PKGBUILD .SRCINFO
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit for AUR package"
+            exit 0
+          fi
+
+          git commit -m "Update to ${VERSION}"
+          git push
+
+  update-nix-overlay:
+    name: Update Nix Overlay
+    needs: finalize-release
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GH_TOKEN != '' }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION_RAW#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout nixpkgs-overlays
+        uses: actions/checkout@v4
+        with:
+          repository: hongkongkiwi/nixpkgs-overlays
+          token: ${{ secrets.GH_TOKEN }}
+          path: nix-overlay
+
+      - name: Download SHA256 checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+          path: nix-tmp
+
+      - name: Extract SHA256 for Linux x86_64 musl
+        id: sha256
+        run: |
+          SHA256_X86_64_LINUX=$(grep -E 'rusty-commit-.*-x86_64-unknown-linux-musl\.tar\.gz' nix-tmp/SHA256SUMS.txt | awk '{print $1}')
+          SHA256_AARCH64_LINUX=$(grep -E 'rusty-commit-.*-aarch64-unknown-linux-musl\.tar\.gz' nix-tmp/SHA256SUMS.txt | awk '{print $1}')
+
+          if [ -z "$SHA256_X86_64_LINUX" ]; then
+            echo "Missing SHA256 checksum for Linux x86_64" >&2
+            exit 1
+          fi
+
+          echo "sha256_x86_64_linux=${SHA256_X86_64_LINUX}" >> "$GITHUB_OUTPUT"
+          echo "sha256_aarch64_linux=${SHA256_AARCH64_LINUX}" >> "$GITHUB_OUTPUT"
+          echo "SHA256 x86_64-linux-musl: $SHA256_X86_64_LINUX"
+          echo "SHA256 aarch64-linux-musl: $SHA256_AARCH64_LINUX"
+
+      - name: Checkout packaging templates
+        uses: actions/checkout@v4
+        with:
+          path: packaging-templates
+          sparse-checkout: |
+            packaging/nix
+
+      - name: Update Nix overlay
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256_X86_64_LINUX="${{ steps.sha256.outputs.sha256_x86_64_linux }}"
+          SHA256_AARCH64_LINUX="${{ steps.sha256.outputs.sha256_aarch64_linux }}"
+
+          # Copy and update the nix package expression
+          mkdir -p nix-overlay/rusty-commit
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__SHA256_X86_64__/${SHA256_X86_64_LINUX}/g" \
+              -e "s/__SHA256_AARCH64__/${SHA256_AARCH64_LINUX}/g" \
+              packaging-templates/packaging/nix/default.nix > nix-overlay/rusty-commit/default.nix
+
+          cat nix-overlay/rusty-commit/default.nix
+
+      - name: Commit and push to overlay repo
+        working-directory: ./nix-overlay
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add rusty-commit/default.nix
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit for nix overlay"
+            exit 0
+          fi
+
+          git commit -m "Update rusty-commit to v${VERSION}"
+          git push
+
+  update-chocolatey:
+    name: Update Chocolatey Package
+    needs: finalize-release
+    runs-on: windows-latest
+    if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          $VERSION_RAW = "${{ github.event.inputs.version || github.ref_name }}"
+          $VERSION = $VERSION_RAW.TrimStart('v')
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout packaging templates
+        uses: actions/checkout@v4
+        with:
+          path: packaging-templates
+          sparse-checkout: |
+            packaging/chocolatey
+
+      - name: Download SHA256 checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+          path: chocolatey-tmp
+
+      - name: Extract SHA256 for Windows x86_64
+        id: sha256
+        run: |
+          $SHA256_CONTENT = Get-Content -Path "chocolatey-tmp/SHA256SUMS.txt" -Raw
+          $SHA256_X86_64_WINDOWS = ($SHA256_CONTENT | Select-String -Pattern 'rusty-commit-.*-x86_64-pc-windows-msvc\.zip' | ForEach-Object { $_ -replace '^\s*([a-f0-9]+)\s+.*$', '$1' }).Trim()
+
+          if ([string]::IsNullOrEmpty($SHA256_X86_64_WINDOWS)) {
+            Write-Error "Missing SHA256 checksum for Windows x86_64"
+            exit 1
+          }
+
+          echo "sha256_x86_64_windows=$SHA256_X86_64_WINDOWS" >> $env:GITHUB_OUTPUT
+          echo "SHA256 x86_64-windows: $SHA256_X86_64_WINDOWS"
+
+      - name: Download release asset
+        uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+
+      - name: Update Chocolatey package
+        run: |
+          $VERSION = "${{ steps.version.outputs.version }}"
+          $SHA256_X86_64_WINDOWS = "${{ steps.sha256.outputs.sha256_x86_64_windows }}"
+
+          # Create Chocolatey package directory
+          New-Item -ItemType Directory -Force -Path "chocolatey-package" | Out-Null
+          New-Item -ItemType Directory -Force -Path "chocolatey-package/tools" | Out-Null
+
+          # Update nuspec
+          (Get-Content -Path "packaging-templates/packaging/chocolatey/rusty-commit.nuspec" -Raw) `
+            -replace '__VERSION__', $VERSION |
+            Out-File -FilePath "chocolatey-package/rusty-commit.nuspec" -Encoding UTF8
+
+          # Update install script
+          (Get-Content -Path "packaging-templates/packaging/chocolatey/tools/chocolateyInstall.ps1" -Raw) `
+            -replace '__VERSION__', $VERSION |
+            Out-File -FilePath "chocolatey-package/tools/chocolateyInstall.ps1" -Encoding UTF8
+
+          # Update uninstall script
+          (Get-Content -Path "packaging-templates/packaging/chocolatey/tools/chocolateyUninstall.ps1" -Raw) `
+            -replace '__VERSION__', $VERSION |
+            Out-File -FilePath "chocolatey-package/tools/chocolateyUninstall.ps1" -Encoding UTF8
+
+          # Copy release binary
+          Expand-Archive -Path "release/rusty-commit-v${VERSION}-x86_64-pc-windows-msvc.zip" -DestinationPath "chocolatey-package/extracted" -Force
+
+          Get-ChildItem -Path "chocolatey-package"
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+      - name: Pack Chocolatey package
+        run: |
+          $VERSION = "${{ steps.version.outputs.version }}"
+          choco pack "chocolatey-package/rusty-commit.nuspec" --version $VERSION
+
+          $nupkg = Get-ChildItem -Path "." -Filter "rusty-commit.$VERSION.nupkg" -Recurse
+          Write-Host "Created package: $($nupkg.FullName)"
+
+      - name: Push to Chocolatey
+        if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
+        run: |
+          $VERSION = "${{ steps.version.outputs.version }}"
+          $nupkg = Get-ChildItem -Path "." -Filter "rusty-commit.$VERSION.nupkg" -Recurse | Select-Object -First 1
+
+          choco apikey -k "${{ secrets.CHOCOLATEY_API_KEY }}" -source https://push.chocolatey.org/
+          choco push "$($nupkg.FullName)" --source https://push.chocolatey.org/
+
   build-snap:
     name: Build and Publish Snap
     needs: build-apk
     runs-on: ubuntu-latest
+    if: ${{ secrets.SNAP_STORE_LOGIN != '' }}
     steps:
       - name: Determine version
         id: version
@@ -889,7 +1291,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download musl binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: binary-musl-x86_64-unknown-linux-musl
           path: snap-src
@@ -898,67 +1300,64 @@ jobs:
         run: |
           mkdir -p snap-src/snap
 
-      - name: Create snapcraft.yaml
+      - name: Create snap directory structure and snapcraft.yaml
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-
-          cat > snap-src/snap/snapcraft.yaml << 'EOF'
-          name: rusty-commit
-          base: core22
-          version: 'VERSION_PLACEHOLDER'
-          summary: AI-powered commit message generator
-          description: |
-            Rusty-commit is a modern, AI-powered git commit message generator that helps
-            you create meaningful, standardized commit messages following Conventional Commits.
-            Supports 100+ AI providers including OpenAI, Claude, Groq, and more.
-          grade: stable
-          confinement: classic
-          license: MIT
-
-          parts:
-            rco:
-              plugin: dump
-              source: snap-src/
-              override-pull: |
-                snapcraftctl pull
-                snapctl set version $SNAPCRAFT_PROJECT_VERSION
-
-          apps:
-            rco:
-              command: rco
-          EOF
-
-          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/" snap-src/snap/snapcraft.yaml
-
-      - name: Set up Snapcraft
-        uses: snapcore/action-build@v1
-        with:
-          snapcraft-channel: stable
+          mkdir -p snap/snap
+          # Move the binary to the snap directory
+          mv snap-src/rco snap/
+          
+          # Create snapcraft.yaml using printf to avoid YAML parsing issues
+          printf '%s\n' \
+            'name: rusty-commit' \
+            'base: core22' \
+            "version: '${VERSION}'" \
+            'summary: AI-powered commit message generator' \
+            'description: |' \
+            '  Rusty-commit is a modern, AI-powered git commit message generator that helps' \
+            '  you create meaningful, standardized commit messages following Conventional Commits.' \
+            '  Supports 100+ AI providers including OpenAI, Claude, Groq, and more.' \
+            'grade: stable' \
+            'confinement: classic' \
+            'license: MIT' \
+            '' \
+            'parts:' \
+            '  rco:' \
+            '    plugin: dump' \
+            '    source: .' \
+            '    organize:' \
+            '      rco: bin/rco' \
+            '' \
+            'apps:' \
+            '  rco:' \
+            '    command: bin/rco' > snap/snap/snapcraft.yaml
+          
+          cat snap/snap/snapcraft.yaml
 
       - name: Build Snap package
-        run: |
-          cd snap-src
-          VERSION="${{ steps.version.outputs.version }}"
-          snapcraft pack --output rusty-commit_${VERSION}_amd64.snap
+        uses: snapcore/action-build@v1
+        with:
+          path: snap
+          snapcraft-channel: stable
 
       - name: Upload Snap package to release
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rusty-commit.snap
-          path: snap-src/rusty-commit_*.snap
+          path: snap/*.snap
           retention-days: 5
 
       - name: Upload Snap to GitHub Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
           prerelease: false
-          files: snap-src/rusty-commit_*.snap
+          files: snap/*.snap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Snap Store
-        if: env.SNAP_STORE_LOGIN != ''
+        if: ${{ secrets.SNAP_STORE_LOGIN != '' }}
         uses: snapcore/action-publish@v1
         with:
           snapcraft-channel: stable

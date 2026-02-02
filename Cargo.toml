@@ -84,8 +84,29 @@ secure-storage = ["keyring"]
 # Include extra documentation (for docs.rs)
 docs = []
 
-# AI Provider features - all providers are opt-in
-# This allows users to build minimal binaries with only needed providers
+# ═══════════════════════════════════════════════════════════════════════════════
+# Provider Feature Groups - Enable all providers in a category
+# ═══════════════════════════════════════════════════════════════════════════════
+# Popular cloud providers (OpenAI, Anthropic, etc.)
+providers-popular = ["openai", "anthropic", "ollama", "gemini", "xai", "azure"]
+# Fast inference providers (Groq, Cerebras, SambaNova)
+providers-fast = ["groq", "cerebras", "sambanova", "nebius"]
+# OpenAI-compatible providers (OpenRouter, DeepSeek, Together, etc.)
+providers-openai-compatible = ["openrouter", "deepseek", "together", "deepinfra", "mistral", "fireworks", "moonshot", "dashscope", "cohere", "ai21", "upstage", "replicate", "lambda", "hyperbolic", "kluster", "venice", "jina", "poe", "novita", "friendli", "baseten"]
+# Local/self-hosted providers
+providers-local = ["lmstudio", "llamacpp", "ollama"]
+# Enterprise providers
+providers-enterprise = ["bedrock", "vertex", "azure"]
+# China-based providers
+providers-china = ["siliconflow", "zhipu", "minimax", "baichuan"]
+# GPU cloud providers
+providers-gpu-cloud = ["nebius", "lambda", "hyperbolic", "scaleway", "ovh"]
+# All providers (for maximum functionality, larger binary)
+providers-all = ["providers-popular", "providers-fast", "providers-openai-compatible", "providers-local", "providers-enterprise", "providers-china", "providers-gpu-cloud", "huggingface", "mlx", "nvidia", "flowise"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Individual Provider Features
+# ═══════════════════════════════════════════════════════════════════════════════
 openai = ["async-openai"]
 anthropic = []
 ollama = []

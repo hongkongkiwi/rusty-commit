@@ -943,20 +943,20 @@ fn print_completion_message(config: &Config, is_advanced: bool) {
     println!("{}", "Configuration Summary:".bold());
     println!();
 
-    if let Some(ref provider) = config.ai_provider {
+    if let Some(provider) = &config.ai_provider {
         println!("  {} Provider: {}", "•".cyan(), provider.bright_white());
     }
-    if let Some(ref model) = config.model {
+    if let Some(model) = &config.model {
         println!("  {} Model: {}", "•".cyan(), model.bright_white());
     }
-    if let Some(ref commit_type) = config.commit_type {
+    if let Some(commit_type) = &config.commit_type {
         println!(
             "  {} Commit format: {}",
             "•".cyan(),
             commit_type.bright_white()
         );
     }
-    if let Some(ref language) = config.language {
+    if let Some(language) = &config.language {
         if language != "en" {
             println!("  {} Language: {}", "•".cyan(), language.bright_white());
         }

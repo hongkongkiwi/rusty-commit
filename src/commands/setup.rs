@@ -743,10 +743,11 @@ fn select_provider_quick() -> Result<ProviderOption> {
         .interact()?;
 
     // Count headers before the selected item to determine actual provider index
-    let header_count = all_displays[..=selection].iter()
+    let header_count = all_displays[..=selection]
+        .iter()
         .filter(|s| s.starts_with('─'))
         .count();
-    
+
     let provider_idx = if selection > 0 {
         selection.saturating_sub(header_count)
     } else {
@@ -754,10 +755,16 @@ fn select_provider_quick() -> Result<ProviderOption> {
     };
 
     let provider = if provider_idx < provider_indices.len() {
-        providers.into_iter().nth(provider_indices[provider_idx]).unwrap()
+        providers
+            .into_iter()
+            .nth(provider_indices[provider_idx])
+            .unwrap()
     } else {
         // Fallback to first popular provider
-        providers.into_iter().find(|p| p.category == ProviderCategory::Popular).unwrap()
+        providers
+            .into_iter()
+            .find(|p| p.category == ProviderCategory::Popular)
+            .unwrap()
     };
 
     println!();

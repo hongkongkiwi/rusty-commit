@@ -710,9 +710,17 @@ jobs:
         run: |
           VERSION_RAW='${{ github.event.inputs.version || github.ref_name }}'
           VERSION="${VERSION_RAW#v}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if there are changes to commit
           git add Formula/rusty-commit.rb README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit for homebrew formula"
+            exit 0
+          fi
+
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
 
@@ -747,9 +755,17 @@ jobs:
         run: |
           VERSION_RAW='${{ github.event.inputs.version || github.ref_name }}'
           VERSION="${VERSION_RAW#v}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if there are changes to commit
           git add .pre-commit-hooks.yaml README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit for pre-commit hooks"
+            exit 0
+          fi
+
           git commit -m "Update rusty-commit to v${VERSION}"
           git push
 

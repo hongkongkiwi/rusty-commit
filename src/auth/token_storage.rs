@@ -373,7 +373,7 @@ pub fn get_api_key_for_account(_account_id: &str) -> Result<Option<String>> {
     {
         if crate::config::secure_storage::is_available() {
             let key = account_storage_key(_account_id, "api_key");
-            return Ok(crate::config::secure_storage::get_secret(&key)?);
+            return crate::config::secure_storage::get_secret(&key);
         }
     }
 
@@ -405,7 +405,7 @@ pub fn get_bearer_token_for_account(_account_id: &str) -> Result<Option<String>>
     {
         if crate::config::secure_storage::is_available() {
             let key = account_storage_key(_account_id, "bearer_token");
-            return Ok(crate::config::secure_storage::get_secret(&key)?);
+            return crate::config::secure_storage::get_secret(&key);
         }
     }
 

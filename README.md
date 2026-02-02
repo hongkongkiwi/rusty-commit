@@ -81,15 +81,15 @@ curl -fsSL https://raw.githubusercontent.com/hongkongkiwi/rusty-commit/main/inst
 <details>
 <summary>📦 Package Managers</summary>
 
-| Platform | Command |
-|----------|---------|
-| **Homebrew** | `brew tap hongkongkiwi/tap && brew install rusty-commit` |
-| **Cargo** | `cargo install rusty-commit --features secure-storage` |
-| **Debian/Ubuntu** | `wget .../rusty-commit_amd64.deb && sudo dpkg -i rusty-commit_amd64.deb` |
-| **Fedora/RHEL** | `sudo dnf install https://.../rusty-commit.x86_64.rpm` |
-| **Alpine** | `wget .../rusty-commit-x86_64.apk && sudo apk add --allow-untrusted rusty-commit-x86_64.apk` |
-| **Windows (Scoop)** | `scoop install rusty-commit` |
-| **Windows (Binary)** | [Download from releases](https://github.com/hongkongkiwi/rusty-commit/releases) |
+| Platform | Command | Repo |
+|----------|---------|------|
+| **Homebrew** | `brew tap hongkongkiwi/rusty-commit && brew install rusty-commit` | [homebrew-rusty-commit](https://github.com/hongkongkiwi/homebrew-rusty-commit) |
+| **Cargo** | `cargo install rusty-commit --features secure-storage` | - |
+| **Debian/Ubuntu** | `wget .../rusty-commit_amd64.deb && sudo dpkg -i rusty-commit_amd64.deb` | - |
+| **Fedora/RHEL** | `sudo dnf install https://.../rusty-commit.x86_64.rpm` | - |
+| **Alpine** | `wget .../rusty-commit-x86_64.apk && sudo apk add --allow-untrusted rusty-commit-x86_64.apk` | - |
+| **Windows (Scoop)** | `scoop bucket add rusty-commit && scoop install rusty-commit` | [scoop-rusty-commit](https://github.com/hongkongkiwi/scoop-rusty-commit) |
+| **Windows (Binary)** | [Download from releases](https://github.com/hongkongkiwi/rusty-commit/releases) | - |
 
 </details>
 

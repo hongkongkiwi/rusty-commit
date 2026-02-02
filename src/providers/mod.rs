@@ -483,8 +483,6 @@ pub fn provider_info(provider: &str) -> Option<String> {
     })
 }
 
-
-
 /// Create an AI provider from an account configuration
 #[allow(dead_code)]
 pub fn create_provider_for_account(

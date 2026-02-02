@@ -238,7 +238,10 @@ pub fn extract_file_summary(diff: &str) -> String {
         let mut type_list: Vec<_> = file_types.into_iter().collect();
         type_list.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by count descending
 
-        let type_str: Vec<_> = type_list.iter().map(|(t, c)| format!("{} {}", c, t)).collect();
+        let type_str: Vec<_> = type_list
+            .iter()
+            .map(|(t, c)| format!("{} {}", c, t))
+            .collect();
         summary.push_str(&format!(" ({})", type_str.join(", ")));
     }
 

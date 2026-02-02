@@ -6,8 +6,8 @@
 )]
 
 use rusty_commit::config::Config;
-use rusty_commit::providers::prompt::build_prompt;
 use rusty_commit::providers::create_provider;
+use rusty_commit::providers::prompt::build_prompt;
 
 #[test]
 fn test_build_prompt_conventional() {

@@ -9,7 +9,8 @@ use async_openai::{
 };
 use async_trait::async_trait;
 
-use super::{split_prompt, AIProvider};
+use super::prompt::split_prompt;
+use super::AIProvider;
 use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 

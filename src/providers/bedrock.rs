@@ -4,7 +4,8 @@ use aws_config::Region;
 use aws_sdk_bedrockruntime as bedrock;
 use aws_sdk_bedrockruntime::types::{ContentBlock, SystemContentBlock};
 
-use super::{split_prompt, AIProvider};
+use super::prompt::split_prompt;
+use super::AIProvider;
 use crate::config::Config;
 
 pub struct BedrockProvider {

@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 
-use super::{split_prompt, AIProvider};
+use super::prompt::split_prompt;
+use super::AIProvider;
 use crate::config::accounts::AccountConfig;
 use crate::config::Config;
 use crate::utils::retry::retry_async;

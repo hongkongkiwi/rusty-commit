@@ -198,7 +198,8 @@ jobs:
     name: Publish to crates.io
     needs: release
     runs-on: ubuntu-latest
-    if: ${{ secrets.CARGO_REGISTRY_TOKEN != '' }}
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -476,6 +477,8 @@ jobs:
       - build-apk
       - publish-docker
     runs-on: ubuntu-latest
+    env:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     steps:
       - name: Download release assets
         uses: actions/download-artifact@v4
@@ -518,27 +521,27 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Setup GPG for signing
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         uses: actions/cache@v5
         with:
           path: ~/.gnupg
           key: gpg-key-${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Import GPG key
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         run: |
           echo '${{ secrets.GPG_PRIVATE_KEY }}' | gpg --batch --import --
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Sign checksums
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         run: |
           cd release-packages
           gpg --batch --yes --armor --detach-sign SHA256SUMS.txt
           cat SHA256SUMS.txt.asc
 
       - name: Generate per-file GPG signatures
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         run: |
           cd release-packages
 
@@ -554,10 +557,10 @@ jobs:
           done
 
           # List generated signatures
-          ls -la *.asc 2>/dev/null || echo "No .asc files generated"
+          ls -la -- *.asc 2>/dev/null || echo "No .asc files generated"
 
       - name: Upload per-file GPG signatures
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: gpg-signatures
@@ -572,7 +575,7 @@ jobs:
           retention-days: 5
 
       - name: Upload GPG signature
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: sha256sums-asc
@@ -591,7 +594,6 @@ jobs:
     needs:
       - build-apk
     runs-on: ubuntu-latest
-    if: ${{ secrets.GITHUB_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -654,7 +656,8 @@ jobs:
     name: Update Homebrew Formula
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.HOMEBREW_REPO_UPDATE_TOKEN != '' }}
+    env:
+      HOMEBREW_REPO_UPDATE_TOKEN: ${{ secrets.HOMEBREW_REPO_UPDATE_TOKEN }}
     steps:
       - name: Checkout homebrew-rusty-commit
         uses: actions/checkout@v4
@@ -770,7 +773,8 @@ jobs:
     name: Update Pre-commit Hook
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.PRECOMMIT_REPO_UPDATE_TOKEN != '' }}
+    env:
+      PRECOMMIT_REPO_UPDATE_TOKEN: ${{ secrets.PRECOMMIT_REPO_UPDATE_TOKEN }}
     steps:
       - name: Checkout precommit-rusty-commit
         uses: actions/checkout@v4
@@ -816,7 +820,8 @@ jobs:
     name: Update GitHub Action
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN != '' }}
+    env:
+      ACTIONS_REPO_UPDATE_TOKEN: ${{ secrets.ACTIONS_REPO_UPDATE_TOKEN }}
     steps:
       - name: Checkout action-rusty-commit
         uses: actions/checkout@v4
@@ -850,7 +855,8 @@ jobs:
     name: Update Scoop Bucket
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.SCOOP_REPO_UPDATE_TOKEN != '' }}
+    env:
+      SCOOP_REPO_UPDATE_TOKEN: ${{ secrets.SCOOP_REPO_UPDATE_TOKEN }}
     steps:
       - name: Determine version
         id: version
@@ -922,7 +928,8 @@ jobs:
     name: Update Winget Package
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.WINGET_PKGS_TOKEN != '' }}
+    env:
+      WINGET_PKGS_TOKEN: ${{ secrets.WINGET_PKGS_TOKEN }}
     steps:
       - name: Determine version
         id: version
@@ -956,6 +963,20 @@ jobs:
 
           echo "sha256_x86_64_windows=${SHA256_X86_64_WINDOWS}" >> "$GITHUB_OUTPUT"
           echo "SHA256 x86_64-windows: $SHA256_X86_64_WINDOWS"
+
+      - name: Checkout winget-pkgs fork
+        uses: actions/checkout@v4
+        with:
+          repository: hongkongkiwi/winget-pkgs
+          token: ${{ env.WINGET_PKGS_TOKEN }}
+          path: winget-pkgs
+
+      - name: Configure git for winget-pkgs
+        run: |
+          cd winget-pkgs
+          git remote add upstream https://github.com/microsoft/winget-pkgs.git
+          git fetch upstream
+          git checkout -b update-rusty-commit-${{ steps.version.outputs.version }} upstream/master
 
       - name: Prepare Winget manifest directory
         run: |
@@ -994,8 +1015,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.WINGET_PKGS_TOKEN }}
-          repository: microsoft/winget-pkgs
+          token: ${{ env.WINGET_PKGS_TOKEN }}
           path: winget-pkgs
           commit-message: "Update rusty-commit to v${{ steps.version.outputs.version }}"
           title: "Update rusty-commit to v${{ steps.version.outputs.version }}"
@@ -1005,12 +1025,14 @@ jobs:
           labels: |
             validation-passed
             update-manifest
+          push-to-fork: hongkongkiwi/winget-pkgs-fork
 
   update-aur:
     name: Update AUR Package
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.AUR_SSH_KEY != '' }}
+    env:
+      AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
     steps:
       - name: Determine version
         id: version
@@ -1099,7 +1121,8 @@ jobs:
     name: Update Nix Overlay
     needs: finalize-release
     runs-on: ubuntu-latest
-    if: ${{ secrets.GH_TOKEN != '' }}
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Determine version
         id: version
@@ -1181,7 +1204,8 @@ jobs:
     name: Update Chocolatey Package
     needs: finalize-release
     runs-on: windows-latest
-    if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
+    env:
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
     steps:
       - name: Determine version
         id: version
@@ -1266,19 +1290,20 @@ jobs:
           Write-Host "Created package: $($nupkg.FullName)"
 
       - name: Push to Chocolatey
-        if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
+        if: ${{ env.CHOCOLATEY_API_KEY != '' }}
         run: |
           $VERSION = "${{ steps.version.outputs.version }}"
           $nupkg = Get-ChildItem -Path "." -Filter "rusty-commit.$VERSION.nupkg" -Recurse | Select-Object -First 1
 
-          choco apikey -k "${{ secrets.CHOCOLATEY_API_KEY }}" -source https://push.chocolatey.org/
+          choco apikey -k "$env:CHOCOLATEY_API_KEY" -source https://push.chocolatey.org/
           choco push "$($nupkg.FullName)" --source https://push.chocolatey.org/
 
   build-snap:
     name: Build and Publish Snap
     needs: build-apk
     runs-on: ubuntu-latest
-    if: ${{ secrets.SNAP_STORE_LOGIN != '' }}
+    env:
+      SNAP_STORE_LOGIN: ${{ secrets.SNAP_STORE_LOGIN }}
     steps:
       - name: Determine version
         id: version
@@ -1357,8 +1382,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Snap Store
-        if: ${{ secrets.SNAP_STORE_LOGIN != '' }}
+        if: ${{ env.SNAP_STORE_LOGIN != '' }}
         uses: snapcore/action-publish@v1
         with:
           snapcraft-channel: stable
-          login: ${{ secrets.SNAP_STORE_LOGIN }}
+          login: ${{ env.SNAP_STORE_LOGIN }}

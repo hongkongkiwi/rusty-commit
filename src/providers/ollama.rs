@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use super::{build_prompt, AIProvider};
+use super::prompt::build_prompt;
+use super::AIProvider;
 // Note: Ollama uses the combined prompt since its API doesn't support separate system messages
 use crate::config::Config;
 use crate::utils::retry::retry_async;

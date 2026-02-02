@@ -4,7 +4,8 @@ use reqwest::{header, Client};
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{split_prompt, AIProvider};
+use super::prompt::split_prompt;
+use super::AIProvider;
 use crate::config::Config;
 
 #[derive(Clone)]

@@ -576,7 +576,7 @@ impl Config {
             Self::replace_placeholders(&template, diff, context, self)
         } else {
             // Use the standard prompt generation
-            super::providers::build_prompt(diff, context, self, full_gitmoji)
+            super::providers::prompt::build_prompt(diff, context, self, full_gitmoji)
         }
     }
 

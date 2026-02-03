@@ -398,3 +398,7 @@ CVS/
 
 # Claude Code specific
 .claude/
+
+# Git worktrees
+.worktrees/
+worktrees/

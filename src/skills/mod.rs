@@ -648,6 +648,14 @@ pub mod external {
     pub enum ExternalSource {
         /// Claude Code skills directory
         ClaudeCode,
+        /// Cline skills directory (~/.cline/skills/)
+        Cline { path: PathBuf },
+        /// Codex skills directory (.codex/)
+        Codex { path: PathBuf },
+        /// Roo Code skills (GitHub format: owner/repo or gist:id)
+        Roo { source: String },
+        /// Kilo skills (GitHub format: owner/repo or gist:id)
+        Kilo { source: String },
         /// GitHub repository
         GitHub {
             owner: String,
@@ -664,6 +672,10 @@ pub mod external {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 ExternalSource::ClaudeCode => write!(f, "claude-code"),
+                ExternalSource::Cline { path } => write!(f, "cline:{}", path.display()),
+                ExternalSource::Codex { path } => write!(f, "codex:{}", path.display()),
+                ExternalSource::Roo { source } => write!(f, "roo:{}", source),
+                ExternalSource::Kilo { source } => write!(f, "kilo:{}", source),
                 ExternalSource::GitHub { owner, repo, .. } => {
                     write!(f, "github:{}/{}", owner, repo)
                 }
@@ -677,6 +689,10 @@ pub mod external {
     ///
     /// Supported formats:
     /// - `claude-code` - Import from Claude Code skills
+    /// - `cline:/path` or `cline:./path` - Import from Cline skills directory
+    /// - `codex:/path` or `codex:./path` - Import from Codex skills directory
+    /// - `roo:owner/repo` or `roo:gist:id` - Import from Roo Code (GitHub/Gist)
+    /// - `kilo:owner/repo` or `kilo:gist:id` - Import from Kilo (GitHub/Gist)
     /// - `github:owner/repo` - Import from GitHub repo (looks for .rco/skills/)
     /// - `github:owner/repo/path/to/skill` - Import specific skill from repo
     /// - `gist:abc123` - Import from GitHub Gist
@@ -684,6 +700,60 @@ pub mod external {
     pub fn parse_source(source: &str) -> Result<ExternalSource> {
         if source == "claude-code" || source == "claude" {
             Ok(ExternalSource::ClaudeCode)
+        } else if let Some(path) = source.strip_prefix("cline:") {
+            // Parse cline:path format
+            let path = if path.starts_with("/") || path.starts_with("./") {
+                PathBuf::from(path)
+            } else {
+                // Try relative to home directory or use as-is
+                PathBuf::from(path)
+            };
+            Ok(ExternalSource::Cline { path })
+        } else if let Some(path) = source.strip_prefix("codex:") {
+            // Parse codex:path format
+            let path = if path.starts_with("/") || path.starts_with("./") {
+                PathBuf::from(path)
+            } else {
+                PathBuf::from(path)
+            };
+            Ok(ExternalSource::Codex { path })
+        } else if let Some(roo_ref) = source.strip_prefix("roo:") {
+            // Parse roo:owner/repo or roo:gist:id format
+            if roo_ref.contains('/') {
+                // Likely owner/repo format
+                let parts: Vec<&str> = roo_ref.split('/').collect();
+                if parts.len() >= 2 {
+                    Ok(ExternalSource::Roo {
+                        source: roo_ref.to_string(),
+                    })
+                } else {
+                    anyhow::bail!("Invalid Roo reference. Use format: roo:owner/repo or roo:gist:id");
+                }
+            } else if roo_ref.starts_with("gist:") {
+                Ok(ExternalSource::Roo {
+                    source: roo_ref.to_string(),
+                })
+            } else {
+                Ok(ExternalSource::Roo {
+                    source: roo_ref.to_string(),
+                })
+            }
+        } else if let Some(kilo_ref) = source.strip_prefix("kilo:") {
+            // Parse kilo:owner/repo or kilo:gist:id format
+            if kilo_ref.contains('/') {
+                // Likely owner/repo format
+                Ok(ExternalSource::Kilo {
+                    source: kilo_ref.to_string(),
+                })
+            } else if kilo_ref.starts_with("gist:") {
+                Ok(ExternalSource::Kilo {
+                    source: kilo_ref.to_string(),
+                })
+            } else {
+                Ok(ExternalSource::Kilo {
+                    source: kilo_ref.to_string(),
+                })
+            }
         } else if let Some(github_ref) = source.strip_prefix("github:") {
             // Parse github:owner/repo or github:owner/repo/path
             let parts: Vec<&str> = github_ref.split('/').collect();
@@ -1174,6 +1244,201 @@ pub mod external {
         }
 
         Ok(skills)
+    }
+
+    /// Convert a Cline skill to rusty-commit format
+    ///
+    /// Cline skills are stored in ~/.cline/skills/ and have a similar structure
+    pub fn convert_cline_skill(source: &Path, target: &Path, name: &str) -> Result<()> {
+        if !source.exists() {
+            anyhow::bail!("Source directory does not exist: {:?}", source);
+        }
+
+        fs::create_dir_all(target)
+            .with_context(|| format!("Failed to create target directory: {:?}", target))?;
+
+        // Cline skills typically have CLAUDE.md, .claude/, and other files
+        let description = if source.join("README.md").exists() {
+            let readme = fs::read_to_string(source.join("README.md"))?;
+            readme.lines().next().unwrap_or("Imported from Cline").to_string()
+        } else if source.join("CLAUDE.md").exists() {
+            let claude_md = fs::read_to_string(source.join("CLAUDE.md"))?;
+            claude_md.lines().next().unwrap_or("Imported from Cline").to_string()
+        } else {
+            format!("Imported from Cline: {}", name)
+        };
+
+        let manifest = SkillManifest {
+            skill: SkillMeta {
+                name: name.to_string(),
+                version: "1.0.0".to_string(),
+                description,
+                author: Some("Imported from Cline".to_string()),
+                category: SkillCategory::Template,
+                tags: vec!["cline".to_string(), "imported".to_string()],
+            },
+            hooks: None,
+            config: None,
+        };
+
+        fs::write(
+            target.join("skill.toml"),
+            toml::to_string_pretty(&manifest)?,
+        )?;
+
+        // Try to find instructions to convert to prompt.md
+        let instruction_files = ["CLAUDE.md", "README.md", "INSTRUCTIONS.md"];
+        let mut found_instructions = false;
+
+        for file in &instruction_files {
+            let source_file = source.join(file);
+            if source_file.exists() {
+                let content = fs::read_to_string(&source_file)?;
+                let prompt = format!(
+                    "# Imported from Cline Skill: {}\n\n{}\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                    name,
+                    content
+                );
+                fs::write(target.join("prompt.md"), prompt)?;
+                found_instructions = true;
+                break;
+            }
+        }
+
+        if !found_instructions {
+            let prompt = format!(
+                "# Skill: {}\n\nThis skill was imported from Cline.\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                name
+            );
+            fs::write(target.join("prompt.md"), prompt)?;
+        }
+
+        // Copy non-Claude-specific files
+        for entry in fs::read_dir(source)? {
+            let entry = entry?;
+            let file_name = entry.file_name();
+            let file_str = file_name.to_string_lossy();
+
+            if entry.path().is_file() {
+                // Skip Claude-specific files
+                if file_str.starts_with(".claude") || file_str.ends_with(".json") {
+                    continue;
+                }
+                if ["skill.toml", "prompt.md", "README.md", "CLAUDE.md", "INSTRUCTIONS.md"]
+                    .contains(&file_str.as_ref())
+                {
+                    continue;
+                }
+                let target_file = target.join(&file_name);
+                fs::copy(entry.path(), target_file)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Convert a Codex skill to rusty-commit format
+    ///
+    /// Codex skills are stored in .codex/ directory and contain prompt files
+    pub fn convert_codex_skill(source: &Path, target: &Path, name: &str) -> Result<()> {
+        if !source.exists() {
+            anyhow::bail!("Source directory does not exist: {:?}", source);
+        }
+
+        fs::create_dir_all(target)
+            .with_context(|| format!("Failed to create target directory: {:?}", target))?;
+
+        // Codex typically has prompt files directly in the directory
+        let description = format!("Imported from Codex: {}", name);
+
+        let manifest = SkillManifest {
+            skill: SkillMeta {
+                name: name.to_string(),
+                version: "1.0.0".to_string(),
+                description,
+                author: Some("Imported from Codex".to_string()),
+                category: SkillCategory::Template,
+                tags: vec!["codex".to_string(), "imported".to_string()],
+            },
+            hooks: None,
+            config: None,
+        };
+
+        fs::write(
+            target.join("skill.toml"),
+            toml::to_string_pretty(&manifest)?,
+        )?;
+
+        // Look for prompt files
+        let prompt_files: Vec<_> = source
+            .read_dir()?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.path().is_file()
+                    && (e.file_name().to_string_lossy().ends_with(".md")
+                        || e.file_name().to_string_lossy().ends_with(".txt"))
+            })
+            .collect();
+
+        if let Some(first_file) = prompt_files.first() {
+            let content = fs::read_to_string(first_file.path())?;
+            let prompt = format!(
+                "# Imported from Codex Skill: {}\n\n{}\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                name,
+                content
+            );
+            fs::write(target.join("prompt.md"), prompt)?;
+        } else {
+            let prompt = format!(
+                "# Skill: {}\n\nThis skill was imported from Codex.\n\n## Diff\n\n```diff\n{{diff}}\n```\n\n## Context\n\n{{context}}",
+                name
+            );
+            fs::write(target.join("prompt.md"), prompt)?;
+        }
+
+        Ok(())
+    }
+
+    /// Convert a Roo Code skill to rusty-commit format
+    ///
+    /// Roo Code skills use GitHub repositories with skills in the root or .roo/skills/
+    pub fn convert_roo_skill(source: &str, target_dir: &Path) -> Result<Vec<String>> {
+        // Roo uses the same format as GitHub - delegate to import_from_github
+        if source.starts_with("gist:") {
+            let gist_id = source.strip_prefix("gist:").unwrap();
+            let name = import_from_gist(gist_id, target_dir)?;
+            Ok(vec![name])
+        } else {
+            // Parse owner/repo format
+            let parts: Vec<&str> = source.split('/').collect();
+            if parts.len() < 2 {
+                anyhow::bail!("Invalid Roo reference: {}", source);
+            }
+            let owner = parts[0];
+            let repo = parts[1];
+            import_from_github(owner, repo, Some(".roo/skills"), target_dir)
+        }
+    }
+
+    /// Convert a Kilo skill to rusty-commit format
+    ///
+    /// Kilo skills use GitHub repositories with skills in the root or .kilo/skills/
+    pub fn convert_kilo_skill(source: &str, target_dir: &Path) -> Result<Vec<String>> {
+        // Kilo uses the same format as GitHub - delegate to import_from_github
+        if source.starts_with("gist:") {
+            let gist_id = source.strip_prefix("gist:").unwrap();
+            let name = import_from_gist(gist_id, target_dir)?;
+            Ok(vec![name])
+        } else {
+            // Parse owner/repo format
+            let parts: Vec<&str> = source.split('/').collect();
+            if parts.len() < 2 {
+                anyhow::bail!("Invalid Kilo reference: {}", source);
+            }
+            let owner = parts[0];
+            let repo = parts[1];
+            import_from_github(owner, repo, Some(".kilo/skills"), target_dir)
+        }
     }
 }
 

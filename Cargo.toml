@@ -21,64 +21,20 @@ path = "src/main.rs"
 
 [features]
 # ═══════════════════════════════════════════════════════════════════════════════
-# Default Features - Common providers enabled by default for convenience
-# Users can disable individual providers to reduce binary size
+# Default Features - Core providers enabled by default for convenience
 # ═══════════════════════════════════════════════════════════════════════════════
 default = [
-    # Core providers
+    # Core providers (all OpenAI-compatible via single feature)
     "openai",
+    # Dedicated implementations
     "anthropic",
     "ollama",
     "gemini",
     "azure",
-    "perplexity",
     "xai",
-    # Major OpenAI-compatible providers
-    "openrouter",
-    "groq",
-    "deepseek",
-    "together",
-    "deepinfra",
-    "mistral",
-    "github-models",
-    "fireworks",
-    "moonshot",
-    "dashscope",
-    # Enterprise providers
-    "cohere",
-    "ai21",
-    "upstage",
-    # Popular GPU/Inference providers
-    "cerebras",
-    "sambanova",
-    "novita",
-    "nebius",
-    "replicate",
-    "lambda",
-    "hyperbolic",
-    "kluster",
-    # Local providers
-    "lmstudio",
-    "llamacpp",
-    # China-based providers
-    "siliconflow",
-    "zhipu",
-    "minimax",
-    # AI Gateways
-    "helicone",
-    # Cloud providers
-    "huggingface",
-    "bedrock",
-    "vertex",
-    # Dedicated providers
-    "mlx",
-    "nvidia",
-    "flowise",
-    # Additional popular providers
-    "jina",
-    "poe",
-    "venice",
+    "perplexity",
 ]
+
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
 # Enable TUI (Terminal User Interface) for setup command
@@ -89,27 +45,25 @@ docs = []
 # ═══════════════════════════════════════════════════════════════════════════════
 # Provider Feature Groups - Enable all providers in a category
 # ═══════════════════════════════════════════════════════════════════════════════
-# Popular cloud providers (OpenAI, Anthropic, etc.)
+# Popular cloud providers
 providers-popular = ["openai", "anthropic", "ollama", "gemini", "xai", "azure"]
-# Fast inference providers (Groq, Cerebras, SambaNova)
-providers-fast = ["groq", "cerebras", "sambanova", "nebius"]
-# OpenAI-compatible providers (OpenRouter, DeepSeek, Together, etc.)
-providers-openai-compatible = ["openrouter", "deepseek", "together", "deepinfra", "mistral", "fireworks", "moonshot", "dashscope", "cohere", "ai21", "upstage", "replicate", "lambda", "hyperbolic", "kluster", "venice", "jina", "poe", "novita", "friendli", "baseten"]
+# Fast inference providers
+providers-fast = ["openai"]
 # Local/self-hosted providers
-providers-local = ["lmstudio", "llamacpp", "ollama"]
+providers-local = ["ollama"]
 # Enterprise providers
 providers-enterprise = ["bedrock", "vertex", "azure"]
-# China-based providers
-providers-china = ["siliconflow", "zhipu", "minimax", "baichuan"]
-# GPU cloud providers
-providers-gpu-cloud = ["nebius", "lambda", "hyperbolic", "scaleway", "ovh"]
-# All providers (for maximum functionality, larger binary)
-providers-all = ["providers-popular", "providers-fast", "providers-openai-compatible", "providers-local", "providers-enterprise", "providers-china", "providers-gpu-cloud", "huggingface", "mlx", "nvidia", "flowise"]
+# All providers (maximum functionality, larger binary)
+providers-all = ["providers-popular", "providers-local", "providers-enterprise", "huggingface", "mlx", "nvidia", "flowise"]
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Individual Provider Features
+# Provider Features
 # ═══════════════════════════════════════════════════════════════════════════════
+# OpenAI-compatible providers (OpenAI, OpenRouter, Groq, DeepSeek, Together, etc.)
+# Enables ALL OpenAI-compatible providers - select via model config
 openai = ["async-openai"]
+
+# Dedicated provider implementations
 anthropic = []
 ollama = []
 gemini = []
@@ -119,106 +73,6 @@ xai = ["async-openai"]
 huggingface = []
 bedrock = []
 vertex = ["chrono"]
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# OpenAI-Compatible Provider Presets
-# These don't need extra dependencies, they use the openai module
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# Major Cloud Providers
-openrouter = ["openai"]
-groq = ["openai"]
-deepseek = ["openai"]
-together = ["openai"]
-deepinfra = ["openai"]
-mistral = ["openai"]
-github-models = ["openai"]
-fireworks = ["openai"]
-moonshot = ["openai"]
-dashscope = ["openai"]
-
-# Enterprise & Specialized
-cohere = ["openai"]
-ai21 = ["openai"]
-upstage = ["openai"]
-
-# GPU Cloud & Inference Providers (Comprehensive list from OpenCode)
-nebius = ["openai"]
-ovh = ["openai"]
-scaleway = ["openai"]
-friendli = ["openai"]
-baseten = ["openai"]
-chutes = ["openai"]
-ionet = ["openai"]
-modelscope = ["openai"]
-requesty = ["openai"]
-morph = ["openai"]
-synthetic = ["openai"]
-nano-gpt = ["openai"]
-zenmux = ["openai"]
-v0 = ["openai"]
-venice = ["openai"]
-cortecs = ["openai"]
-abacus = ["openai"]
-bailing = ["openai"]
-fastrouter = ["openai"]
-inference = ["openai"]
-submodel = ["openai"]
-zai = ["openai"]
-poe = ["openai"]
-cerebras = ["openai"]
-sambanova = ["openai"]
-novita = ["openai"]
-predibase = ["openai"]
-tensorops = ["openai"]
-hyperbolic = ["openai"]
-kluster = ["openai"]
-lambda = ["openai"]
-replicate = ["openai"]
-targon = ["openai"]
-corcel = ["openai"]
-cybernative = ["openai"]
-edgen = ["openai"]
-gigachat = ["openai"]
-hydra = ["openai"]
-jina = ["openai"]
-lingyi = ["openai"]
-monica = ["openai"]
-pollinations = ["openai"]
-shuttleai = ["openai"]
-teknium = ["openai"]
-theb = ["openai"]
-tryleap = ["openai"]
-
-# Local/Self-hosted Providers
-lmstudio = ["openai"]
-llamacpp = ["openai"]
-kobold = ["openai"]
-textgen = ["openai"]
-tabby = ["openai"]
-
-# China-based Providers
-siliconflow = ["openai"]
-zhipu = ["openai"]
-minimax = ["openai"]
-baichuan = ["openai"]
-
-# AI Gateway & Proxy Services
-helicone = ["openai"]
-workers-ai = ["openai"]
-cloudflare-ai = ["openai"]
-vercel-ai = ["openai"]
-
-# Specialized Providers
-302ai = ["openai"]
-sap-ai = ["openai"]
-
-# Additional Providers from OpenCommit
-aimlapi = ["openai"]
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Dedicated Providers with Special Implementations
-# ═══════════════════════════════════════════════════════════════════════════════
 mlx = []
 nvidia = []
 flowise = []

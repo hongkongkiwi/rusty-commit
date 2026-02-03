@@ -51,11 +51,7 @@ impl PerplexityProvider {
             .context("Perplexity API key not configured.\nRun: rco config set RCO_API_KEY=<your_key>\nGet your API key from: https://www.perplexity.ai/settings/api")?;
 
         let client = Client::new();
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("llama-3.1-sonar-small-128k-online")
-            .to_string();
+        let model = config.model.clone();
 
         Ok(Self {
             client,
@@ -75,8 +71,7 @@ impl PerplexityProvider {
         let model = _account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("llama-3.1-sonar-small-128k-online")
+            .unwrap_or(&config.model)
             .to_string();
 
         Ok(Self {
@@ -112,7 +107,7 @@ impl AIProvider for PerplexityProvider {
         let request = PerplexityRequest {
             model: self.model.clone(),
             messages,
-            max_tokens: config.tokens_max_output.unwrap_or(500),
+            max_tokens: config.tokens_max_output,
             temperature: 0.7,
             stream: false,
         };

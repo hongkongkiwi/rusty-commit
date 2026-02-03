@@ -75,7 +75,7 @@ pub async fn execute(options: GlobalOptions) -> Result<()> {
     // Determine effective generate count (CLI > config > default), clamped to 1-5
     let generate_count = options
         .generate_count
-        .max(config.generate_count.unwrap_or(1))
+        .max(config.generate_count)
         .clamp(1, 5);
 
     // Prepare the diff for processing
@@ -223,7 +223,7 @@ fn prepare_diff(config: &Config, ctx: &ExecContext) -> Result<(String, usize)> {
     }
 
     // Check if diff is too large - implement chunking if needed
-    let max_tokens = config.tokens_max_input.unwrap_or(4096);
+    let max_tokens = config.tokens_max_input;
     let token_count = utils::token::estimate_tokens(&diff)?;
 
     // If diff is too large, chunk it
@@ -263,21 +263,21 @@ fn run_pre_gen_hooks(config: &Config, token_count: usize, context: Option<&str>)
             ("RCO_REPO_ROOT", git::get_repo_root()?.to_string()),
             (
                 "RCO_MAX_TOKENS",
-                (config.tokens_max_input.unwrap_or(4096)).to_string(),
+                config.tokens_max_input.to_string(),
             ),
             ("RCO_DIFF_TOKENS", token_count.to_string()),
             ("RCO_CONTEXT", context.unwrap_or_default().to_string()),
             (
                 "RCO_PROVIDER",
-                config.ai_provider.clone().unwrap_or_default(),
+                config.ai_provider.clone(),
             ),
-            ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+            ("RCO_MODEL", config.model.clone()),
         ];
         run_hooks(HookOptions {
             name: "pre-gen",
             commands: hooks,
-            strict: config.hook_strict.unwrap_or(true),
-            timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+            strict: config.hook_strict,
+            timeout: std::time::Duration::from_millis(config.hook_timeout_ms),
             envs,
         })?;
     }
@@ -383,7 +383,7 @@ async fn handle_commit_action(
             ctx.success("Changes committed successfully!");
 
             // Push to remote if gitpush is enabled
-            if config.gitpush.unwrap_or(false) {
+            if config.gitpush {
                 push_after_commit(config, ctx)?;
             }
         }
@@ -394,7 +394,7 @@ async fn handle_commit_action(
             ctx.success("Changes committed successfully!");
 
             // Push to remote if gitpush is enabled
-            if config.gitpush.unwrap_or(false) {
+            if config.gitpush {
                 push_after_commit(config, ctx)?;
             }
         }
@@ -410,7 +410,7 @@ async fn handle_commit_action(
             ctx.success("Changes committed successfully!");
 
             // Push to remote if gitpush is enabled
-            if config.gitpush.unwrap_or(false) {
+            if config.gitpush {
                 push_after_commit(config, ctx)?;
             }
         }
@@ -426,7 +426,7 @@ async fn handle_commit_action(
             ctx.success("Changes committed successfully!");
 
             // Push to remote if gitpush is enabled
-            if config.gitpush.unwrap_or(false) {
+            if config.gitpush {
                 push_after_commit(config, ctx)?;
             }
         }
@@ -603,15 +603,15 @@ async fn run_post_commit_hooks(config: &Config, message: &str) -> Result<()> {
             ("RCO_COMMIT_MESSAGE", message.to_string()),
             (
                 "RCO_PROVIDER",
-                config.ai_provider.clone().unwrap_or_default(),
+                config.ai_provider.clone(),
             ),
-            ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+            ("RCO_MODEL", config.model.clone()),
         ];
         run_hooks(HookOptions {
             name: "post-commit",
             commands: hooks,
-            strict: config.hook_strict.unwrap_or(true),
-            timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+            strict: config.hook_strict,
+            timeout: std::time::Duration::from_millis(config.hook_timeout_ms),
             envs,
         })?;
     }
@@ -628,15 +628,15 @@ fn run_pre_commit_hooks(config: &Config, message: &str) -> Result<String> {
             ("RCO_COMMIT_FILE", commit_file.to_string_lossy().to_string()),
             (
                 "RCO_PROVIDER",
-                config.ai_provider.clone().unwrap_or_default(),
+                config.ai_provider.clone(),
             ),
-            ("RCO_MODEL", config.model.clone().unwrap_or_default()),
+            ("RCO_MODEL", config.model.clone()),
         ];
         run_hooks(HookOptions {
             name: "pre-commit",
             commands: hooks,
-            strict: config.hook_strict.unwrap_or(true),
-            timeout: std::time::Duration::from_millis(config.hook_timeout_ms.unwrap_or(30000)),
+            strict: config.hook_strict,
+            timeout: std::time::Duration::from_millis(config.hook_timeout_ms),
             envs,
         })?;
         // Read back possibly modified commit file

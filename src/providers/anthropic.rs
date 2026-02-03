@@ -55,11 +55,7 @@ impl AnthropicProvider {
         };
 
         let client = Client::new();
-        let model = config
-            .model
-            .as_deref()
-            .unwrap_or("claude-3-5-sonnet-20241022")
-            .to_string();
+        let model = config.model.clone();
 
         Ok(Self {
             client,
@@ -75,8 +71,7 @@ impl AnthropicProvider {
         let model = account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("claude-3-5-sonnet-20241022")
+            .unwrap_or(&config.model)
             .to_string();
 
         // For accounts, we'll use the api_key from the function parameter
@@ -114,7 +109,7 @@ impl AIProvider for AnthropicProvider {
                     content: user_prompt,
                 },
             ],
-            max_tokens: config.tokens_max_output.unwrap_or(500),
+            max_tokens: config.tokens_max_output,
             temperature: 0.7,
         };
 

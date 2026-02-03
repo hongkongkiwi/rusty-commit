@@ -1,8 +1,6 @@
 pub mod codex_oauth;
-pub mod gitlab_oauth;
 pub mod oauth;
 pub mod token_storage;
-pub mod vercel_oauth;
 
 use crate::config::accounts::{AccountConfig, AuthMethod};
 use crate::config::Config;

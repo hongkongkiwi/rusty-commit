@@ -38,7 +38,7 @@ pub fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     );
 
     // Add style guidance from history if enabled
-    if config.learn_from_history.unwrap_or(false) {
+    if config.learn_from_history {
         if let Some(style_guidance) = get_style_guidance(config) {
             prompt.push_str("REPO STYLE (learned from commit history):\n");
             prompt.push_str(&style_guidance);
@@ -47,22 +47,22 @@ pub fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     }
 
     // Add locale if specified
-    if let Some(locale) = &config.language {
+    if !config.language.is_empty() {
         prompt.push_str(&format!(
             "- Generate the commit message in {} language\n",
-            locale
+            config.language
         ));
     }
 
     // Add commit type preference
-    let commit_type = config.commit_type.as_deref().unwrap_or("conventional");
+    let commit_type = config.commit_type.as_str();
     match commit_type {
         "conventional" => {
             prompt.push_str("- Use conventional commit format: <type>(<scope>): <description>\n");
             prompt.push_str(
                 "- Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore\n",
             );
-            if config.omit_scope.unwrap_or(false) {
+            if config.omit_scope {
                 prompt.push_str("- Omit the scope, use format: <type>: <description>\n");
             }
         }
@@ -80,22 +80,22 @@ pub fn build_system_prompt(config: &Config, full_gitmoji: bool) -> String {
     }
 
     // Description requirements
-    let max_length = config.description_max_length.unwrap_or(100);
+    let max_length = config.description_max_length;
     prompt.push_str(&format!(
         "- Keep the description under {} characters\n",
         max_length
     ));
 
-    if config.description_capitalize.unwrap_or(true) {
+    if config.description_capitalize {
         prompt.push_str("- Capitalize the first letter of the description\n");
     }
 
-    if !config.description_add_period.unwrap_or(false) {
+    if !config.description_add_period {
         prompt.push_str("- Do not end the description with a period\n");
     }
 
     // Add commit body guidance if enabled
-    if config.enable_commit_body.unwrap_or(false) {
+    if config.enable_commit_body {
         prompt.push_str("\nCOMMIT BODY (optional):\n");
         prompt.push_str(
             "- Add a blank line after the description, then explain WHY the change was made\n",
@@ -118,7 +118,7 @@ fn get_style_guidance(config: &Config) -> Option<String> {
     }
 
     // Analyze recent commits - default now 50 for better learning
-    let count = config.history_commits_count.unwrap_or(50);
+    let count = config.history_commits_count;
 
     match git::get_recent_commit_messages(count) {
         Ok(commits) => {
@@ -153,7 +153,7 @@ pub fn build_user_prompt(
     let mut prompt = String::new();
 
     // Add project context if available
-    if let Some(project_context) = get_project_context() {
+    if let Some(project_context) = get_project_context(_config) {
         prompt.push_str(&format!("Project Context: {}\n\n", project_context));
     }
 
@@ -315,74 +315,86 @@ fn categorize_file_type(ext: &str) -> String {
     .to_string()
 }
 
-/// Get project context from .rco/context.txt or README
-pub fn get_project_context() -> Option<String> {
-    // Try .rco/context.txt first
+/// Get project context based on config options
+pub fn get_project_context(config: &Config) -> Option<String> {
+    if !config.read_context && !config.read_agent_files && !config.read_project_config {
+        return None;
+    }
+
     if let Ok(repo_root) = git::get_repo_root() {
-        let context_path = Path::new(&repo_root).join(".rco").join("context.txt");
-        if context_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&context_path) {
-                let trimmed = content.trim();
-                if !trimmed.is_empty() {
-                    return Some(trimmed.to_string());
+        let repo_path = Path::new(&repo_root);
+
+        // Try .rco/context.txt first (highest priority - explicit user context)
+        if config.read_context {
+            let context_path = repo_path.join(".rco").join("context.txt");
+            if context_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&context_path) {
+                    let trimmed = content.trim();
+                    if !trimmed.is_empty() {
+                        return Some(trimmed.to_string());
+                    }
                 }
             }
         }
 
-        // Try README.md - extract first paragraph
-        let readme_path = Path::new(&repo_root).join("README.md");
-        if readme_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&readme_path) {
-                // Find first non-empty line that's not a header
-                for line in content.lines() {
-                    let trimmed = line.trim();
-                    if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                        // Return first sentence or up to 100 chars
-                        let context = if let Some(idx) = trimmed.find('.') {
-                            trimmed[..idx + 1].to_string()
-                        } else {
-                            trimmed.chars().take(100).collect()
-                        };
-                        if !context.is_empty() {
-                            return Some(context);
+        // Try AI agent specification files (in order of specificity)
+        if config.read_agent_files {
+            let agent_files = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"];
+            for agent_file in &agent_files {
+                let agent_path = repo_path.join(agent_file);
+                if agent_path.exists() {
+                    if let Ok(content) = std::fs::read_to_string(&agent_path) {
+                        // Extract relevant sections for commit context
+                        // Look for purpose, guidelines, or rules sections
+                        let relevant = extract_relevant_context(&content);
+                        if !relevant.is_empty() {
+                            return Some(relevant);
                         }
                     }
                 }
             }
         }
 
+        // Try project config files for commit style
+        if config.read_project_config {
+            if let Some(commit_style) = get_commit_style_config(repo_path) {
+                return Some(commit_style);
+            }
+        }
+
         // Try Cargo.toml for Rust projects
-        let cargo_path = Path::new(&repo_root).join("Cargo.toml");
-        if cargo_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&cargo_path) {
-                // Extract description from Cargo.toml
-                let mut in_package = false;
-                for line in content.lines() {
-                    let trimmed = line.trim();
-                    if trimmed == "[package]" {
-                        in_package = true;
-                    } else if trimmed.starts_with('[') && trimmed != "[package]" {
-                        in_package = false;
-                    } else if in_package && trimmed.starts_with("description") {
-                        if let Some(idx) = trimmed.find('=') {
-                            let desc = trimmed[idx + 1..].trim().trim_matches('"');
-                            if !desc.is_empty() {
-                                return Some(format!("Rust project: {}", desc));
+        if config.read_project_config {
+            let cargo_path = repo_path.join("Cargo.toml");
+            if cargo_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&cargo_path) {
+                    let mut in_package = false;
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        if trimmed == "[package]" {
+                            in_package = true;
+                        } else if trimmed.starts_with('[') && trimmed != "[package]" {
+                            in_package = false;
+                        } else if in_package && trimmed.starts_with("description") {
+                            if let Some(idx) = trimmed.find('=') {
+                                let desc = trimmed[idx + 1..].trim().trim_matches('"');
+                                if !desc.is_empty() {
+                                    return Some(format!("Rust project: {}", desc));
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Try package.json for Node projects
-        let package_path = Path::new(&repo_root).join("package.json");
-        if package_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&package_path) {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let Some(desc) = json.get("description").and_then(|d| d.as_str()) {
-                        if !desc.is_empty() {
-                            return Some(format!("Node.js project: {}", desc));
+            // Try package.json for Node projects
+            let package_path = repo_path.join("package.json");
+            if package_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&package_path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        if let Some(desc) = json.get("description").and_then(|d| d.as_str()) {
+                            if !desc.is_empty() {
+                                return Some(format!("Node.js project: {}", desc));
+                            }
                         }
                     }
                 }
@@ -391,6 +403,126 @@ pub fn get_project_context() -> Option<String> {
     }
 
     None
+}
+
+/// Get commit style configuration from project
+fn get_commit_style_config(repo_path: &Path) -> Option<String> {
+    // Check for various commit style config files
+    let config_files = [
+        "commitlint.config.js",
+        "commitlint.config.ts",
+        "commitlint.config.cjs",
+        ".commitlintrc.js",
+        ".commitlintrc.ts",
+        ".commitlintrc.json",
+        ".commitlintrc",
+        "conventionalcommits.yaml",
+        "conventionalcommits.yml",
+        ".czrc",
+        ".cz.json",
+    ];
+
+    for config_file in &config_files {
+        let config_path = repo_path.join(config_file);
+        if config_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&config_path) {
+                return Some(parse_commit_style(&content, config_file));
+            }
+        }
+    }
+
+    None
+}
+
+/// Parse commit style configuration file
+fn parse_commit_style(content: &str, file_name: &str) -> String {
+    // Try to extract useful commit rules from the config
+    let mut rules = Vec::new();
+
+    // Look for type.enums or similar patterns
+    if content.contains("type-enum") || content.contains("types") {
+        rules.push("Uses conventional commit types");
+    }
+
+    // Look for scope configuration
+    if content.contains("scope") {
+        rules.push("Supports commit scopes");
+    }
+
+    // Look for header pattern
+    if content.contains("header") || content.contains("maxLength") {
+        rules.push("Has header length constraints");
+    }
+
+    // Look for body configuration
+    if content.contains("body") && !content.contains("body: false") {
+        rules.push("Includes commit body");
+    }
+
+    // Look for breaking changes
+    if content.contains("breaking") || content.contains("breakingChanges") {
+        rules.push("Supports breaking changes");
+    }
+
+    if rules.is_empty() {
+        format!("Commit style config: {}", file_name)
+    } else {
+        format!("Commit style ({}): {}", file_name, rules.join(", "))
+    }
+}
+
+/// Extract relevant commit context from agent specification files
+fn extract_relevant_context(content: &str) -> String {
+    let mut relevant = String::new();
+
+    // Look for sections like "purpose", "guidelines", "rules", "contributing"
+    let section_patterns = [
+        "purpose",
+        "guidelines",
+        "contributing",
+        "conventions",
+        "commit",
+    ];
+
+    for line in content.lines() {
+        let trimmed = line.trim().to_lowercase();
+        for pattern in &section_patterns {
+            if trimmed.contains(pattern) && (trimmed.starts_with('#') || trimmed.starts_with("##")) {
+                // Found a relevant section header - include following content
+                // Limit to ~300 chars of useful context
+                if relevant.len() < 300 {
+                    if !relevant.is_empty() {
+                        relevant.push(' ');
+                    }
+                    let section_content = extract_section_content(content, line);
+                    relevant.push_str(&section_content.chars().take(200).collect::<String>());
+                }
+            }
+        }
+    }
+
+    relevant.trim().to_string()
+}
+
+/// Extract content under a section header
+fn extract_section_content<'a>(content: &'a str, header_line: &str) -> &'a str {
+    let header_idx = content.find(header_line).unwrap_or(0);
+    let after_header = &content[header_idx + header_line.len()..];
+
+    // Find next header (## or ###) or end of section
+    if let Some(newline_idx) = after_header.find(|c| c == '\n') {
+        let potential_header = after_header[newline_idx + 1..].trim();
+        if potential_header.starts_with("##") {
+            return &after_header[..newline_idx];
+        }
+    }
+
+    // Return up to next header or 500 chars
+    let end_idx = after_header
+        .find("## ")
+        .unwrap_or(after_header.len())
+        .min(500);
+    &after_header[..end_idx]
 }
 
 /// Build the combined prompt for providers without system message support

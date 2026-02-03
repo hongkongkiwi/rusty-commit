@@ -457,6 +457,80 @@ async fn import_skills(source: String, specific_name: Option<String>) -> Result<
                 import_from_claude_code(target_dir)?
             }
         }
+        crate::skills::external::ExternalSource::Cline { path } => {
+            let claude_dir = if path.is_absolute() {
+                path
+            } else {
+                dirs::home_dir()
+                    .context("Could not find home directory")?
+                    .join(path)
+            };
+
+            if !claude_dir.exists() {
+                anyhow::bail!("Cline skills directory not found at {:?}", claude_dir);
+            }
+
+            let mut imported = Vec::new();
+            for entry in fs::read_dir(&claude_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                if path.is_dir() {
+                    let skill_name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    let target_skill_dir = target_dir.join(&skill_name);
+                    if target_skill_dir.exists() {
+                        tracing::warn!("Skill '{}' already exists, skipping", skill_name);
+                        continue;
+                    }
+
+                    fs::create_dir_all(&target_skill_dir)?;
+                    crate::skills::external::convert_cline_skill(&path, &target_skill_dir, &skill_name)?;
+                    imported.push(skill_name);
+                }
+            }
+            imported
+        }
+        crate::skills::external::ExternalSource::Codex { path } => {
+            if !path.exists() {
+                anyhow::bail!("Codex skills directory not found at {:?}", path);
+            }
+
+            let mut imported = Vec::new();
+            for entry in fs::read_dir(&path)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                if path.is_dir() {
+                    let skill_name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    let target_skill_dir = target_dir.join(&skill_name);
+                    if target_skill_dir.exists() {
+                        tracing::warn!("Skill '{}' already exists, skipping", skill_name);
+                        continue;
+                    }
+
+                    fs::create_dir_all(&target_skill_dir)?;
+                    crate::skills::external::convert_codex_skill(&path, &target_skill_dir, &skill_name)?;
+                    imported.push(skill_name);
+                }
+            }
+            imported
+        }
+        crate::skills::external::ExternalSource::Roo { source: roo_source } => {
+            crate::skills::external::convert_roo_skill(&roo_source, target_dir)?
+        }
+        crate::skills::external::ExternalSource::Kilo { source: kilo_source } => {
+            crate::skills::external::convert_kilo_skill(&kilo_source, target_dir)?
+        }
         crate::skills::external::ExternalSource::GitHub { owner, repo, path } => {
             if let Some(name) = specific_name {
                 // Import specific skill from GitHub
@@ -545,9 +619,59 @@ async fn list_available_skills(source: String) -> Result<()> {
                 "rco skills import claude-code --name <skill-name>".cyan()
             );
         }
+        "cline" => {
+            let clane_dir = dirs::home_dir()
+                .context("Could not find home directory")?
+                .join(".cline")
+                .join("skills");
+
+            if !clane_dir.exists() {
+                println!("{}", "No Cline skills found.".yellow());
+                println!();
+                println!("Cline skills are stored in: ~/.cline/skills/");
+                return Ok(());
+            }
+
+            let mut count = 0;
+            for entry in fs::read_dir(&clane_dir)? {
+                if entry.unwrap().path().is_dir() {
+                    count += 1;
+                }
+            }
+
+            println!("{}", "Available Cline Skills".bold().underline());
+            println!();
+            println!("Found {} skill(s) in ~/.cline/skills/", count);
+            println!();
+            println!("To import: {}", "rco skills import cline:/path/to/skills".cyan());
+        }
+        "codex" => {
+            println!("{}", "Codex Skills".bold().underline());
+            println!();
+            println!("To import from a .codex/ directory:");
+            println!("  {}", "rco skills import codex:/path/to/.codex".cyan());
+        }
+        "roo" => {
+            println!("{}", "Roo Code Skills".bold().underline());
+            println!();
+            println!("To import from a Roo Code repository:");
+            println!("  {}", "rco skills import roo:owner/repo".cyan());
+            println!();
+            println!("To import from a Roo Code gist:");
+            println!("  {}", "rco skills import roo:gist:gist-id".cyan());
+        }
+        "kilo" => {
+            println!("{}", "Kilo Skills".bold().underline());
+            println!();
+            println!("To import from a Kilo repository:");
+            println!("  {}", "rco skills import kilo:owner/repo".cyan());
+            println!();
+            println!("To import from a Kilo gist:");
+            println!("  {}", "rco skills import kilo:gist:gist-id".cyan());
+        }
         _ => {
             anyhow::bail!(
-                "Unknown source: {}. Currently supported: claude-code",
+                "Unknown source: {}. Currently supported: claude-code, cline, codex, roo, kilo",
                 source
             );
         }

@@ -48,6 +48,10 @@ Conventional commits, GitMoji, or custom templates. Multi-language support.
 
 Seamlessly switch between work and personal accounts, different providers, or models.
 
+**📖 Smart Context Awareness**
+
+Reads AGENTS.md, CLAUDE.md, GEMINI.md, commitlint configs, and Cargo.toml to generate context-aware commits.
+
 **🔌 Editor Integration**
 
 MCP server for Cursor, VS Code, Claude Code, and other AI-powered editors.
@@ -366,17 +370,35 @@ rco config reset --all                     # Reset to defaults
 
 | Key | Description | Default |
 |-----|-------------|---------|
+| **Provider Settings** |
 | `RCO_AI_PROVIDER` | AI backend | `anthropic` |
 | `RCO_MODEL` | Model name | Provider-specific |
 | `RCO_API_KEY` | API key | - |
 | `RCO_API_URL` | Custom endpoint | - |
-| `RCO_COMMIT_TYPE` | Commit format | `conventional` |
+| **Commit Format** |
+| `RCO_COMMIT_TYPE` | Commit format (`conventional`, `gitmoji`) | `conventional` |
 | `RCO_EMOJI` | Include emojis | `false` |
 | `RCO_LANGUAGE` | Output language | `en` |
+| `RCO_DESCRIPTION` | Add description | `false` |
+| `RCO_DESCRIPTION_CAPITALIZE` | Capitalize description | `true` |
+| `RCO_DESCRIPTION_ADD_PERIOD` | Add period to description | `false` |
+| `RCO_DESCRIPTION_MAX_LENGTH` | Max description length | `100` |
+| **Context & Learning** |
+| `RCO_READ_CONTEXT` | Read `.rco/context.txt` | `true` |
+| `RCO_READ_AGENT_FILES` | Read AGENTS.md, CLAUDE.md, GEMINI.md | `true` |
+| `RCO_READ_COMMITLINT` | Read commit style configs | `true` |
+| `RCO_READ_PROJECT_CONFIG` | Read Cargo.toml, package.json | `true` |
+| `RCO_LEARN_FROM_HISTORY` | Learn from git history | `false` |
+| `RCO_HISTORY_COMMITS_COUNT` | Commits to analyze | `50` |
+| **Output Control** |
 | `RCO_MAX_TOKENS` | Max response tokens | `1024` |
 | `RCO_TEMPERATURE` | Response creativity | `0.7` |
 | `RCO_ENABLE_COMMIT_BODY` | Add commit body | `false` |
-| `RCO_LEARN_FROM_HISTORY` | Learn from git history | `false` |
+| `RCO_GENERATE_COUNT` | Variations to generate | `1` |
+| `RCO_ONE_LINE_COMMIT` | Single line message | `false` |
+| **Integration** |
+| `RCO_CLIPBOARD_ON_TIMEOUT` | Copy to clipboard on timeout | `true` |
+| `RCO_ACTION_ENABLED` | Enable action mode | `false` |
 
 </details>
 
@@ -450,13 +472,22 @@ Automatically learn and match your team's commit style:
 
 ```bash
 rco config set RCO_LEARN_FROM_HISTORY=true
+rco config set RCO_HISTORY_COMMITS_COUNT=100  # Analyze last 100 commits
 ```
 
-Analyzes last 50 commits to detect:
+Analyzes your git history to detect:
 - Common commit types and scopes
 - Average description length
 - Capitalization preferences
 - Gitmoji usage patterns
+- Period usage in descriptions
+- Subject vs body formatting
+
+Configure how many commits to analyze:
+```bash
+rco config set RCO_HISTORY_COMMITS_COUNT=100  # More commits = better patterns
+rco config set RCO_HISTORY_COMMITS_COUNT=20   # Faster, less accurate
+```
 
 </details>
 
@@ -485,18 +516,50 @@ Analyzes last 50 commits to detect:
 <details>
 <summary>📂 Repository Context Awareness</summary>
 
-Rusty Commit automatically detects project context:
+Rusty Commit automatically detects project context to generate better commit messages. Control which sources are read via configuration:
 
 ```bash
-# Create custom context file
-echo "Payment processing microservice" > .rco/context.txt
+# Enable/disable context reading
+rco config set RCO_READ_CONTEXT=true           # Read .rco/context.txt
+rco config set RCO_READ_AGENT_FILES=true       # Read AGENTS.md, CLAUDE.md, GEMINI.md
+rco config set RCO_READ_PROJECT_CONFIG=true    # Read Cargo.toml, package.json
+rco config set RCO_READ_COMMITLINT=true        # Read commit style configs
 ```
 
-**Auto-detected sources:**
-- `.rco/context.txt` - Custom project description
-- `README.md` - First paragraph
-- `Cargo.toml` - Rust project description
-- `package.json` - Node.js project description
+**Context Sources (by priority):**
+
+| Priority | Source | Description |
+|----------|--------|-------------|
+| 1 | `.rco/context.txt` | Custom project description (highest priority) |
+| 2 | `AGENTS.md` | AI agent specification (highest priority) |
+| 3 | `CLAUDE.md` | Claude Code specification |
+| 4 | `GEMINI.md` | Gemini specification |
+| 5 | Commit style config | commitlint, cz, conventionalcommits rules |
+| 6 | `Cargo.toml` | Rust project description |
+| 7 | `package.json` | Node.js project description |
+
+**Commit Style Configuration Detection:**
+
+Rusty Commit reads existing commit style configurations to match your project's conventions:
+
+| File | Format |
+|------|--------|
+| `commitlint.config.js` | Commitlint (JS) |
+| `commitlint.config.ts` | Commitlint (TypeScript) |
+| `.commitlintrc.js` | Commitlint (legacy) |
+| `.commitlintrc.ts` | Commitlint (legacy TS) |
+| `.commitlintrc.json` | Commitlint (legacy JSON) |
+| `.commitlintrc` | Commitlint (legacy YAML) |
+| `conventionalcommits.yaml` | Conventional Commits |
+| `conventionalcommits.yml` | Conventional Commits |
+| `.czrc` | Cz CLI config |
+| `.cz.json` | Cz JSON config |
+
+When detected, rusty-commit learns:
+- Supported commit types (feat, fix, docs, etc.)
+- Scope requirements
+- Header length constraints
+- Breaking change format
 
 </details>
 
@@ -518,10 +581,26 @@ rco --skill my-team-template              # Use a skill
 <details>
 <summary>📥 Import Skills from External Sources</summary>
 
+Import skills from various AI tool formats:
+
 ```bash
 # Import from Claude Code
-rco skills available                      # List Claude Code skills
+rco skills available claude-code              # List available skills
 rco skills import claude-code --name <skill-name>
+
+# Import from Cline
+rco skills import cline:/path/to/.cline/skills
+
+# Import from Roo Code
+rco skills import roo:owner/repo              # From GitHub repository
+rco skills import roo:gist:gist-id            # From GitHub Gist
+
+# Import from Kilo
+rco skills import kilo:owner/repo             # From GitHub repository
+rco skills import kilo:gist:gist-id           # From GitHub Gist
+
+# Import from .codex directory
+rco skills import codex:/path/to/.codex
 
 # Import from GitHub
 rco skills import github:owner/repo

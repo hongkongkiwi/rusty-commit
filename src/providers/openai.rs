@@ -35,7 +35,7 @@ impl OpenAIProvider {
         );
 
         let client = Client::with_config(openai_config);
-        let model = config.model.as_deref().unwrap_or("gpt-4o-mini").to_string();
+        let model = config.model.clone();
 
         Ok(Self { client, model })
     }
@@ -55,8 +55,7 @@ impl OpenAIProvider {
         let model = account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("gpt-4o-mini")
+            .unwrap_or(&config.model)
             .to_string();
 
         Ok(Self { client, model })
@@ -86,7 +85,7 @@ impl AIProvider for OpenAIProvider {
                 .model(&self.model)
                 .messages(messages)
                 .temperature(1.0)
-                .max_tokens(config.tokens_max_output.unwrap_or(500) as u16)
+                .max_tokens(config.tokens_max_output as u16)
                 .build()?
         } else {
             // Standard models support temperature=0.7 and max_tokens
@@ -94,7 +93,7 @@ impl AIProvider for OpenAIProvider {
                 .model(&self.model)
                 .messages(messages)
                 .temperature(0.7)
-                .max_tokens(config.tokens_max_output.unwrap_or(500) as u16)
+                .max_tokens(config.tokens_max_output as u16)
                 .build()?
         };
 

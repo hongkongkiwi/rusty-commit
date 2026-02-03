@@ -119,12 +119,12 @@ fn cleanup_test_env() {
 #[test]
 fn test_default_config() {
     let config = Config::default();
-    assert_eq!(config.ai_provider.as_deref(), Some("openai"));
-    assert_eq!(config.model.as_deref(), Some("gpt-3.5-turbo"));
-    assert_eq!(config.tokens_max_input, Some(4096));
-    assert_eq!(config.tokens_max_output, Some(500));
-    assert_eq!(config.commit_type.as_deref(), Some("conventional"));
-    assert_eq!(config.emoji, Some(false));
+    assert_eq!(config.ai_provider, "openai");
+    assert_eq!(config.model, "gpt-3.5-turbo");
+    assert_eq!(config.tokens_max_input, 4096);
+    assert_eq!(config.tokens_max_output, 500);
+    assert_eq!(config.commit_type, "conventional");
+    assert_eq!(config.emoji, false);
 }
 
 #[test]
@@ -134,17 +134,17 @@ fn test_save_and_load_config() {
 
         let mut config = Config::default();
         config.api_key = Some("test_key".to_string());
-        config.emoji = Some(true);
-        config.tokens_max_output = Some(1000);
+        config.emoji = true;
+        config.tokens_max_output = 1000;
 
         // Save the config
         config.save().unwrap();
 
         // Load the config back
         let loaded_config = Config::load().unwrap();
-        assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
-        assert_eq!(loaded_config.emoji, Some(true));
-        assert_eq!(loaded_config.tokens_max_output, Some(1000));
+        assert_eq!(loaded_config.api_key.as_ref(), Some(&"test_key".to_string()));
+        assert_eq!(loaded_config.emoji, true);
+        assert_eq!(loaded_config.tokens_max_output, 1000);
 
         cleanup_test_env();
     });
@@ -167,12 +167,12 @@ fn test_parse_legacy_format() {
         let config = Config::load().unwrap();
 
         assert_eq!(config.api_key.as_deref(), Some("sk-test-key"));
-        assert_eq!(config.ai_provider.as_deref(), Some("openai"));
-        assert_eq!(config.model.as_deref(), Some("gpt-4"));
-        assert_eq!(config.emoji, Some(true));
-        assert_eq!(config.gitpush, Some(false));
-        assert_eq!(config.language.as_deref(), Some("en"));
-        assert_eq!(config.tokens_max_output, Some(1000));
+        assert_eq!(config.ai_provider, "openai");
+        assert_eq!(config.model, "gpt-4");
+        assert_eq!(config.emoji, true);
+        assert_eq!(config.gitpush, false);
+        assert_eq!(config.language, "en");
+        assert_eq!(config.tokens_max_output, 1000);
 
         // Cleanup MUST happen before the lock is released to prevent env var leakage
         // Clean up environment variables immediately after test
@@ -217,20 +217,20 @@ fn test_reset_config() {
 
         // Modify some values
         config.api_key = Some("custom_key".to_string());
-        config.emoji = Some(true);
-        config.tokens_max_output = Some(1000);
+        config.emoji = true;
+        config.tokens_max_output = 1000;
 
         // Reset specific keys
         config.reset(Some(&vec!["RCO_EMOJI".to_string()])).unwrap();
         assert_eq!(config.api_key.as_deref(), Some("custom_key"));
-        assert_eq!(config.emoji, Some(false)); // Reset to default
-        assert_eq!(config.tokens_max_output, Some(1000));
+        assert_eq!(config.emoji, false); // Reset to default
+        assert_eq!(config.tokens_max_output, 1000);
 
         // Reset all
         config.reset(None).unwrap();
         assert_eq!(config.api_key, None);
-        assert_eq!(config.emoji, Some(false));
-        assert_eq!(config.tokens_max_output, Some(500));
+        assert_eq!(config.emoji, false);
+        assert_eq!(config.tokens_max_output, 500);
 
         cleanup_test_env();
     });
@@ -247,10 +247,10 @@ fn test_legacy_prompt_module_mapping() {
         config
             .set("RCO_PROMPT_MODULE", "conventional-commit")
             .unwrap();
-        assert_eq!(config.commit_type.as_deref(), Some("conventional"));
+        assert_eq!(config.commit_type, "conventional");
 
         config.set("RCO_PROMPT_MODULE", "gitmoji").unwrap();
-        assert_eq!(config.commit_type.as_deref(), Some("gitmoji"));
+        assert_eq!(config.commit_type, "gitmoji");
 
         cleanup_test_env();
     });

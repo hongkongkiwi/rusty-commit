@@ -256,11 +256,11 @@ fn test_config_with_different_providers() {
         std::env::remove_var("RCO_API_KEY");
 
         let mut config = Config::default();
-        config.ai_provider = Some("anthropic".to_string());
+        config.ai_provider = "anthropic".to_string();
         config.api_key = Some("test_key".to_string());
 
         // Test that provider is set correctly
-        assert_eq!(config.ai_provider.as_deref(), Some("anthropic"));
+        assert_eq!(config.ai_provider, "anthropic");
 
         // Test saving and loading
         assert!(config.save().is_ok());
@@ -271,7 +271,7 @@ fn test_config_with_different_providers() {
 
         let loaded_config = Config::load().unwrap();
 
-        assert_eq!(loaded_config.ai_provider.as_deref(), Some("anthropic"));
+        assert_eq!(loaded_config.ai_provider, "anthropic");
         assert_eq!(loaded_config.api_key.as_deref(), Some("test_key"));
 
         cleanup_env();
@@ -295,7 +295,7 @@ fn test_provider_specific_configurations() {
         let _temp_dir1 = setup_clean_env("test_provider_specific_configurations_bedrock");
         std::env::set_var("AWS_BEARER_TOKEN_BEDROCK", "test_bedrock_token");
         let mut config = Config::default();
-        config.ai_provider = Some("amazon-bedrock".to_string());
+        config.ai_provider = "amazon-bedrock".to_string();
         assert!(config.save().is_ok());
         std::env::remove_var("AWS_BEARER_TOKEN_BEDROCK");
         cleanup_env();
@@ -303,23 +303,23 @@ fn test_provider_specific_configurations() {
         // Test Ollama local configuration
         let _temp_dir2 = setup_clean_env("test_provider_specific_configurations_ollama");
         let mut ollama_config = Config::default();
-        ollama_config.ai_provider = Some("ollama".to_string());
+        ollama_config.ai_provider = "ollama".to_string();
         ollama_config.api_url = Some("http://localhost:11434".to_string());
-        ollama_config.model = Some("mistral".to_string());
+        ollama_config.model = "mistral".to_string();
         assert!(ollama_config.save().is_ok());
         cleanup_env();
 
         // Test Azure OpenAI configuration
         let _temp_dir3 = setup_clean_env("test_provider_specific_configurations_azure");
         let mut azure_config = Config::default();
-        azure_config.ai_provider = Some("azure".to_string());
+        azure_config.ai_provider = "azure".to_string();
         azure_config.api_key = Some("azure_key".to_string());
         azure_config.api_url = Some("https://test.openai.azure.com".to_string());
-        azure_config.model = Some("gpt-35-turbo".to_string());
+        azure_config.model = "gpt-35-turbo".to_string();
         assert!(azure_config.save().is_ok());
 
         let loaded_azure = Config::load().unwrap();
-        assert_eq!(loaded_azure.ai_provider.as_deref(), Some("azure"));
+        assert_eq!(loaded_azure.ai_provider, "azure");
         assert_eq!(loaded_azure.api_key.as_deref(), Some("azure_key"));
         assert_eq!(
             loaded_azure.api_url.as_deref(),

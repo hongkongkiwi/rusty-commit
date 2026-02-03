@@ -111,15 +111,10 @@ pub trait AIProvider: Send + Sync {
         ];
 
         let request = async_openai::types::chat::CreateChatCompletionRequestArgs::default()
-            .model(
-                config
-                    .model
-                    .clone()
-                    .unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
-            )
+            .model(&config.model)
             .messages(messages)
             .temperature(0.7)
-            .max_tokens(config.tokens_max_output.unwrap_or(1000) as u16)
+            .max_tokens(config.tokens_max_output as u16)
             .build()?;
 
         // Create a new client for this request
@@ -241,7 +236,7 @@ pub static PROVIDER_REGISTRY: Lazy<registry::ProviderRegistry> = Lazy::new(|| {
 
 /// Create an AI provider instance from configuration
 pub fn create_provider(config: &Config) -> Result<Box<dyn AIProvider>> {
-    let provider_name = config.ai_provider.as_deref().unwrap_or("openai");
+    let provider_name = config.ai_provider.as_str();
 
     // Try to create from registry
     if let Some(provider) = PROVIDER_REGISTRY.create(provider_name, config)? {

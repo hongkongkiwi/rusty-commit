@@ -21,7 +21,7 @@ pub async fn execute(cmd: ModelCommand) -> Result<()> {
 
 async fn list_models(config: &Config, provider_override: Option<&str>) -> Result<()> {
     let provider = provider_override
-        .unwrap_or(config.ai_provider.as_deref().unwrap_or("openai"))
+        .unwrap_or(config.ai_provider.as_str())
         .to_lowercase();
 
     println!(
@@ -75,7 +75,7 @@ async fn list_models(config: &Config, provider_override: Option<&str>) -> Result
     };
 
     for (i, model) in models.iter().enumerate() {
-        let marker = if config.model.as_deref() == Some(&model[..]) {
+        let marker = if config.model == *model {
             "✓"
         } else {
             " "
@@ -94,15 +94,12 @@ async fn list_models(config: &Config, provider_override: Option<&str>) -> Result
 async fn select_model_interactive(config: &mut Config) -> Result<()> {
     let provider = config
         .ai_provider
-        .as_deref()
-        .unwrap_or("openai")
+        .as_str()
         .to_lowercase();
 
     println!("{}", "🤖 Interactive Model Selection".green().bold());
     println!("Current provider: {}", provider.cyan());
-    if let Some(current_model) = &config.model {
-        println!("Current model: {}", current_model.cyan());
-    }
+    println!("Current model: {}", config.model.cyan());
     println!("{}", "─".repeat(50).dimmed());
 
     // Get model list for provider
@@ -124,20 +121,16 @@ async fn select_model_interactive(config: &mut Config) -> Result<()> {
             .with_prompt("Enter model name")
             .interact_text()?;
 
-        config.model = Some(custom_model);
+        config.model = custom_model;
     } else {
-        config.model = Some(options[selection].clone());
+        config.model = options[selection].clone();
     }
 
     // Save config
     config.save()?;
 
     println!();
-    if let Some(model) = &config.model {
-        println!("{}", format!("✅ Model set to: {}", model).green());
-    } else {
-        println!("{}", "✅ Model configured".green());
-    }
+    println!("{}", format!("✅ Model set to: {}", config.model).green());
 
     Ok(())
 }

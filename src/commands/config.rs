@@ -159,9 +159,7 @@ pub async fn execute(cmd: ConfigCommand) -> Result<()> {
             }
 
             // Show AI provider
-            if let Some(provider) = &config.ai_provider {
-                println!("🤖 AI Provider: {}", provider);
-            }
+            println!("🤖 AI Provider: {}", config.ai_provider);
         }
         ConfigAction::Describe => {
             println!("\n{}", "📖 Configuration Options".bold());

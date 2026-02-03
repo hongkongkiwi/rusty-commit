@@ -12,11 +12,11 @@ use rusty_commit::providers::prompt::build_prompt;
 #[test]
 fn test_build_prompt_conventional() {
     let mut config = Config::default();
-    config.commit_type = Some("conventional".to_string());
-    config.language = Some("en".to_string());
-    config.description_capitalize = Some(true);
-    config.description_add_period = Some(false);
-    config.description_max_length = Some(100);
+    config.commit_type = "conventional".to_string();
+    config.language = "en".to_string();
+    config.description_capitalize = true;
+    config.description_add_period = false;
+    config.description_max_length = 100;
 
     let diff = "diff --git a/test.txt b/test.txt\n+hello world";
     let prompt = build_prompt(diff, None, &config, false);
@@ -31,7 +31,7 @@ fn test_build_prompt_conventional() {
 #[test]
 fn test_build_prompt_gitmoji() {
     let mut config = Config::default();
-    config.commit_type = Some("gitmoji".to_string());
+    config.commit_type = "gitmoji".to_string();
 
     let diff = "test diff";
     let prompt = build_prompt(diff, None, &config, false);
@@ -59,7 +59,7 @@ fn test_build_prompt_with_context() {
 #[test]
 fn test_build_prompt_with_language() {
     let mut config = Config::default();
-    config.language = Some("es".to_string());
+    config.language = "es".to_string();
 
     let diff = "test diff";
     let prompt = build_prompt(diff, None, &config, false);
@@ -70,7 +70,7 @@ fn test_build_prompt_with_language() {
 #[test]
 fn test_create_provider_openai() {
     let mut config = Config::default();
-    config.ai_provider = Some("openai".to_string());
+    config.ai_provider = "openai".to_string();
     config.api_key = Some("test_key".to_string());
 
     let provider = create_provider(&config);
@@ -80,7 +80,7 @@ fn test_create_provider_openai() {
 #[test]
 fn test_create_provider_anthropic() {
     let mut config = Config::default();
-    config.ai_provider = Some("anthropic".to_string());
+    config.ai_provider = "anthropic".to_string();
     config.api_key = Some("test_key".to_string());
 
     let provider = create_provider(&config);
@@ -90,7 +90,7 @@ fn test_create_provider_anthropic() {
 #[test]
 fn test_create_provider_ollama() {
     let mut config = Config::default();
-    config.ai_provider = Some("ollama".to_string());
+    config.ai_provider = "ollama".to_string();
 
     let provider = create_provider(&config);
     assert!(provider.is_ok());
@@ -99,7 +99,7 @@ fn test_create_provider_ollama() {
 #[test]
 fn test_create_provider_gemini() {
     let mut config = Config::default();
-    config.ai_provider = Some("gemini".to_string());
+    config.ai_provider = "gemini".to_string();
     config.api_key = Some("test_key".to_string());
 
     let provider = create_provider(&config);
@@ -110,7 +110,7 @@ fn test_create_provider_gemini() {
 #[test]
 fn test_create_provider_azure() {
     let mut config = Config::default();
-    config.ai_provider = Some("azure".to_string());
+    config.ai_provider = "azure".to_string();
     config.api_key = Some("test_key".to_string());
     config.api_url = Some("https://test.openai.azure.com".to_string());
 
@@ -125,7 +125,7 @@ fn test_create_provider_azure() {
 #[test]
 fn test_create_provider_invalid() {
     let mut config = Config::default();
-    config.ai_provider = Some("invalid_provider".to_string());
+    config.ai_provider = "invalid_provider".to_string();
 
     let provider = create_provider(&config);
     assert!(provider.is_err());
@@ -134,8 +134,7 @@ fn test_create_provider_invalid() {
 #[test]
 fn test_create_provider_missing_api_key() {
     let mut config = Config::default();
-    config.ai_provider = Some("openai".to_string());
-    config.api_key = None;
+    config.ai_provider = "openai".to_string();
 
     let provider = create_provider(&config);
     assert!(provider.is_err());

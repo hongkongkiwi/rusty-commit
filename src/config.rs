@@ -16,48 +16,48 @@ pub struct Config {
     // API Configuration
     pub api_key: Option<String>,
     pub api_url: Option<String>,
-    pub ai_provider: Option<String>,
-    pub model: Option<String>,
+    pub ai_provider: String,
+    pub model: String,
 
     // Token limits
-    pub tokens_max_input: Option<usize>,
-    pub tokens_max_output: Option<u32>,
+    pub tokens_max_input: usize,
+    pub tokens_max_output: u32,
 
     // Commit message configuration
-    pub commit_type: Option<String>,
-    pub emoji: Option<bool>,
-    pub description: Option<bool>,
-    pub description_capitalize: Option<bool>,
-    pub description_add_period: Option<bool>,
-    pub description_max_length: Option<usize>,
+    pub commit_type: String,
+    pub emoji: bool,
+    pub description: bool,
+    pub description_capitalize: bool,
+    pub description_add_period: bool,
+    pub description_max_length: usize,
 
     // Language and customization
-    pub language: Option<String>,
-    pub message_template_placeholder: Option<String>,
-    pub prompt_module: Option<String>,
+    pub language: String,
+    pub message_template_placeholder: String,
+    pub prompt_module: String,
 
     // Behavior
-    pub gitpush: Option<bool>,
+    pub gitpush: bool,
     pub remote: Option<String>,
-    pub one_line_commit: Option<bool>,
-    pub why: Option<bool>,
-    pub omit_scope: Option<bool>,
-    pub generate_count: Option<u8>,
-    pub clipboard_on_timeout: Option<bool>,
+    pub one_line_commit: bool,
+    pub why: bool,
+    pub omit_scope: bool,
+    pub generate_count: u8,
+    pub clipboard_on_timeout: bool,
 
     // GitHub Actions
-    pub action_enabled: Option<bool>,
+    pub action_enabled: bool,
 
     // Testing
     pub test_mock_type: Option<String>,
 
     // Hooks
-    pub hook_auto_uncomment: Option<bool>,
+    pub hook_auto_uncomment: bool,
     pub pre_gen_hook: Option<Vec<String>>,
     pub pre_commit_hook: Option<Vec<String>>,
     pub post_commit_hook: Option<Vec<String>>,
-    pub hook_strict: Option<bool>,
-    pub hook_timeout_ms: Option<u64>,
+    pub hook_strict: bool,
+    pub hook_timeout_ms: u64,
 
     // Global commitlint configuration
     pub commitlint_config: Option<String>,
@@ -65,12 +65,18 @@ pub struct Config {
     pub prompt_file: Option<String>,
 
     // Commit style learning from history
-    pub learn_from_history: Option<bool>,
-    pub history_commits_count: Option<usize>,
+    pub learn_from_history: bool,
+    pub history_commits_count: usize,
     pub style_profile: Option<String>,
 
+    // Context and config reading
+    pub read_context: bool,
+    pub read_agent_files: bool,
+    pub read_commitlint: bool,
+    pub read_project_config: bool,
+
     // Commit body support
-    pub enable_commit_body: Option<bool>,
+    pub enable_commit_body: bool,
 }
 
 impl Default for Config {
@@ -78,41 +84,46 @@ impl Default for Config {
         Self {
             api_key: None,
             api_url: None,
-            ai_provider: Some("openai".to_string()),
-            model: Some("gpt-3.5-turbo".to_string()),
-            tokens_max_input: Some(4096),
-            tokens_max_output: Some(500),
-            commit_type: Some("conventional".to_string()),
-            emoji: Some(false),
-            description: Some(false),
-            description_capitalize: Some(true),
-            description_add_period: Some(false),
-            description_max_length: Some(100),
-            language: Some("en".to_string()),
-            message_template_placeholder: Some("$msg".to_string()),
-            prompt_module: Some("conventional-commit".to_string()),
-            gitpush: Some(false),
+            ai_provider: "openai".to_string(),
+            model: "gpt-3.5-turbo".to_string(),
+            tokens_max_input: 4096,
+            tokens_max_output: 500,
+            commit_type: "conventional".to_string(),
+            emoji: false,
+            description: false,
+            description_capitalize: true,
+            description_add_period: false,
+            description_max_length: 100,
+            language: "en".to_string(),
+            message_template_placeholder: "$msg".to_string(),
+            prompt_module: "conventional-commit".to_string(),
+            gitpush: false,
             remote: None,
-            one_line_commit: Some(false),
-            why: Some(false),
-            omit_scope: Some(false),
-            generate_count: Some(1),
-            clipboard_on_timeout: Some(true),
-            action_enabled: Some(false),
+            one_line_commit: false,
+            why: false,
+            omit_scope: false,
+            generate_count: 1,
+            clipboard_on_timeout: true,
+            action_enabled: false,
             test_mock_type: None,
-            hook_auto_uncomment: Some(false),
+            hook_auto_uncomment: false,
             pre_gen_hook: None,
             pre_commit_hook: None,
             post_commit_hook: None,
-            hook_strict: Some(true),
-            hook_timeout_ms: Some(30000),
+            hook_strict: true,
+            hook_timeout_ms: 30000,
             commitlint_config: None,
             custom_prompt: None,
             prompt_file: None,
-            learn_from_history: Some(false),
-            history_commits_count: Some(50),
+            learn_from_history: false,
+            history_commits_count: 50,
             style_profile: None,
-            enable_commit_body: Some(false),
+            // Context and config reading (enabled by default)
+            read_context: true,
+            read_agent_files: true,
+            read_commitlint: true,
+            read_project_config: true,
+            enable_commit_body: false,
         }
     }
 }
@@ -188,98 +199,80 @@ impl Config {
                 }
             }
             "RCO_API_URL" => self.api_url = Some(value.to_string()),
-            "RCO_AI_PROVIDER" => self.ai_provider = Some(value.to_string()),
-            "RCO_MODEL" => self.model = Some(value.to_string()),
+            "RCO_AI_PROVIDER" => self.ai_provider = value.to_string(),
+            "RCO_MODEL" => self.model = value.to_string(),
             "RCO_TOKENS_MAX_INPUT" => {
-                self.tokens_max_input = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for TOKENS_MAX_INPUT")?,
-                );
+                self.tokens_max_input = value
+                    .parse()
+                    .context("Invalid number for TOKENS_MAX_INPUT")?;
             }
             "RCO_TOKENS_MAX_OUTPUT" => {
-                self.tokens_max_output = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for TOKENS_MAX_OUTPUT")?,
-                );
+                self.tokens_max_output = value
+                    .parse()
+                    .context("Invalid number for TOKENS_MAX_OUTPUT")?;
             }
-            "RCO_COMMIT_TYPE" => {
-                self.commit_type = Some(value.to_string());
-            }
+            "RCO_COMMIT_TYPE" => self.commit_type = value.to_string(),
             "RCO_PROMPT_MODULE" => {
                 // Map legacy prompt module to commit type
                 let commit_type = match value {
                     "conventional-commit" => "conventional",
                     _ => value,
                 };
-                self.commit_type = Some(commit_type.to_string());
-                self.prompt_module = Some(value.to_string());
+                self.commit_type = commit_type.to_string();
+                self.prompt_module = value.to_string();
             }
             "RCO_EMOJI" => {
-                self.emoji = Some(value.parse().context("Invalid boolean for EMOJI")?);
+                self.emoji = value.parse().context("Invalid boolean for EMOJI")?;
             }
             "RCO_DESCRIPTION_CAPITALIZE" => {
-                self.description_capitalize = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for DESCRIPTION_CAPITALIZE")?,
-                );
+                self.description_capitalize = value
+                    .parse()
+                    .context("Invalid boolean for DESCRIPTION_CAPITALIZE")?;
             }
             "RCO_DESCRIPTION_ADD_PERIOD" => {
-                self.description_add_period = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for DESCRIPTION_ADD_PERIOD")?,
-                );
+                self.description_add_period = value
+                    .parse()
+                    .context("Invalid boolean for DESCRIPTION_ADD_PERIOD")?;
             }
             "RCO_DESCRIPTION_MAX_LENGTH" => {
-                self.description_max_length = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for DESCRIPTION_MAX_LENGTH")?,
-                );
+                self.description_max_length = value
+                    .parse()
+                    .context("Invalid number for DESCRIPTION_MAX_LENGTH")?;
             }
-            "RCO_LANGUAGE" => self.language = Some(value.to_string()),
+            "RCO_LANGUAGE" => self.language = value.to_string(),
             "RCO_MESSAGE_TEMPLATE_PLACEHOLDER" => {
-                self.message_template_placeholder = Some(value.to_string());
+                self.message_template_placeholder = value.to_string();
             }
             "RCO_GITPUSH" => {
-                self.gitpush = Some(value.parse().context("Invalid boolean for GITPUSH")?);
+                self.gitpush = value.parse().context("Invalid boolean for GITPUSH")?;
             }
             "RCO_REMOTE" => self.remote = Some(value.to_string()),
             "RCO_ONE_LINE_COMMIT" => {
-                self.one_line_commit = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for ONE_LINE_COMMIT")?,
-                );
+                self.one_line_commit = value
+                    .parse()
+                    .context("Invalid boolean for ONE_LINE_COMMIT")?;
             }
             "RCO_ACTION_ENABLED" => {
-                self.action_enabled = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for ACTION_ENABLED")?,
-                );
+                self.action_enabled = value
+                    .parse()
+                    .context("Invalid boolean for ACTION_ENABLED")?;
             }
             "RCO_DESCRIPTION" => {
-                self.description = Some(value.parse().context("Invalid boolean for DESCRIPTION")?);
+                self.description = value.parse().context("Invalid boolean for DESCRIPTION")?;
             }
             "RCO_WHY" => {
-                self.why = Some(value.parse().context("Invalid boolean for WHY")?);
+                self.why = value.parse().context("Invalid boolean for WHY")?;
             }
             "RCO_OMIT_SCOPE" => {
-                self.omit_scope = Some(value.parse().context("Invalid boolean for OMIT_SCOPE")?);
+                self.omit_scope = value.parse().context("Invalid boolean for OMIT_SCOPE")?;
             }
             "RCO_TEST_MOCK_TYPE" => {
                 self.test_mock_type = Some(value.to_string());
             }
             "RCO_HOOK_AUTO_UNCOMMENT" => {
-                self.hook_auto_uncomment = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for HOOK_AUTO_UNCOMMENT")?,
-                );
+                self.hook_auto_uncomment = value
+                    .parse()
+                    .context("Invalid boolean for HOOK_AUTO_UNCOMMENT")?;
             }
             "RCO_PRE_GEN_HOOK" => {
                 let items = value
@@ -306,14 +299,12 @@ impl Config {
                 self.post_commit_hook = Some(items);
             }
             "RCO_HOOK_STRICT" => {
-                self.hook_strict = Some(value.parse().context("Invalid boolean for HOOK_STRICT")?);
+                self.hook_strict = value.parse().context("Invalid boolean for HOOK_STRICT")?;
             }
             "RCO_HOOK_TIMEOUT_MS" => {
-                self.hook_timeout_ms = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for HOOK_TIMEOUT_MS")?,
-                );
+                self.hook_timeout_ms = value
+                    .parse()
+                    .context("Invalid number for HOOK_TIMEOUT_MS")?;
             }
             "RCO_COMMITLINT_CONFIG" => {
                 self.commitlint_config = Some(value.to_string());
@@ -325,42 +316,32 @@ impl Config {
                 self.prompt_file = Some(value.to_string());
             }
             "RCO_GENERATE_COUNT" => {
-                self.generate_count = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for GENERATE_COUNT (1-5)")?,
-                );
+                self.generate_count = value
+                    .parse()
+                    .context("Invalid number for GENERATE_COUNT (1-5)")?;
             }
             "RCO_CLIPBOARD_ON_TIMEOUT" => {
-                self.clipboard_on_timeout = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?,
-                );
+                self.clipboard_on_timeout = value
+                    .parse()
+                    .context("Invalid boolean for CLIPBOARD_ON_TIMEOUT")?;
             }
             "RCO_LEARN_FROM_HISTORY" => {
-                self.learn_from_history = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for LEARN_FROM_HISTORY")?,
-                );
+                self.learn_from_history = value
+                    .parse()
+                    .context("Invalid boolean for LEARN_FROM_HISTORY")?;
             }
             "RCO_HISTORY_COMMITS_COUNT" => {
-                self.history_commits_count = Some(
-                    value
-                        .parse()
-                        .context("Invalid number for HISTORY_COMMITS_COUNT")?,
-                );
+                self.history_commits_count = value
+                    .parse()
+                    .context("Invalid number for HISTORY_COMMITS_COUNT")?;
             }
             "RCO_STYLE_PROFILE" => {
                 self.style_profile = Some(value.to_string());
             }
             "RCO_ENABLE_COMMIT_BODY" => {
-                self.enable_commit_body = Some(
-                    value
-                        .parse()
-                        .context("Invalid boolean for ENABLE_COMMIT_BODY")?,
-                );
+                self.enable_commit_body = value
+                    .parse()
+                    .context("Invalid boolean for ENABLE_COMMIT_BODY")?;
             }
             // Ignore unsupported keys
             "RCO_API_CUSTOM_HEADERS" => {
@@ -384,29 +365,26 @@ impl Config {
                     .or_else(|| secure_storage::get_secret("RCO_API_KEY").ok().flatten())
             }
             "RCO_API_URL" => self.api_url.as_ref().map(|s| s.to_string()),
-            "RCO_AI_PROVIDER" => self.ai_provider.as_ref().map(|s| s.to_string()),
-            "RCO_MODEL" => self.model.as_ref().map(|s| s.to_string()),
-            "RCO_TOKENS_MAX_INPUT" => self.tokens_max_input.map(|v| v.to_string()),
-            "RCO_TOKENS_MAX_OUTPUT" => self.tokens_max_output.map(|v| v.to_string()),
-            "RCO_COMMIT_TYPE" => self.commit_type.as_ref().map(|s| s.to_string()),
-            "RCO_EMOJI" => self.emoji.map(|v| v.to_string()),
-            "RCO_DESCRIPTION_CAPITALIZE" => self.description_capitalize.map(|v| v.to_string()),
-            "RCO_DESCRIPTION_ADD_PERIOD" => self.description_add_period.map(|v| v.to_string()),
-            "RCO_DESCRIPTION_MAX_LENGTH" => self.description_max_length.map(|v| v.to_string()),
-            "RCO_LANGUAGE" => self.language.as_ref().map(|s| s.to_string()),
-            "RCO_MESSAGE_TEMPLATE_PLACEHOLDER" => self
-                .message_template_placeholder
-                .as_ref()
-                .map(|s| s.to_string()),
-            "RCO_GITPUSH" => self.gitpush.map(|v| v.to_string()),
+            "RCO_AI_PROVIDER" => Some(self.ai_provider.clone()),
+            "RCO_MODEL" => Some(self.model.clone()),
+            "RCO_TOKENS_MAX_INPUT" => Some(self.tokens_max_input.to_string()),
+            "RCO_TOKENS_MAX_OUTPUT" => Some(self.tokens_max_output.to_string()),
+            "RCO_COMMIT_TYPE" => Some(self.commit_type.clone()),
+            "RCO_EMOJI" => Some(self.emoji.to_string()),
+            "RCO_DESCRIPTION_CAPITALIZE" => Some(self.description_capitalize.to_string()),
+            "RCO_DESCRIPTION_ADD_PERIOD" => Some(self.description_add_period.to_string()),
+            "RCO_DESCRIPTION_MAX_LENGTH" => Some(self.description_max_length.to_string()),
+            "RCO_LANGUAGE" => Some(self.language.clone()),
+            "RCO_MESSAGE_TEMPLATE_PLACEHOLDER" => Some(self.message_template_placeholder.clone()),
+            "RCO_GITPUSH" => Some(self.gitpush.to_string()),
             "RCO_REMOTE" => self.remote.as_ref().map(|s| s.to_string()),
-            "RCO_ONE_LINE_COMMIT" => self.one_line_commit.map(|v| v.to_string()),
-            "RCO_ACTION_ENABLED" => self.action_enabled.map(|v| v.to_string()),
+            "RCO_ONE_LINE_COMMIT" => Some(self.one_line_commit.to_string()),
+            "RCO_ACTION_ENABLED" => Some(self.action_enabled.to_string()),
             "RCO_COMMITLINT_CONFIG" => self.commitlint_config.as_ref().map(|s| s.to_string()),
             "RCO_CUSTOM_PROMPT" => self.custom_prompt.as_ref().map(|s| s.to_string()),
             "RCO_PROMPT_FILE" => self.prompt_file.as_ref().map(|s| s.to_string()),
-            "RCO_GENERATE_COUNT" => self.generate_count.map(|v| v.to_string()),
-            "RCO_CLIPBOARD_ON_TIMEOUT" => self.clipboard_on_timeout.map(|v| v.to_string()),
+            "RCO_GENERATE_COUNT" => Some(self.generate_count.to_string()),
+            "RCO_CLIPBOARD_ON_TIMEOUT" => Some(self.clipboard_on_timeout.to_string()),
             _ => None,
         };
 
@@ -506,12 +484,6 @@ impl Config {
         if let Some(ref config_path) = self.commitlint_config.clone() {
             let path = PathBuf::from(config_path);
             if path.exists() {
-                // For now, just set to conventional commits if commitlint config exists
-                // Full commitlint parsing would require a JS engine or specific parsing
-                if self.commit_type.is_none() {
-                    self.commit_type = Some("conventional".to_string());
-                }
-
                 // In a full implementation, we would parse the commitlint config
                 // and extract rules, but for now we'll use conventional commits
                 println!("📋 Found commitlint config at: {}", config_path);
@@ -607,12 +579,12 @@ impl Config {
     ) -> String {
         let mut result = template.to_string();
 
-        // Get values from config with defaults
-        let language = config.language.as_deref().unwrap_or("en");
-        let commit_type = config.commit_type.as_deref().unwrap_or("conventional");
-        let max_length = config.description_max_length.unwrap_or(100).to_string();
-        let emoji = config.emoji.unwrap_or(false).to_string();
-        let description = config.description.unwrap_or(false).to_string();
+        // Get values from config directly (now non-Option types)
+        let language = &config.language;
+        let commit_type = &config.commit_type;
+        let max_length = config.description_max_length.to_string();
+        let emoji = config.emoji.to_string();
+        let description = config.description.to_string();
 
         // Context value (empty string if None)
         let context_str = context.unwrap_or("");
@@ -645,7 +617,8 @@ impl Config {
 
     /// Merge another config into this one (other takes priority over self)
     pub fn merge(&mut self, other: Config) {
-        macro_rules! merge_field {
+        // For Option fields, only copy if other has Some value
+        macro_rules! merge_option {
             ($field:ident) => {
                 if other.$field.is_some() {
                     self.$field = other.$field;
@@ -653,8 +626,15 @@ impl Config {
             };
         }
 
-        merge_field!(api_key);
-        merge_field!(api_url);
+        // For non-Option fields, always copy from other
+        macro_rules! merge_field {
+            ($field:ident) => {
+                self.$field = other.$field;
+            };
+        }
+
+        merge_option!(api_key);
+        merge_option!(api_url);
         merge_field!(ai_provider);
         merge_field!(model);
         merge_field!(tokens_max_input);
@@ -669,32 +649,32 @@ impl Config {
         merge_field!(message_template_placeholder);
         merge_field!(prompt_module);
         merge_field!(gitpush);
-        merge_field!(remote);
+        merge_option!(remote);
         merge_field!(one_line_commit);
         merge_field!(why);
         merge_field!(omit_scope);
         merge_field!(action_enabled);
-        merge_field!(test_mock_type);
+        merge_option!(test_mock_type);
         merge_field!(hook_auto_uncomment);
-        merge_field!(pre_gen_hook);
-        merge_field!(pre_commit_hook);
-        merge_field!(post_commit_hook);
+        merge_option!(pre_gen_hook);
+        merge_option!(pre_commit_hook);
+        merge_option!(post_commit_hook);
         merge_field!(hook_strict);
         merge_field!(hook_timeout_ms);
-        merge_field!(commitlint_config);
-        merge_field!(custom_prompt);
-        merge_field!(prompt_file);
+        merge_option!(commitlint_config);
+        merge_option!(custom_prompt);
+        merge_option!(prompt_file);
         merge_field!(generate_count);
         merge_field!(clipboard_on_timeout);
         merge_field!(learn_from_history);
         merge_field!(history_commits_count);
-        merge_field!(style_profile);
+        merge_option!(style_profile);
     }
 
     /// Load configuration values from environment variables
     /// Uses RCO_ environment variables
     pub fn load_from_environment(&mut self) {
-        // Macro to reduce code duplication
+        // Macro for Option<String> fields
         macro_rules! load_env_var {
             ($field:ident, $base_name:expr) => {
                 if let Some(value) = Self::get_env_var($base_name) {
@@ -703,11 +683,21 @@ impl Config {
             };
         }
 
+        // Macro for concrete type fields (String)
+        macro_rules! load_env_var_string {
+            ($field:ident, $base_name:expr) => {
+                if let Some(value) = Self::get_env_var($base_name) {
+                    self.$field = value;
+                }
+            };
+        }
+
+        // Macro for concrete type fields (bool, usize, u32, u8, u64)
         macro_rules! load_env_var_parse {
             ($field:ident, $base_name:expr, $type:ty) => {
                 if let Some(value) = Self::get_env_var($base_name) {
                     if let Ok(parsed) = value.parse::<$type>() {
-                        self.$field = Some(parsed);
+                        self.$field = parsed;
                     }
                 }
             };
@@ -715,19 +705,19 @@ impl Config {
 
         load_env_var!(api_key, "API_KEY");
         load_env_var!(api_url, "API_URL");
-        load_env_var!(ai_provider, "AI_PROVIDER");
-        load_env_var!(model, "MODEL");
+        load_env_var_string!(ai_provider, "AI_PROVIDER");
+        load_env_var_string!(model, "MODEL");
         load_env_var_parse!(tokens_max_input, "TOKENS_MAX_INPUT", usize);
         load_env_var_parse!(tokens_max_output, "TOKENS_MAX_OUTPUT", u32);
-        load_env_var!(commit_type, "COMMIT_TYPE");
+        load_env_var_string!(commit_type, "COMMIT_TYPE");
         load_env_var_parse!(emoji, "EMOJI", bool);
         load_env_var_parse!(description, "DESCRIPTION", bool);
         load_env_var_parse!(description_capitalize, "DESCRIPTION_CAPITALIZE", bool);
         load_env_var_parse!(description_add_period, "DESCRIPTION_ADD_PERIOD", bool);
         load_env_var_parse!(description_max_length, "DESCRIPTION_MAX_LENGTH", usize);
-        load_env_var!(language, "LANGUAGE");
-        load_env_var!(message_template_placeholder, "MESSAGE_TEMPLATE_PLACEHOLDER");
-        load_env_var!(prompt_module, "PROMPT_MODULE");
+        load_env_var_string!(language, "LANGUAGE");
+        load_env_var_string!(message_template_placeholder, "MESSAGE_TEMPLATE_PLACEHOLDER");
+        load_env_var_string!(prompt_module, "PROMPT_MODULE");
         load_env_var_parse!(gitpush, "GITPUSH", bool);
         load_env_var!(remote, "REMOTE");
         load_env_var_parse!(one_line_commit, "ONE_LINE_COMMIT", bool);

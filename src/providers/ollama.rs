@@ -42,7 +42,7 @@ impl OllamaProvider {
             .as_deref()
             .unwrap_or("http://localhost:11434")
             .to_string();
-        let model = config.model.as_deref().unwrap_or("mistral").to_string();
+        let model = config.model.clone();
 
         Ok(Self {
             client,
@@ -68,8 +68,7 @@ impl OllamaProvider {
         let model = account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("mistral")
+            .unwrap_or(&config.model)
             .to_string();
 
         Ok(Self {
@@ -97,7 +96,7 @@ impl AIProvider for OllamaProvider {
             stream: false,
             options: OllamaOptions {
                 temperature: 0.7,
-                num_predict: config.tokens_max_output.unwrap_or(500) as i32,
+                num_predict: config.tokens_max_output as i32,
             },
         };
 

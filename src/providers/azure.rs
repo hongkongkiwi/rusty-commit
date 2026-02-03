@@ -58,11 +58,7 @@ impl AzureProvider {
             )?
             .clone();
 
-        let deployment = config
-            .model
-            .as_deref()
-            .unwrap_or("gpt-35-turbo")
-            .to_string();
+        let deployment = config.model.clone();
 
         let client = Client::new();
 
@@ -92,8 +88,7 @@ impl AzureProvider {
         let deployment = account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("gpt-35-turbo")
+            .unwrap_or(&config.model)
             .to_string();
 
         let client = Client::new();
@@ -129,7 +124,7 @@ impl AIProvider for AzureProvider {
                     content: user_prompt,
                 },
             ],
-            max_tokens: config.tokens_max_output.unwrap_or(500),
+            max_tokens: config.tokens_max_output,
             temperature: 0.7,
         };
 

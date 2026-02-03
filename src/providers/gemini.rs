@@ -72,7 +72,7 @@ impl GeminiProvider {
             .clone();
 
         let client = Client::new();
-        let model = config.model.as_deref().unwrap_or("gemini-pro").to_string();
+        let model = config.model.clone();
 
         Ok(Self {
             client,
@@ -92,8 +92,7 @@ impl GeminiProvider {
         let model = _account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("gemini-pro")
+            .unwrap_or(&config.model)
             .to_string();
 
         Ok(Self {
@@ -128,7 +127,7 @@ impl AIProvider for GeminiProvider {
             }),
             generation_config: GenerationConfig {
                 temperature: 0.7,
-                max_output_tokens: config.tokens_max_output.unwrap_or(500),
+                max_output_tokens: config.tokens_max_output,
             },
         };
 

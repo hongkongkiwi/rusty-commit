@@ -31,7 +31,7 @@ impl XAIProvider {
             .with_api_base(config.api_url.as_deref().unwrap_or("https://api.x.ai/v1"));
 
         let client = Client::with_config(openai_config);
-        let model = config.model.as_deref().unwrap_or("grok-beta").to_string();
+        let model = config.model.clone();
 
         Ok(Self { client, model })
     }
@@ -51,8 +51,7 @@ impl XAIProvider {
         let model = account
             .model
             .as_deref()
-            .or(config.model.as_deref())
-            .unwrap_or("grok-beta")
+            .unwrap_or(&config.model)
             .to_string();
 
         Ok(Self { client, model })
@@ -79,7 +78,7 @@ impl AIProvider for XAIProvider {
             .model(&self.model)
             .messages(messages)
             .temperature(0.7)
-            .max_tokens(config.tokens_max_output.unwrap_or(500) as u16)
+            .max_tokens(config.tokens_max_output as u16)
             .build()?;
 
         let response = self

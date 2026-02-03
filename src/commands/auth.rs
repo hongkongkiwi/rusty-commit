@@ -220,7 +220,7 @@ async fn handle_claude_oauth() -> Result<()> {
 
             // Update config to use anthropic provider
             let mut config = Config::load()?;
-            config.ai_provider = Some("anthropic".to_string());
+            config.ai_provider = "anthropic".to_string();
             config.save()?;
 
             Ok(())
@@ -307,8 +307,8 @@ async fn handle_codex_auth() -> Result<()> {
 
             // Update config to use codex provider
             let mut config = Config::load()?;
-            config.ai_provider = Some("codex".to_string());
-            config.model = Some("gpt-5.1-codex".to_string());
+            config.ai_provider = "codex".to_string();
+            config.model = "gpt-5.1-codex".to_string();
             config.api_url = Some("https://chatgpt.com/backend-api/codex/responses".to_string());
             config.save()?;
 
@@ -343,7 +343,7 @@ async fn handle_ollama_auth() -> Result<()> {
         .interact()?;
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("ollama".to_string());
+    config.ai_provider = "ollama".to_string();
 
     if use_local {
         config.api_url = Some("http://localhost:11434".to_string());
@@ -386,7 +386,7 @@ async fn handle_ollama_auth() -> Result<()> {
         .default("mistral".to_string())
         .interact_text()?;
 
-    config.model = Some(model.clone());
+    config.model = model.clone();
     config.save()?;
 
     println!(
@@ -414,7 +414,7 @@ async fn handle_azure_auth() -> Result<()> {
     println!("\n{}", "☁️ Azure OpenAI Configuration".cyan().bold());
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("azure".to_string());
+    config.ai_provider = "azure".to_string();
 
     let api_key: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter Azure OpenAI API key")
@@ -432,7 +432,7 @@ async fn handle_azure_auth() -> Result<()> {
 
     config.api_key = Some(api_key);
     config.api_url = Some(endpoint);
-    config.model = Some(deployment);
+    config.model = deployment;
     config.save()?;
 
     println!(
@@ -455,54 +455,54 @@ async fn handle_manual_api_key(provider: &str) -> Result<()> {
 
     let mut config = Config::load()?;
     config.api_key = Some(api_key);
-    config.ai_provider = Some(provider.to_string());
+    config.ai_provider = provider.to_string();
 
     // Set default model and API URL based on provider
     match provider {
         "anthropic" => {
-            config.model = Some("claude-3-5-haiku-20241022".to_string());
+            config.model = "claude-3-5-haiku-20241022".to_string();
         }
         "openai" => {
-            config.model = Some("gpt-4o-mini".to_string());
+            config.model = "gpt-4o-mini".to_string();
         }
         "gemini" => {
-            config.model = Some("gemini-1.5-pro".to_string());
+            config.model = "gemini-1.5-pro".to_string();
             config.api_url = Some("https://generativelanguage.googleapis.com/v1beta".to_string());
         }
         "openrouter" => {
-            config.model = Some("openai/gpt-4o-mini".to_string());
+            config.model = "openai/gpt-4o-mini".to_string();
             config.api_url = Some("https://openrouter.ai/api/v1".to_string());
         }
         "perplexity" => {
-            config.model = Some("llama-3.1-sonar-small-128k-online".to_string());
+            config.model = "llama-3.1-sonar-small-128k-online".to_string();
             config.api_url = Some("https://api.perplexity.ai".to_string());
         }
         "groq" => {
-            config.model = Some("llama-3.1-70b-versatile".to_string());
+            config.model = "llama-3.1-70b-versatile".to_string();
             config.api_url = Some("https://api.groq.com/openai/v1".to_string());
         }
         "deepseek" => {
-            config.model = Some("deepseek-chat".to_string());
+            config.model = "deepseek-chat".to_string();
             config.api_url = Some("https://api.deepseek.com".to_string());
         }
         "mistral" => {
-            config.model = Some("mistral-large-latest".to_string());
+            config.model = "mistral-large-latest".to_string();
             config.api_url = Some("https://api.mistral.ai/v1".to_string());
         }
         "together" => {
-            config.model = Some("meta-llama/Llama-3.2-3B-Instruct-Turbo".to_string());
+            config.model = "meta-llama/Llama-3.2-3B-Instruct-Turbo".to_string();
             config.api_url = Some("https://api.together.xyz/v1".to_string());
         }
         "deepinfra" => {
-            config.model = Some("meta-llama/Llama-3.2-3B-Instruct".to_string());
+            config.model = "meta-llama/Llama-3.2-3B-Instruct".to_string();
             config.api_url = Some("https://api.deepinfra.com/v1/openai".to_string());
         }
         "huggingface" => {
-            config.model = Some("meta-llama/Llama-3.2-3B-Instruct".to_string());
+            config.model = "meta-llama/Llama-3.2-3B-Instruct".to_string();
             config.api_url = Some("https://api-inference.huggingface.co/v1".to_string());
         }
         "github-models" => {
-            config.model = Some("gpt-4o".to_string());
+            config.model = "gpt-4o".to_string();
             config.api_url = Some("https://models.inference.ai.azure.com".to_string());
         }
         _ => {}
@@ -535,8 +535,8 @@ async fn handle_github_copilot_auth() -> Result<()> {
     println!("{}", "Please use GitHub CLI: gh auth login".cyan());
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("github-copilot".to_string());
-    config.model = Some("gpt-4o".to_string());
+    config.ai_provider = "github-copilot".to_string();
+    config.model = "gpt-4o".to_string();
     config.save()?;
 
     println!(
@@ -557,8 +557,8 @@ async fn handle_openrouter_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("openrouter".to_string());
-    config.model = Some("openai/gpt-4o".to_string());
+    config.ai_provider = "openrouter".to_string();
+    config.model = "openai/gpt-4o".to_string();
     config.api_url = Some("https://openrouter.ai/api/v1".to_string());
 
     handle_manual_api_key("openrouter").await
@@ -573,8 +573,8 @@ async fn handle_groq_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("groq".to_string());
-    config.model = Some("llama-3.1-70b-versatile".to_string());
+    config.ai_provider = "groq".to_string();
+    config.model = "llama-3.1-70b-versatile".to_string();
     config.api_url = Some("https://api.groq.com/openai/v1".to_string());
 
     handle_manual_api_key("groq").await
@@ -589,8 +589,8 @@ async fn handle_deepseek_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("deepseek".to_string());
-    config.model = Some("deepseek-chat".to_string());
+    config.ai_provider = "deepseek".to_string();
+    config.model = "deepseek-chat".to_string();
     config.api_url = Some("https://api.deepseek.com".to_string());
 
     handle_manual_api_key("deepseek").await
@@ -605,8 +605,8 @@ async fn handle_mistral_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("mistral".to_string());
-    config.model = Some("mistral-large-latest".to_string());
+    config.ai_provider = "mistral".to_string();
+    config.model = "mistral-large-latest".to_string();
     config.api_url = Some("https://api.mistral.ai/v1".to_string());
 
     handle_manual_api_key("mistral").await
@@ -626,8 +626,8 @@ async fn handle_qwen_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("qwen".to_string());
-    config.model = Some("qwen3-coder:480b".to_string());
+    config.ai_provider = "qwen".to_string();
+    config.model = "qwen3-coder:480b".to_string();
     config.api_url = Some("https://dashscope.aliyuncs.com/compatible-mode/v1".to_string());
 
     handle_manual_api_key("qwen").await
@@ -655,8 +655,8 @@ async fn handle_aws_bedrock_auth() -> Result<()> {
         .interact()?;
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("amazon-bedrock".to_string());
-    config.model = Some("us.anthropic.claude-3-5-haiku-20241022-v1:0".to_string());
+    config.ai_provider = "amazon-bedrock".to_string();
+    config.model = "us.anthropic.claude-3-5-haiku-20241022-v1:0".to_string();
 
     match method {
         0 => {
@@ -719,8 +719,8 @@ async fn handle_together_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("together".to_string());
-    config.model = Some("meta-llama/Llama-3.2-3B-Instruct-Turbo".to_string());
+    config.ai_provider = "together".to_string();
+    config.model = "meta-llama/Llama-3.2-3B-Instruct-Turbo".to_string();
     config.api_url = Some("https://api.together.xyz/v1".to_string());
 
     handle_manual_api_key("together").await
@@ -735,8 +735,8 @@ async fn handle_deepinfra_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("deepinfra".to_string());
-    config.model = Some("meta-llama/Llama-3.2-3B-Instruct".to_string());
+    config.ai_provider = "deepinfra".to_string();
+    config.model = "meta-llama/Llama-3.2-3B-Instruct".to_string();
     config.api_url = Some("https://api.deepinfra.com/v1/openai".to_string());
 
     handle_manual_api_key("deepinfra").await
@@ -751,8 +751,8 @@ async fn handle_huggingface_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("huggingface".to_string());
-    config.model = Some("meta-llama/Llama-3.2-3B-Instruct".to_string());
+    config.ai_provider = "huggingface".to_string();
+    config.model = "meta-llama/Llama-3.2-3B-Instruct".to_string();
     config.api_url = Some("https://api-inference.huggingface.co/v1".to_string());
 
     handle_manual_api_key("huggingface").await
@@ -768,8 +768,8 @@ async fn handle_github_models_auth() -> Result<()> {
     println!("{}", "Requires 'Model Inference' permission".dimmed());
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("github-models".to_string());
-    config.model = Some("gpt-4o".to_string());
+    config.ai_provider = "github-models".to_string();
+    config.model = "gpt-4o".to_string();
     config.api_url = Some("https://models.inference.ai.azure.com".to_string());
 
     handle_manual_api_key("github-models").await
@@ -791,7 +791,7 @@ async fn handle_manual_api_key_with_env(provider: &str, env_var: &str) -> Result
 
     let mut config = Config::load()?;
     // For environment variable based auth, we don't store the key in config
-    config.ai_provider = Some(provider.to_string());
+    config.ai_provider = provider.to_string();
     config.save()?;
 
     println!(
@@ -834,9 +834,9 @@ async fn handle_manual_auth() -> Result<()> {
         .interact_text()?;
 
     let mut config = Config::load()?;
-    config.ai_provider = Some(provider.clone());
+    config.ai_provider = provider.clone();
     config.api_url = Some(api_url);
-    config.model = Some(model);
+    config.model = model;
     config.save()?;
 
     handle_manual_api_key(&provider).await
@@ -866,10 +866,7 @@ async fn status() -> Result<()> {
     // Check for API key
     if config.api_key.is_some() {
         out.success("API Key configured");
-        out.key_value(
-            "Provider",
-            config.ai_provider.as_deref().unwrap_or("openai"),
-        );
+        out.key_value("Provider", &config.ai_provider);
         return Ok(());
     }
 
@@ -984,8 +981,8 @@ async fn handle_perplexity_auth() -> Result<()> {
     );
 
     let mut config = Config::load()?;
-    config.ai_provider = Some("perplexity".to_string());
-    config.model = Some("llama-3.1-sonar-small-128k-online".to_string());
+    config.ai_provider = "perplexity".to_string();
+    config.model = "llama-3.1-sonar-small-128k-online".to_string();
     config.api_url = Some("https://api.perplexity.ai".to_string());
 
     handle_manual_api_key("perplexity").await

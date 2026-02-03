@@ -144,6 +144,86 @@ impl PartialEq for ProviderOption {
     }
 }
 
+impl ProviderOption {
+    /// Get all available providers
+    pub fn all() -> Vec<Self> {
+        vec![
+            // ═════════════════════════════════════════════════════════════════
+            // Popular providers
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "openai".to_string(),
+                display: "OpenAI (GPT-4o, GPT-4o-mini, GPT-5)".to_string(),
+                default_model: "gpt-4o-mini".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            ProviderOption {
+                name: "anthropic".to_string(),
+                display: "Anthropic (Claude 3.5/4 Sonnet, Haiku, Opus)".to_string(),
+                default_model: "claude-3-5-haiku-20241022".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            ProviderOption {
+                name: "gemini".to_string(),
+                display: "Google Gemini (2.5 Flash, 2.5 Pro)".to_string(),
+                default_model: "gemini-2.5-flash".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Popular,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // Local/Self-hosted
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "ollama".to_string(),
+                display: "Ollama (Local models - free, private)".to_string(),
+                default_model: "llama3.2".to_string(),
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            ProviderOption {
+                name: "lmstudio".to_string(),
+                display: "LM Studio (Local GUI for LLMs)".to_string(),
+                default_model: "local-model".to_string(),
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            ProviderOption {
+                name: "llamacpp".to_string(),
+                display: "llama.cpp (Local inference)".to_string(),
+                default_model: "local-model".to_string(),
+                requires_key: false,
+                category: ProviderCategory::Local,
+            },
+            // ═════════════════════════════════════════════════════════════════
+            // Cloud providers - Fast Inference
+            // ═════════════════════════════════════════════════════════════════
+            ProviderOption {
+                name: "groq".to_string(),
+                display: "Groq (Ultra-fast inference)".to_string(),
+                default_model: "llama-3.3-70b-versatile".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "cerebras".to_string(),
+                display: "Cerebras (Fast inference)".to_string(),
+                default_model: "llama-3.3-70b".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+            ProviderOption {
+                name: "sambanova".to_string(),
+                display: "SambaNova (Fast inference)".to_string(),
+                default_model: "Meta-Llama-3.3-70B-Instruct".to_string(),
+                requires_key: true,
+                category: ProviderCategory::Cloud,
+            },
+        ]
+    }
+}
+
 /// Category for organizing AI providers
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ProviderCategory {

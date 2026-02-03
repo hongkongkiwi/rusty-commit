@@ -142,6 +142,14 @@ pub struct SetupCommand {
     /// Run advanced setup with all configuration options
     #[arg(long, default_value = "false")]
     pub advanced: bool,
+
+    /// Force TUI mode (terminal user interface)
+    #[arg(long, default_value = "false")]
+    pub tui: bool,
+
+    /// Force non-TUI mode (use dialoguer prompts)
+    #[arg(long, default_value = "false")]
+    pub no_tui: bool,
 }
 
 #[derive(Subcommand)]

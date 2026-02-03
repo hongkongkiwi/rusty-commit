@@ -49,7 +49,7 @@ impl AnthropicProvider {
                 .api_key
                 .as_ref()
                 .context(
-                    "Not authenticated with Claude.\nRun: oco auth login (for OAuth)\nOr: rco config set RCO_API_KEY=<your_key>\nGet your API key from: https://console.anthropic.com/settings/keys",
+                    "Not authenticated with Claude.\nRun: rco auth login (for OAuth)\nOr: rco config set RCO_API_KEY=<your_key>\nGet your API key from: https://console.anthropic.com/settings/keys",
                 )?
                 .clone()
         };

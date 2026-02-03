@@ -81,6 +81,8 @@ default = [
 ]
 # Enable secure storage for API keys (requires system keychain)
 secure-storage = ["keyring"]
+# Enable TUI (Terminal User Interface) for setup command
+tui = ["ratatui", "crossterm"]
 # Include extra documentation (for docs.rs)
 docs = []
 
@@ -230,6 +232,11 @@ colored = "3.0"
 dialoguer = { version = "0.12", features = ["fuzzy-select"] }
 indicatif = "0.18"
 console = "0.16"
+atty = "0.2"
+
+# TUI for interactive setup
+ratatui = { version = "0.28", optional = true }
+crossterm = { version = "0.28", optional = true }
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }

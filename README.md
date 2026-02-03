@@ -332,7 +332,17 @@ Falls back to config file if keychain is unavailable.
 ```bash
 rco setup              # Quick setup (essential settings)
 rco setup --advanced   # Advanced setup (all settings)
+rco setup --tui        # Force TUI mode (interactive terminal UI)
+rco setup --no-tui     # Force dialoguer prompts (no TUI)
 ```
+
+The setup wizard automatically detects whether to use TUI mode based on your terminal. Use `--tui` or `--no-tui` to override.
+
+**TUI Features:**
+- Arrow key navigation through menus
+- Real-time preview of commit message formats
+- Visual confirmation of selections
+- Color-coded provider categories
 
 ### Configuration Priority
 

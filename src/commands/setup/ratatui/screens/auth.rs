@@ -5,13 +5,13 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
     widgets::{Block, Paragraph, Borders},
     Frame,
 };
 
 use crate::commands::setup::ratatui::app::SetupApp;
-use crate::config::setup_config::ProviderOption;
 
 /// Render the authentication screen
 ///
@@ -36,7 +36,7 @@ pub fn render_auth_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp) {
 
     let title = format!("Authentication - {}", provider.name);
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(Color::LightCyan).bold());
+        .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD));
     frame.render_widget(title_widget, chunks[0]);
 
     // API key input (masked)

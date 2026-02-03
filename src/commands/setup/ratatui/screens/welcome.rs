@@ -5,13 +5,14 @@
 
 use ratatui::{
     layout::{Alignment, Rect},
-    style::{Color, Style},
-    text::{Line, Text},
+    prelude::*,
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
 };
 
-use super::SetupApp;
+use crate::commands::setup::ratatui::app::SetupApp;
 
 /// Render the welcome screen
 ///
@@ -20,31 +21,29 @@ use super::SetupApp;
 pub fn render_welcome_screen(frame: &mut Frame, area: Rect, _app: &mut SetupApp) {
     // Title section with emoji and styled text
     let title = Line::from(vec![
-        "🚀 ".into(),
-        "Rusty Commit".bold().fg(Color::LightCyan),
-        " Setup".bold(),
+        Span::from("🚀 "),
+        Span::styled("Rusty Commit", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
+        Span::styled(" Setup", Style::default().add_modifier(Modifier::BOLD)),
     ])
     .alignment(Alignment::Center);
 
     // Subtitle with description
-    let subtitle = Line::from(vec![
-        "Let's get you set up with AI-powered commit messages".dim().into(),
-    ])
+    let subtitle = Line::from(vec![Span::styled(
+        "Let's get you set up with AI-powered commit messages",
+        Style::default().add_modifier(Modifier::DIM),
+    )])
     .alignment(Alignment::Center);
-
-    // Spacer
-    let spacer = Line::from(vec!["".into()]);
 
     // Instructions
     let instructions = Line::from(vec![
-        "Press ".into(),
-        "[Enter]".bold().fg(Color::LightGreen),
-        " to continue".into(),
+        Span::from("Press "),
+        Span::styled("[Enter]", Style::default().add_modifier(Modifier::BOLD).fg(Color::LightGreen)),
+        Span::from(" to continue"),
     ])
     .alignment(Alignment::Center);
 
     // Build the content
-    let content = Paragraph::new(vec![title, Text::new(""), subtitle, spacer, instructions])
+    let content = Paragraph::new(vec![title, Line::from(""), subtitle, Line::from(""), instructions])
         .block(
             Block::bordered()
                 .title("Welcome")

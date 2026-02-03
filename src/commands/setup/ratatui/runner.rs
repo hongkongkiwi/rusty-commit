@@ -9,15 +9,15 @@ use std::time::Duration;
 use crossterm::event::{KeyCode, KeyEvent};
 use crossterm::execute;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::prelude::{CrosstermBackend, Rect};
+use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 
-use super::app::SetupApp;
-use super::event::{Event, EventHandler};
-use super::screens;
+use crate::commands::setup::ratatui::app::SetupApp;
+use crate::commands::setup::ratatui::event::{Event, EventHandler};
+use crate::commands::setup::ratatui::screens;
 
 /// Result type for TUI operations
-pub type TuiResult = Result<(), Box<dyn std::error::Error>>;
+pub type TuiResult = Result<(), anyhow::Error>;
 
 /// TUI terminal wrapper
 ///
@@ -61,23 +61,35 @@ impl Tui {
     pub fn draw(&mut self, app: &mut SetupApp) -> TuiResult {
         self.terminal.draw(|frame| {
             let area = frame.area();
-            self.render_screen(frame, area, app);
+            let current_screen = app.current_screen();
+            match current_screen {
+                crate::commands::setup::ratatui::app::ScreenType::Welcome => {
+                    screens::welcome::render_welcome_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Provider => {
+                    screens::provider::render_provider_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Model => {
+                    screens::model::render_model_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Auth => {
+                    screens::auth::render_auth_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Style => {
+                    screens::style::render_style_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Hooks => {
+                    screens::hooks::render_hooks_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Settings => {
+                    screens::settings::render_settings_screen(frame, area, app)
+                }
+                crate::commands::setup::ratatui::app::ScreenType::Summary => {
+                    screens::summary::render_summary_screen(frame, area, app)
+                }
+            }
         })?;
         Ok(())
-    }
-
-    /// Render the appropriate screen based on app state
-    fn render_screen(&self, frame: &mut ratatui::Frame, area: Rect, app: &mut SetupApp) {
-        use super::ScreenType::*;
-        match app.current_screen() {
-            Welcome => screens::welcome::render_welcome_screen(frame, area, app),
-            Provider => screens::provider::render_provider_screen(frame, area, app),
-            Model => screens::model::render_model_screen(frame, area, app),
-            Auth => screens::auth::render_auth_screen(frame, area, app),
-            Style => screens::style::render_style_screen(frame, area, app),
-            Settings => screens::settings::render_settings_screen(frame, area, app),
-            Summary => screens::summary::render_summary_screen(frame, area, app),
-        }
     }
 
     /// Handle keyboard events
@@ -101,10 +113,10 @@ impl Tui {
 
         match key.code {
             // Navigation
-            Down | j | J => {
+            Down => {
                 app.increment_menu_index(10);
             }
-            Up | k | K => {
+            Up => {
                 app.decrement_menu_index();
             }
             Enter => {
@@ -113,7 +125,7 @@ impl Tui {
                     app.next_screen();
                 }
             }
-            Esc | q | Q => {
+            Esc => {
                 // Go back or exit
                 if app.is_first_screen() {
                     // Exit on first screen
@@ -162,7 +174,7 @@ pub async fn tui_main() -> TuiResult {
         }
 
         // Check if we're on the summary screen and should exit
-        if matches!(app.current_screen(), super::ScreenType::Summary) {
+        if matches!(app.current_screen(), crate::commands::setup::ratatui::app::ScreenType::Summary) {
             // Exit the TUI
             break;
         }

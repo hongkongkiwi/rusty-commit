@@ -5,8 +5,9 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Paragraph, Borders},
     Frame,
 };
@@ -29,7 +30,7 @@ pub fn render_summary_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp) 
 
     // Title
     let title = Paragraph::new("Configuration Summary")
-        .style(Style::default().fg(Color::LightCyan).bold());
+        .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD));
     frame.render_widget(title, chunks[0]);
 
     // Summary content
@@ -75,14 +76,14 @@ pub fn render_summary_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp) 
         Line::from(generate_count_info),
         Line::from(""),
         Line::from(vec![
-            "Press ".into(),
-            "[Enter]".bold().fg(Color::LightGreen),
-            " to save configuration".into(),
+            Span::from("Press "),
+            Span::styled("[Enter]", Style::default().add_modifier(Modifier::BOLD).fg(Color::LightGreen)),
+            Span::from(" to save configuration"),
         ]),
         Line::from(vec![
-            "Press ".into(),
-            "[Esc]".bold().fg(Color::LightRed),
-            " to go back".into(),
+            Span::from("Press "),
+            Span::styled("[Esc]", Style::default().add_modifier(Modifier::BOLD).fg(Color::LightRed)),
+            Span::from(" to go back"),
         ]),
     ])
     .block(

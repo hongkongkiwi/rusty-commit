@@ -3,7 +3,7 @@
 //! This module defines the SetupApp struct that manages the
 /// screen state and accumulated configuration during the TUI flow.
 
-use crate::config::setup_config::{CommitFormat, SetupConfig};
+use crate::config::setup_config::SetupConfig;
 
 /// Screen states for the TUI setup flow
 #[derive(Debug, Clone, PartialEq)]
@@ -18,6 +18,8 @@ pub enum ScreenType {
     Auth,
     /// Commit style selection screen
     Style,
+    /// Git hooks configuration screen
+    Hooks,
     /// Behavior settings screen
     Settings,
     /// Summary and save confirmation screen
@@ -67,7 +69,8 @@ impl SetupApp {
             ScreenType::Provider => ScreenType::Model,
             ScreenType::Model => ScreenType::Auth,
             ScreenType::Auth => ScreenType::Style,
-            ScreenType::Style => ScreenType::Settings,
+            ScreenType::Style => ScreenType::Hooks,
+            ScreenType::Hooks => ScreenType::Settings,
             ScreenType::Settings => ScreenType::Summary,
             ScreenType::Summary => ScreenType::Summary,
         };

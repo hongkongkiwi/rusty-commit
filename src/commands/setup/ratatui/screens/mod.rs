@@ -8,5 +8,6 @@ pub mod provider;
 pub mod model;
 pub mod auth;
 pub mod style;
+pub mod hooks;
 pub mod settings;
 pub mod summary;

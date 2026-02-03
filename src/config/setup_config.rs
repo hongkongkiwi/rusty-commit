@@ -106,6 +106,9 @@ pub struct SetupConfig {
     /// Copy commit message to clipboard on timeout/error
     pub clipboard_on_timeout: bool,
 
+    /// Whether to install git hooks during setup
+    pub install_hooks: bool,
+
     /// Strict hook mode (fail on hook errors)
     pub hook_strict: bool,
 
@@ -267,6 +270,7 @@ impl Default for SetupConfig {
             learn_from_history: false,
             history_commits_count: 50,
             clipboard_on_timeout: true,
+            install_hooks: false,
             hook_strict: true,
             hook_timeout_ms: 30000,
             tokens_max_input: 4096,

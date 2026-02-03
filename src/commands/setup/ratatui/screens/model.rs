@@ -5,8 +5,8 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
-    text::Line,
     widgets::{Block, Paragraph, Borders},
     Frame,
 };
@@ -37,7 +37,7 @@ pub fn render_model_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp) {
 
     let title = format!("Model Selection - {}", provider_name);
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(Color::LightCyan).bold());
+        .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD));
     frame.render_widget(title_widget, chunks[0]);
 
     // Model selection area

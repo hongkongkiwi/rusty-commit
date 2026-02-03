@@ -5,6 +5,7 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
     text::Line,
     widgets::{Block, List, ListItem, Paragraph, Borders},
@@ -30,7 +31,7 @@ pub fn render_style_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp) {
 
     // Title
     let title = Paragraph::new("Select Commit Message Format")
-        .style(Style::default().fg(Color::LightCyan).bold());
+        .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD));
     frame.render_widget(title, chunks[0]);
 
     // Format options

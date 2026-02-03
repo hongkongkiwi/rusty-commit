@@ -5,8 +5,9 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, List, ListItem, Paragraph},
     Frame,
 };
@@ -48,7 +49,7 @@ pub fn render_provider_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp)
 
     // Title
     let title = Paragraph::new("Select your AI Provider")
-        .style(Style::default().fg(Color::LightCyan).bold());
+        .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD));
     frame.render_widget(title, chunks[0]);
 
     // Provider list grouped by category
@@ -59,7 +60,10 @@ pub fn render_provider_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp)
         .flat_map(|(category, providers)| {
             // Category header
             let header = ListItem::new(
-                Line::from(vec![format!("─── {} ───", category.display()).dim().into()])
+                Line::from(vec![Span::styled(
+                    format!("─── {} ───", category.display()),
+                    Style::default().add_modifier(Modifier::DIM)
+                )])
             ).style(Style::default().fg(Color::DarkGray));
 
             // Provider items
@@ -89,25 +93,4 @@ pub fn render_provider_screen(frame: &mut Frame, area: Rect, app: &mut SetupApp)
     let footer = Paragraph::new("↑/↓ navigate · Enter select · Esc back")
         .style(Style::default().dim());
     frame.render_widget(footer, chunks[2]);
-}
-
-/// Provider option with helper methods
-impl ProviderOption {
-    /// Get the display name
-    pub fn display(&self) -> String {
-        self.display.clone()
-    }
-}
-
-impl ProviderCategory {
-    /// Get the display name for the category
-    pub fn display(&self) -> &'static str {
-        match self {
-            ProviderCategory::Popular => "Popular Providers",
-            ProviderCategory::Local => "Local/Private",
-            ProviderCategory::Cloud => "Cloud Providers",
-            ProviderCategory::Enterprise => "Enterprise",
-            ProviderCategory::Specialized => "Specialized",
-        }
-    }
 }

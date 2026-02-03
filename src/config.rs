@@ -2,6 +2,7 @@ pub mod accounts;
 pub mod format;
 pub mod migrations;
 pub mod secure_storage;
+pub mod setup_config;
 
 use anyhow::{Context, Result};
 use colored::Colorize;

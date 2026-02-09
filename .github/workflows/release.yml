@@ -57,7 +57,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -111,7 +111,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
@@ -187,7 +187,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release binaries for finalize job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release
           path: release/
@@ -268,7 +268,7 @@ jobs:
         run: cargo deb --target ${{ matrix.target }} --no-build
 
       - name: Upload .deb package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.deb-${{ matrix.arch }}
           path: target/${{ matrix.target }}/debian/*_${{ matrix.deb_arch }}.deb
@@ -354,7 +354,7 @@ jobs:
             --target ${{ matrix.rpm_arch }}
 
       - name: Upload .rpm package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.rpm-${{ matrix.arch }}
           path: rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm
@@ -411,7 +411,7 @@ jobs:
           cp target/${{ matrix.target }}/release/rco apk-build/bin/
 
       - name: Upload Linux musl binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binary-musl-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/rco
@@ -462,7 +462,7 @@ jobs:
               su builder -c "export REPODEST=/work/apk-packages PACKAGER= && abuild -r"'
 
       - name: Upload Alpine package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.apk-${{ matrix.arch }}
           path: apk-packages/**/*.apk
@@ -561,14 +561,14 @@ jobs:
 
       - name: Upload per-file GPG signatures
         if: ${{ env.GPG_PRIVATE_KEY != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gpg-signatures
           path: release-packages/*.asc
           retention-days: 5
 
       - name: Upload SHA256 checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sha256sums
           path: release-packages/SHA256SUMS.txt
@@ -576,7 +576,7 @@ jobs:
 
       - name: Upload GPG signature
         if: ${{ env.GPG_PRIVATE_KEY != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sha256sums-asc
           path: release-packages/SHA256SUMS.txt.asc
@@ -1366,7 +1366,7 @@ jobs:
           snapcraft-channel: stable
 
       - name: Upload Snap package to release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rusty-commit.snap
           path: snap/*.snap
